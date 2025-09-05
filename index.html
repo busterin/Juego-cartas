@@ -1,166 +1,15 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<title>Duelo en 10 PV — Prueba</title>
-<style>
-  :root{
-    --bg1:#0b0f1e; --bg2:#151b36; --ink:#eaf2ff; --muted:#a5b3cc;
-    --accent:#69f0ff; --accent-2:#7b5cff; --good:#7bff9a; --bad:#ff6b88; --warn:#ffd76b;
-    --panel:rgba(255,255,255,.06); --panel-br:rgba(255,255,255,.14);
-    --card1:#1a2553; --card2:#0f1633; --glow:0 10px 30px rgba(0,0,0,.45), inset 0 0 40px rgba(255,255,255,.035);
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-    color:var(--ink);
-    background:
-      radial-gradient(1200px 800px at 20% 0%, #1a2458 0, transparent 60%),
-      radial-gradient(900px 600px at 80% 100%, #141e46 0, transparent 60%),
-      linear-gradient(180deg, var(--bg1), var(--bg2));
-  }
-  #game{
-    min-height:100svh; display:flex; flex-direction:column; gap:8px;
-    padding:12px 12px calc(16px + env(safe-area-inset-bottom));
-    max-width:560px; margin-inline:auto;
-  }
-
-  /* HUD */
-  .hud{
-    display:grid; grid-template-columns: 1fr auto auto; gap:8px; align-items:center;
-    padding:8px 10px; border:1px solid var(--panel-br); border-radius:12px;
-    background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-    box-shadow:var(--glow);
-  }
-  .logo{
-    margin:0; font-size:clamp(16px, 4.6vw, 22px); letter-spacing:.4px;
-    background:linear-gradient(90deg, var(--accent), var(--accent-2));
-    -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:800;
-    filter: drop-shadow(0 0 8px rgba(0,255,255,.25));
-  }
-  .score{
-    display:flex; align-items:center; gap:10px; font-weight:800;
-    font-variant-numeric: tabular-nums;
-  }
-  .pill{ border:1px solid var(--panel-br); background:var(--panel); padding:4px 8px; border-radius:10px; }
-  .btn{ border:1px solid var(--panel-br); background:var(--panel);
-    padding:8px 10px; border-radius:10px; color:var(--ink); cursor:pointer; box-shadow:var(--glow);
-  }
-  .btn:active{ transform: translateY(1px); }
-
-  /* Board */
-  .board{ display:grid; gap:10px; grid-template-rows: auto 1fr auto; min-height:0; }
-
-  .field{ display:grid; place-items:center; gap:6px; }
-  .name{ color:var(--muted); font-weight:700; font-size:.9rem; }
-
-  .slot{
-    width:min(92%, 420px); aspect-ratio: 5/3;
-    border:2px dashed rgba(105,240,255,.35);
-    border-radius:14px; display:grid; place-items:center;
-    background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
-    transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-    position:relative; overflow:visible;
-  }
-  .slot.enemy{ border-color: rgba(255,108,132,.35); }
-  .slot.highlight{ box-shadow: 0 0 0 3px rgba(105,240,255,.35); transform: scale(1.02); }
-  .hint{ color:var(--muted); font-size:.95rem; text-align:center; }
-
-  /* Turn bar */
-  .turnbar{
-    display:flex; justify-content:center; gap:8px; align-items:center; color:var(--muted); font-weight:700;
-  }
-  .who{ padding:4px 8px; border-radius:10px; border:1px solid var(--panel-br); background:var(--panel); }
-  .who.you{ outline:2px solid rgba(105,240,255,.4); }
-  .who.bot{ outline:2px solid rgba(255,108,132,.4); }
-
-  /* Hand */
-  .hand{
-    display:flex; gap:8px; overflow:auto; padding:6px;
-    border:1px solid var(--panel-br); border-radius:12px; background:rgba(255,255,255,.04);
-    scroll-snap-type:x mandatory;
-  }
-  .hand::-webkit-scrollbar{ height:8px } .hand::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.15); border-radius:4px; }
-
-  /* Card */
-  .card{
-    position:relative; flex:0 0 auto;
-    width: clamp(74px, 18vw, 100px); aspect-ratio: 5/7;
-    border-radius:12px; border:1px solid rgba(255,255,255,.18);
-    background: linear-gradient(160deg, var(--card1) 0%, var(--card2) 60%);
-    box-shadow: 0 4px 18px rgba(0,0,0,.55), inset 0 0 24px rgba(255,255,255,.05);
-    color:#eaf2ff; font-weight:900; user-select:none; -webkit-user-select:none; touch-action:none;
-    scroll-snap-align:center; transition: transform .12s ease, box-shadow .12s ease; display:grid; place-items:center;
-  }
-  .card:hover{ transform: translateY(-2px); }
-  .badge{
-    position:absolute; top:6px; width:30px; height:30px; border-radius:8px;
-    display:grid; place-items:center; font-size:.9rem; border:1px solid rgba(255,255,255,.25);
-    background: rgba(12,16,36,.7); text-shadow: 0 1px 0 rgba(0,0,0,.5);
-    box-shadow: inset 0 0 14px rgba(255,255,255,.06), 0 2px 10px rgba(0,0,0,.4);
-  }
-  .b-hp{ left:6px; color:#8aff9c; }
-  .b-pw{ right:6px; color:#ffd76b; }
-  .card .big{ font-size: clamp(18px, 7vw, 28px); text-shadow: 0 2px 1px rgba(0,0,0,.5), 0 0 10px rgba(105,240,255,.4); }
-  .label{ position:absolute; bottom:6px; left:6px; right:6px; color:var(--muted); font-size:.7rem; font-weight:800; text-align:right; }
-
-  /* Drag ghost */
-  .ghost{
-    position:fixed; z-index:9999; pointer-events:none;
-    width: clamp(78px, 20vw, 110px); aspect-ratio: 5/7;
-    transform: translate(-50%, -50%) scale(1.06);
-    transition: left .15s ease, top .15s ease;
-    border-radius:12px; border:1px solid rgba(255,255,255,.5);
-    background: linear-gradient(160deg, #27408f 0%, #0f1633 60%);
-    box-shadow: 0 8px 30px rgba(0,0,0,.6), 0 0 24px rgba(105,240,255,.45) inset;
-    display:grid; place-items:center; color:#fff; font-weight:900;
-  }
-  .ghost .label{ display:none }
-
-  /* Placed card */
-  .slot .placed{
-    position:absolute; inset:8px; border-radius:10px;
-    display:grid; place-items:center; font-weight:900;
-    background: linear-gradient(160deg, #20326d 0%, #0e142d 60%);
-    border:1px solid rgba(255,255,255,.25);
-    box-shadow: 0 6px 24px rgba(0,0,0,.55), inset 0 0 22px rgba(255,255,255,.06);
-    font-size: clamp(24px, 8vw, 36px);
-  }
-  .slot .placed.enemy{
-    background: linear-gradient(160deg, #5a1f35 0%, #1c0f1a 60%);
-    border-color: rgba(255,108,132,.4);
-    text-shadow: 0 0 12px rgba(255,108,132,.5);
-  }
-
-  /* Toasts / Overlays */
-  .toast{
-    position:fixed; left:50%; top:18%; transform:translateX(-50%); z-index:50;
-    background: rgba(0,0,0,.4); border:1px solid var(--panel-br);
-    padding:10px 14px; border-radius:12px; backdrop-filter: blur(6px); font-weight:800;
-    animation: slideDown .38s ease both;
-  }
-  @keyframes slideDown{ from{transform:translate(-50%,-6px);opacity:0} to{transform:translate(-50%,0);opacity:1} }
-
-  .overlay{
-    position:fixed; inset:0; display:grid; place-items:center;
-    background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75));
-    opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100;
-  }
-  .overlay.visible{ opacity:1; pointer-events:auto; }
-  .panel{
-    width:min(92%, 460px); background: rgba(255,255,255,.06);
-    border:1px solid var(--panel-br); padding:18px; border-radius:16px; box-shadow:var(--glow); text-align:center;
-  }
-  .panel h2{ margin-top:0 }
-  .row{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>Duelo 3 Líneas — 10 PV</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main id="game">
+  <main id="game" aria-label="Duelo de cartas con 3 líneas">
     <header class="hud">
-      <h1 class="logo">Duelo — 10 PV</h1>
+      <h1 class="logo">Duelo · 3 Líneas</h1>
       <div class="score" aria-live="polite">
         <span class="pill">Ataca: <strong id="whoAtk">Tú</strong></span>
         <span>👤 PV <strong id="pHP">10</strong></span>
@@ -170,19 +19,39 @@
       <button id="resetBtn" class="btn" aria-label="Reiniciar">↺</button>
     </header>
 
-    <div class="turnbar"><span class="who you" id="youTag">Tú</span><span>⇄</span><span class="who bot" id="botTag">🤖</span></div>
+    <div class="turnbar">
+      <span class="who you" id="youTag">Tú</span>
+      <span>⇄</span>
+      <span class="who bot" id="botTag">🤖</span>
+    </div>
 
-    <section class="board" aria-label="Tablero">
-      <div class="field">
-        <div id="enemySlot" class="slot enemy" aria-label="Zona del rival"></div>
+    <!-- Tablero con 3 líneas -->
+    <section class="board" aria-label="Tablero de 3 líneas">
+      <!-- Fila Rival -->
+      <div class="row row-enemy">
         <div class="name">Rival</div>
+        <div class="lanes">
+          <div class="slot enemy" data-side="enemy" data-lane="0" aria-label="Rival línea 1"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="1" aria-label="Rival línea 2"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="2" aria-label="Rival línea 3"></div>
+        </div>
       </div>
 
-      <div class="field">
-        <div id="playerDrop" class="slot" aria-label="Suelta aquí tu carta"><span class="hint">Arrastra una carta y suéltala aquí</span></div>
+      <!-- Separador / hints -->
+      <div class="center-hint">Arrastra una carta a una de tus 3 líneas</div>
+
+      <!-- Fila Jugador -->
+      <div class="row row-player">
+        <div class="lanes">
+          <div class="slot" data-side="player" data-lane="0" aria-label="Tu línea 1"></div>
+          <div class="slot" data-side="player" data-lane="1" aria-label="Tu línea 2"></div>
+          <div class="slot" data-side="player" data-lane="2" aria-label="Tu línea 3"></div>
+        </div>
+        <div class="name">Tú</div>
       </div>
 
-      <div class="field">
+      <!-- Mano -->
+      <div class="hand-wrap">
         <div class="name">Tu mano</div>
         <div id="hand" class="hand" role="list"></div>
       </div>
@@ -192,307 +61,40 @@
   <!-- Overlays -->
   <div id="startOverlay" class="overlay visible" role="dialog" aria-labelledby="startTitle">
     <div class="panel">
-      <h2 id="startTitle">Nuevo sistema: Vida + Fuerza</h2>
-      <p style="color:var(--muted)">
-        Cada carta tiene ❤️ Vida y ⚔️ Fuerza. Cuando ambos juegan, <b>solo ataca el jugador inicial</b> (alterna cada turno).<br/>
-        Daño = ⚔️ atacante − ⚔️ defensor (mínimo 0). Si el daño ≥ vida de la carta rival, la destruyes y el exceso daña los PV del oponente.
+      <h2 id="startTitle">Vida persistente + 3 líneas</h2>
+      <p class="muted">
+        Cada turno ambos juegan 1 carta (si hay hueco). Luego <b>ataca el jugador inicial</b> del turno (alterna).<br>
+        Si no hay carta enfrente, el daño va directo a los PV del jugador.
       </p>
-      <div class="row">
+      <div class="row-btns">
         <button id="startBtn" class="btn">Jugar ▶</button>
         <button id="howBtn" class="btn">¿Detalles?</button>
       </div>
-      <details id="how" style="margin-top:8px; color:var(--muted)">
-        <summary>Reglas y notas de esta demo</summary>
-        <ul style="text-align:left; line-height:1.5; margin:0">
-          <li>PV iniciales: 10 vs 10.</li>
-          <li>Mano de 5, robas automáticamente tras cada ronda.</li>
-          <li>En esta prueba retiramos las cartas tras resolver (aunque sobrevivan). Si quieres <i>persistencia</i> de vida restante, lo activamos luego.</li>
-          <li>El atacante inicial alterna cada turno (Tú ⇄ 🤖).</li>
+      <details id="how" class="muted">
+        <summary>Reglas de daño</summary>
+        <ul>
+          <li>Daño en línea = <code>max(0, ⚔ atacante − ⚔ defensor)</code>.</li>
+          <li>Si el daño ≥ ❤️ defensor ⇒ destruye y el exceso daña los PV del jugador.</li>
+          <li>Si no hay defensor ⇒ daño = ⚔ atacante a los PV del jugador.</li>
+          <li>Las cartas <b>permanecen</b> con su ❤️ restante.</li>
         </ul>
       </details>
     </div>
   </div>
 
-  <div id="endOverlay" class="overlay" role="dialog" aria-labelledby="endTitle" aria-live="polite">
+  <div id="endOverlay" class="overlay" role="dialog" aria-live="polite">
     <div class="panel">
       <h2 id="endTitle">Resultado</h2>
-      <p id="endLine" style="font-size:1.1rem; margin:.5rem 0 1rem 0;"></p>
-      <div class="row">
+      <p id="endLine" class="muted"></p>
+      <div class="row-btns">
         <button id="againBtn" class="btn">Jugar de nuevo</button>
         <button id="menuBtn" class="btn">Menú</button>
       </div>
     </div>
   </div>
 
-  <script>
-    (() => {
-      const $ = s => document.querySelector(s);
-      const rand = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
+  <div id="toasts" aria-live="polite" aria-atomic="true"></div>
 
-      // --- Estado ---
-      const START_HP = 10;
-      const handEl = $('#hand'), dropEl = $('#playerDrop'), eSlot = $('#enemySlot');
-      const pHPEl = $('#pHP'), eHPEl = $('#eHP'), whoAtkEl = $('#whoAtk');
-      const youTag = $('#youTag'), botTag = $('#botTag');
-
-      const startOverlay = $('#startOverlay');
-      const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
-
-      const state = {
-        pHP: START_HP, eHP: START_HP,
-        pDeck: [], eDeck: [], pHand: [], eHand: [],
-        pPlaced: null, ePlaced: null,
-        attacker: 'player', // alterna 'player' | 'enemy'
-        resolving: false
-      };
-
-      function makeDeck(){
-        // 14 cartas: Vida 2–7, Fuerza 1–6 (bias suave)
-        const d=[];
-        for(let i=0;i<14;i++){
-          const hp = rand(2,7);
-          const pw = rand(1,6);
-          d.push({hp, pw});
-        }
-        // barajar
-        for(let i=d.length-1;i>0;i--){
-          const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]];
-        }
-        return d;
-      }
-
-      function drawToHand(){
-        while(state.pHand.length<5 && state.pDeck.length) state.pHand.push(state.pDeck.pop());
-        while(state.eHand.length<5 && state.eDeck.length) state.eHand.push(state.eDeck.pop());
-      }
-
-      // --- UI ---
-      function badgeHP(val){ return `<div class="badge b-hp" title="Vida">❤️<span>${val}</span></div>`; }
-      function badgePW(val){ return `<div class="badge b-pw" title="Fuerza">⚔️<span>${val}</span></div>`; }
-
-      function createCardEl(card, index){
-        const el = document.createElement('div');
-        el.className = 'card';
-        el.setAttribute('role','listitem');
-        el.dataset.index = String(index);
-        el.dataset.hp = String(card.hp);
-        el.dataset.pw = String(card.pw);
-        el.innerHTML = `
-          ${badgeHP(card.hp)} ${badgePW(card.pw)}
-          <div class="big">${card.hp}/${card.pw}</div>
-          <div class="label">Arrastra</div>
-        `;
-        attachDragHandlers(el);
-        el.addEventListener('click', ()=>{
-          if(state.resolving) return;
-          playFromHand(parseInt(el.dataset.index,10));
-        });
-        return el;
-      }
-
-      function renderHand(){
-        handEl.innerHTML = '';
-        state.pHand.forEach((c,i)=> handEl.appendChild(createCardEl(c,i)));
-      }
-      function updateHP(){
-        pHPEl.textContent = state.pHP;
-        eHPEl.textContent = state.eHP;
-      }
-      function updateAttackerUI(){
-        whoAtkEl.textContent = state.attacker === 'player' ? 'Tú' : '🤖';
-        youTag.classList.toggle('you', state.attacker==='player');
-        botTag.classList.toggle('bot', state.attacker==='enemy');
-      }
-      function toast(msg, color=''){
-        const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
-        if(color) t.style.borderColor=color;
-        document.body.appendChild(t);
-        setTimeout(()=> t.style.opacity='0', 1200);
-        setTimeout(()=> t.remove(), 1600);
-      }
-
-      // --- Drag & drop (pointer) ---
-      let ghost=null, dragging=null, startRect=null;
-      function attachDragHandlers(cardEl){
-        cardEl.addEventListener('pointerdown', onDown, {passive:false});
-      }
-      function onDown(e){
-        if(state.resolving) return;
-        const el = e.currentTarget; dragging = el;
-        el.setPointerCapture(e.pointerId);
-        startRect = el.getBoundingClientRect();
-        ghost = document.createElement('div');
-        ghost.className='ghost';
-        ghost.innerHTML = `
-          ${badgeHP(el.dataset.hp)} ${badgePW(el.dataset.pw)}
-          <div class="big">${el.dataset.hp}/${el.dataset.pw}</div>
-        `;
-        document.body.appendChild(ghost);
-        moveGhost(e.clientX,e.clientY);
-        dropEl.classList.add('highlight');
-
-        const move = ev=> moveGhost(ev.clientX, ev.clientY);
-        const up = ev=>{
-          el.releasePointerCapture(e.pointerId);
-          window.removeEventListener('pointermove', move);
-          window.removeEventListener('pointerup', up, true);
-          const over = isOver(dropEl, ev.clientX, ev.clientY);
-          dropEl.classList.remove('highlight');
-          if(over){
-            const c=centerOf(dropEl);
-            ghost.style.left=c.x+'px'; ghost.style.top=c.y+'px';
-            setTimeout(()=>{ playFromHand(parseInt(el.dataset.index,10)); removeGhost(); }, 120);
-          }else{
-            ghost.style.left=(startRect.left+startRect.width/2)+'px';
-            ghost.style.top =(startRect.top +startRect.height/2)+'px';
-            setTimeout(removeGhost, 120);
-          }
-          dragging=null;
-        };
-        window.addEventListener('pointermove', move, {passive:false});
-        window.addEventListener('pointerup', up, {passive:false, capture:true});
-        e.preventDefault();
-      }
-      function moveGhost(x,y){ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
-      function removeGhost(){ ghost?.remove(); ghost=null; }
-      function isOver(target,x,y){ const r=target.getBoundingClientRect(); return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom; }
-      function centerOf(target){ const r=target.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
-
-      // --- Colocar / slots ---
-      function placeCardInSlot(slotEl, card, who='player'){
-        slotEl.innerHTML='';
-        const el=document.createElement('div');
-        el.className='placed'+(who==='enemy'?' enemy':'');
-        el.innerHTML = `${badgeHP(card.hp)} ${badgePW(card.pw)}<div class="big">${card.hp}/${card.pw}</div>`;
-        slotEl.appendChild(el);
-      }
-      function clearSlots(){
-        dropEl.innerHTML='<span class="hint">Arrastra una carta y suéltala aquí</span>';
-        eSlot.innerHTML='';
-        state.pPlaced=null; state.ePlaced=null;
-      }
-
-      // --- IA rival (heurística simple) ---
-      function chooseEnemyCard(){
-        const hand = state.eHand;
-        if(!hand.length) return null;
-        // Si enemigo ataca, prioriza fuerza; si defiende, prioriza mitigar (fuerza alta o vida alta).
-        if(state.attacker==='enemy'){
-          let best = hand[0], bestScore = best.pw*2 + best.hp;
-          for(const c of hand){ const sc = c.pw*2 + c.hp; if(sc>bestScore){ best=c; bestScore=sc; } }
-          return best;
-        }else{
-          // Defiende: intenta que (pw_e >= pw_p) si puede estimar tu carta (no la sabe),
-          // como proxy elige carta de mayor hp y luego pw.
-          let best = hand[0], bestScore = best.hp*2 + best.pw;
-          for(const c of hand){ const sc = c.hp*2 + c.pw; if(sc>bestScore){ best=c; bestScore=sc; } }
-          return best;
-        }
-      }
-
-      // --- Reglas de daño ---
-      function resolveCombat(){
-        const atkSide = state.attacker; // 'player' o 'enemy'
-        const defSide = atkSide==='player' ? 'enemy' : 'player';
-        const A = atkSide==='player' ? state.pPlaced : state.ePlaced;
-        const D = defSide==='player' ? state.pPlaced : state.ePlaced;
-
-        const raw = Math.max(0, A.pw - D.pw); // daño neto
-        if(raw===0){
-          toast('Bloqueado ⚔️→🛡', 'rgba(255,215,107,.9)');
-          return { destroyed:false, overflow:0, dealt:0, to:'none' };
-        }
-        if(raw >= D.hp){
-          const overflow = raw - D.hp;
-          if(defSide==='enemy'){ state.eHP = Math.max(0, state.eHP - overflow); }
-          else { state.pHP = Math.max(0, state.pHP - overflow); }
-          updateHP();
-          toast(`¡Destruyes la carta! Exceso ${overflow>0?'-'+overflow+' PV':''}`, overflow>0?'rgba(255,108,132,.9)':'rgba(123,255,154,.9)');
-          return { destroyed:true, overflow, dealt:raw, to:defSide };
-        }else{
-          // En esta demo no persistimos la vida restante del defensor
-          toast(`Daño ${raw} (la carta sobrevive)`, 'rgba(123,255,154,.9)');
-          return { destroyed:false, overflow:0, dealt:raw, to:defSide };
-        }
-      }
-
-      function checkEnd(){
-        if(state.pHP<=0 || state.eHP<=0){
-          const win = state.pHP>0;
-          endTitle.textContent = win ? '¡Victoria!' : 'Derrota';
-          endLine.textContent = `Tú ${state.pHP} PV · Rival ${state.eHP} PV`;
-          endOverlay.classList.add('visible');
-          return true;
-        }
-        return false;
-      }
-
-      // --- Flujo de ronda ---
-      function playFromHand(handIndex){
-        if(state.resolving) return;
-        if(handIndex<0 || handIndex>=state.pHand.length) return;
-        state.resolving = true;
-
-        // Tu carta
-        const pCard = state.pHand.splice(handIndex,1)[0];
-        state.pPlaced = { ...pCard }; // copia
-        renderHand();
-        placeCardInSlot(dropEl, state.pPlaced, 'player');
-
-        // Rival juega
-        setTimeout(()=>{
-          const choice = chooseEnemyCard();
-          const eIdx = state.eHand.indexOf(choice);
-          const eCard = state.eHand.splice(eIdx,1)[0];
-          state.ePlaced = { ...eCard };
-          placeCardInSlot(eSlot, state.ePlaced, 'enemy');
-
-          // Resolver el único ataque del turno (según atacante inicial)
-          setTimeout(()=>{
-            const result = resolveCombat();
-            if(checkEnd()) return;
-
-            // Reponer manos, limpiar mesa y alternar atacante
-            drawToHand(); renderHand();
-            setTimeout(()=>{
-              clearSlots();
-              state.attacker = state.attacker==='player' ? 'enemy' : 'player';
-              updateAttackerUI();
-              state.resolving = false;
-            }, 500);
-          }, 550);
-        }, 400);
-      }
-
-      // --- Controles / overlays ---
-      function newGame(){
-        state.pHP = START_HP; state.eHP = START_HP; updateHP();
-        state.pDeck = makeDeck(); state.eDeck = makeDeck();
-        state.pHand=[]; state.eHand=[]; clearSlots();
-        state.attacker = 'player'; updateAttackerUI();
-        drawToHand(); renderHand();
-        state.resolving=false;
-      }
-      $('#resetBtn').addEventListener('click', ()=>{ newGame(); toast('Partida reiniciada'); });
-
-      $('#startBtn').addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
-      $('#howBtn').addEventListener('click', ()=>{ const d=$('#how'); d.open=!d.open; });
-      $('#againBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
-      $('#menuBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
-
-      // Permite clics dentro del panel de overlay
-      const gate = (e)=>{
-        const anyVisible = startOverlay.classList.contains('visible') || endOverlay.classList.contains('visible');
-        if(!anyVisible) return;
-        if(e.target.closest('.overlay .panel')) return;
-        e.stopPropagation(); e.preventDefault();
-      };
-      document.addEventListener('pointerdown', gate, {capture:true});
-      document.addEventListener('click', gate, {capture:true});
-
-      // Init
-      // (espera a pulsar "Jugar")
-    })();
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
