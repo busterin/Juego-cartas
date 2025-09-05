@@ -28,8 +28,7 @@
 
   const state = {
     round: 1,
-    pCoinsBase: 3, eCoinsBase: 3,
-    pCoins: 3, eCoins: 3,
+    pCoins: 3, eCoins: 3,           // ⬅️ monedas actuales (empiezas con 3)
     pScore: 0, eScore: 0,
     pDeck: [], eDeck: [],
     pHand: [], eHand: [],
@@ -87,7 +86,6 @@
     handEl.innerHTML = '';
     state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i)));
     handEl.style.visibility = 'visible';
-    // en móviles muy pequeños, vuelve al inicio del carrusel
     handEl.scrollTo({left:0, behavior:'instant'});
   }
 
@@ -200,7 +198,7 @@
     return -1;
   }
 
-  // ---------- Rules: play & clash ----------
+  // ---------- Rules: play (sin destrucción por choque) ----------
   const canAfford = (card) => state.pCoins >= card.cost;
 
   function tryPlayFromHandToLane(handIndex, laneIndex){
@@ -211,24 +209,8 @@
     // paga coste
     state.pCoins -= card.cost; updateHUD();
 
-    // choque con carta rival en esa línea (si la hay)
-    const enemyCard = state.lanes[laneIndex].e;
-    if(enemyCard){
-      if(card.pts > enemyCard.pts){
-        // destruye al rival, tu carta queda
-        state.lanes[laneIndex].e = null;
-        state.lanes[laneIndex].p = {...card};
-      } else if(card.pts < enemyCard.pts){
-        // tu carta se destruye (no queda)
-      } else {
-        // iguales: ambas fuera
-        state.lanes[laneIndex].e = null;
-        // y no dejas carta
-      }
-    } else {
-      // no hay rival; colocas (y reemplazas si ya tenías)
-      state.lanes[laneIndex].p = {...card};
-    }
+    // NO destruimos al rival: solo colocas (y puedes reemplazar tu propia carta)
+    state.lanes[laneIndex].p = {...card};
 
     // quitar de la mano + robar 1 si hay
     state.pHand.splice(handIndex,1);
@@ -237,16 +219,19 @@
     renderHand(); renderBoard(); updateHUD();
   }
 
-  // ---------- Enemy AI ----------
+  // ---------- Enemy AI (sin destrucción por choque) ----------
   function enemyTurn(){
     state.resolving = true;
     state.enemyPassed = false;
+
+    // ⬆️ Al empezar su turno: +1 moneda
+    state.eCoins += 1; updateHUD();
 
     const playable = () => state.eHand.some(c => c.cost <= state.eCoins);
 
     const tryPlayOnce = ()=>{
       if(!playable()) return false;
-      // mejor carta asequible
+      // mejor carta asequible (puntos altos / coste)
       let bestIdx=-1, bestScore=-1;
       state.eHand.forEach((c,i)=>{
         if(c.cost<=state.eCoins){
@@ -256,38 +241,19 @@
       });
       const card = state.eHand[bestIdx];
 
-      // mejor carril (choque favorable > hueco libre > resto)
+      // carril preferido: hueco propio, si no, el que tenga menos puntos propios (para reemplazar)
       let laneChoice = 0, laneScore=-1;
       for(let i=0;i<LANES;i++){
-        const P = state.lanes[i].p, E = state.lanes[i].e;
+        const E = state.lanes[i].e;
         let sc = 0;
-        if(P){
-          if(card.pts > P.pts) sc = 100 + (card.pts - P.pts);
-          else if(card.pts === P.pts) sc = 10;
-          else sc = 1;
-        } else {
-          sc = 50;
-        }
-        if(E && E.pts >= card.pts) sc -= 20; // penaliza reemplazo inútil
+        if(!E) sc = 100; else sc = Math.max(0, card.pts - E.pts); // reemplaza si mejora
         if(sc>laneScore){ laneScore=sc; laneChoice=i; }
       }
 
-      // pagar y jugar
+      // pagar y jugar (reemplazo de su propia carta permitido)
       state.eCoins -= card.cost;
-      const P = state.lanes[laneChoice].p;
-      if(P){
-        if(card.pts > P.pts){
-          state.lanes[laneChoice].p = null;
-          state.lanes[laneChoice].e = {...card};
-        } else if(card.pts < P.pts){
-          // se destruye, no queda
-        } else {
-          state.lanes[laneChoice].p = null;
-          // y su carta tampoco queda
-        }
-      } else {
-        state.lanes[laneChoice].e = {...card};
-      }
+      state.lanes[laneChoice].e = {...card};
+
       state.eHand.splice(bestIdx,1);
       if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
 
@@ -298,10 +264,11 @@
     const loop = ()=>{
       if(!tryPlayOnce()){
         state.enemyPassed = true;
-        endEnemyPhase();
+        // Pausa clara para “ver qué jugó” antes de puntuar
+        setTimeout(endEnemyPhase, 600);
         return;
       }
-      setTimeout(loop, 250);
+      setTimeout(loop, 300);
     };
     loop();
   }
@@ -314,47 +281,74 @@
   // ---------- Turn flow / scoring ----------
   const bothHavePassed = () => state.playerPassed && state.enemyPassed;
 
-  function checkBothPassedThenScore(){
-    if(!bothHavePassed()) return;
+  function floatScore(label, who){
+    const div = document.createElement('div');
+    div.className = `score-float ${who}`;
+    div.textContent = label;
+    $('.board').appendChild(div);
+    setTimeout(()=> div.remove(), 1200);
+  }
 
+  function animateVanishBoard(){
+    $$('.placed').forEach(el => el.classList.add('vanish'));
+    return new Promise(res => setTimeout(res, 750));
+  }
+
+  function scoreRoundAndCleanup(){
     // sumar puntos de cartas que siguen
     let pRound=0, eRound=0;
     state.lanes.forEach(l=>{
       if(l.p) pRound += l.p.pts;
       if(l.e) eRound += l.e.pts;
     });
-    state.pScore += pRound; state.eScore += eRound;
 
-    toast(`Puntuación de ronda · Tú +${pRound} · 🤖 +${eRound}`);
+    // Mostrar floats llamativos
+    if(pRound>0) floatScore(`+${pRound} ⭐`, 'you');
+    if(eRound>0) floatScore(`+${eRound} ⭐`, 'enemy');
 
-    // limpiar tablero
-    state.lanes = Array.from({length: LANES}, () => ({ p:null, e:null }));
+    // Pequeña pausa para leer los +puntos
+    setTimeout(async ()=>{
+      // Animar desaparición de cartas
+      await animateVanishBoard();
 
-    // comprobar fin
-    if(state.pScore >= TARGET_SCORE || state.eScore >= TARGET_SCORE){
-      endTitle.textContent = state.pScore>=TARGET_SCORE ? '¡Victoria!' : 'Derrota';
-      endLine.textContent = `Puntos: Tú ${state.pScore} · 🤖 ${state.eScore}`;
-      endOverlay.classList.add('visible');
-      renderBoard(); updateHUD(); return;
-    }
+      state.pScore += pRound; state.eScore += eRound;
 
-    // nueva ronda
-    state.round += 1;
-    state.pCoinsBase += 1; state.eCoinsBase += 1;
-    state.pCoins = state.pCoinsBase; state.eCoins = state.eCoinsBase;
-    state.playerPassed = false; state.enemyPassed = false;
-    // robar hasta 5
-    while(state.pHand.length<HAND_SIZE && state.pDeck.length) state.pHand.push(state.pDeck.pop());
-    while(state.eHand.length<HAND_SIZE && state.eDeck.length) state.eHand.push(state.eDeck.pop());
+      // limpiar tablero
+      state.lanes = Array.from({length: LANES}, () => ({ p:null, e:null }));
 
-    renderBoard(); renderHand(); updateHUD();
-    setBanner('Nueva ronda: arrastra cartas mientras tengas monedas');
-    state.turn = 'player';
+      // comprobar fin
+      if(state.pScore >= TARGET_SCORE || state.eScore >= TARGET_SCORE){
+        endTitle.textContent = state.pScore>=TARGET_SCORE ? '¡Victoria!' : 'Derrota';
+        endLine.textContent = `Puntos: Tú ${state.pScore} · 🤖 ${state.eScore}`;
+        endOverlay.classList.add('visible');
+        renderBoard(); updateHUD(); return;
+      }
+
+      // nueva ronda
+      state.round += 1;
+      state.playerPassed = false; state.enemyPassed = false;
+
+      // robar hasta 5
+      while(state.pHand.length<HAND_SIZE && state.pDeck.length) state.pHand.push(state.pDeck.pop());
+      while(state.eHand.length<HAND_SIZE && state.eDeck.length) state.eHand.push(state.eDeck.pop());
+
+      // turno vuelve a jugador y gana +1 moneda al inicio de su turno
+      state.turn = 'player';
+      state.pCoins += 1;
+
+      renderBoard(); renderHand(); updateHUD();
+      setBanner('Nueva ronda: arrastra cartas mientras tengas monedas');
+    }, 400);
+  }
+
+  function checkBothPassedThenScore(){
+    if(!bothHavePassed()) return;
+    scoreRoundAndCleanup();
   }
 
   // ---------- New game ----------
   function newGame(){
-    state.round=1; state.pCoinsBase=3; state.eCoinsBase=3;
+    state.round=1;
     state.pCoins=3; state.eCoins=3;
     state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
@@ -380,9 +374,11 @@
   passBtn.addEventListener('click', ()=>{
     if(state.turn!=='player' || state.resolving) return;
     state.playerPassed = true;
+
+    // Al empezar turno del rival: cambiamos turno y sumamos su +1 en enemyTurn()
     state.turn = 'enemy';
     setBanner('Turno rival…');
-    enemyTurn();             // la IA decide y al terminar se marca enemyPassed y se puntúa si toca
+    enemyTurn();
   });
 
   // bloquear clicks fuera de paneles cuando overlay
