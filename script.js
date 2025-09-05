@@ -22,28 +22,38 @@
   const passBtn = $('#passBtn');
   const faceBtn = $('#faceBtn');
 
+  // ZOOM overlay
+  const zoomOverlay = $('#zoomOverlay');
+  const zoomWrap = $('#zoomCardWrap');
+  const closeZoomBtn = $('#closeZoomBtn');
+
   // ---------- State ----------
   const START_HP = 10;
   const LANES = 3;
 
   const state = {
     pHP: START_HP, eHP: START_HP,
-    attacker: 'player',     // 'player' | 'enemy' (quién PUEDE atacar en la fase de acción)
+    attacker: 'player',     // 'player' | 'enemy'
     resolving: false,
     phase: 'placing',       // 'placing' | 'action'
-    lanes: Array.from({length: LANES}, () => ({ p: null, e: null })), // {hp, pw}
+    lanes: Array.from({length: LANES}, () => ({ p: null, e: null })), // {hp, pw, name, art}
     pDeck: [], eDeck: [], pHand: [], eHand: [],
     selectedAttackerLane: null
   };
 
-  // ---------- Decks / hands ----------
-  function makeDeck(){
-    // 18 cartas: Vida 2–7, Fuerza 1–6
+  // ---------- Card model ----------
+  function makeRandomCard(){
+    const hp = rand(2,7);
+    const pw = rand(1,6);
+    return { name:'', hp, pw, art:'' };
+  }
+  function makeDeck(withSpiderman=false){
     const d=[];
-    for(let i=0;i<18;i++){
-      const hp = rand(2,7);
-      const pw = rand(1,6);
-      d.push({hp, pw});
+    // 18 cartas aleatorias
+    for(let i=0;i<18;i++){ d.push(makeRandomCard()); }
+    // Si procede, insertamos la carta especial
+    if(withSpiderman){
+      d.push({ name:'Spiderman', hp:5, pw:6, art:'assets/Spiderman.png' });
     }
     // Fisher–Yates
     for(let i=d.length-1;i>0;i--){
@@ -66,13 +76,21 @@
     el.dataset.index = String(index);
     el.dataset.hp = String(card.hp);
     el.dataset.pw = String(card.pw);
-    el.innerHTML = `${badgeHP(card.hp)} ${badgePW(card.pw)} <div class="big">${card.hp}/${card.pw}</div><div class="label">Arrastra (reemplaza si hay)</div>`;
+    el.dataset.name = card.name || '';
+    el.dataset.art = card.art || '';
+    el.innerHTML = `${badgeHP(card.hp)} ${badgePW(card.pw)} <div class="big">${card.hp}/${card.pw}</div><div class="label">${card.name ? card.name : 'Arrastra (ver: tocar)'}</div>`;
     attachDragHandlers(el);
-    // Tap rápido: si hay una única línea libre, jugar directo; si no, resaltar
-    el.addEventListener('click', ()=>{
-      if(state.resolving || state.phase!=='placing') return;
-      const free = [0,1,2]; // con reemplazo permitido, cualquiera vale
-      toast('Arrastra sobre la línea que quieras (puedes reemplazar)');
+    // Tap para abrir ZOOM (sin jugar)
+    el.addEventListener('click', (ev)=>{
+      if(state.resolving) return;
+      // Evita que un click justo tras drag dispare el zoom
+      if(Date.now() - (el._lastDragUpTime||0) < 150) return;
+      openZoom({
+        name: el.dataset.name || 'Carta',
+        hp: parseInt(el.dataset.hp,10),
+        pw: parseInt(el.dataset.pw,10),
+        art: el.dataset.art || ''
+      });
     });
     return el;
   }
@@ -103,10 +121,6 @@
         el.className = 'placed enemy';
         el.innerHTML = `${badgeHP(e.hp)} ${badgePW(e.pw)} <div class="big">${e.hp}/${e.pw}</div>`;
         es.appendChild(el);
-        // Si has seleccionado atacante, estos pueden ser target
-        if(state.phase==='action' && state.attacker==='player' && state.selectedAttackerLane!==null){
-          es.parentElement.querySelector('.slot.enemy')?.classList.add('targetable');
-        }
       }
     }
   }
@@ -144,6 +158,23 @@
     }
   }
 
+  // ---------- ZOOM ----------
+  function openZoom(card){
+    zoomWrap.innerHTML = `
+      <div class="zoom-card">
+        <div class="zoom-badge hp">❤️ ${card.hp}</div>
+        <div class="zoom-badge pw">⚔️ ${card.pw}</div>
+        <div class="art">${card.art ? `<img src="${card.art}" alt="${card.name}">` : ''}</div>
+        <div class="name">${card.name || 'Carta'}</div>
+      </div>
+      <p class="zoom-text">Arrastra desde la mano para jugarla. Tocar solo abre esta vista.</p>
+    `;
+    zoomOverlay.classList.add('visible');
+  }
+  function closeZoom(){ zoomOverlay.classList.remove('visible'); }
+  closeZoomBtn.addEventListener('click', closeZoom);
+  zoomOverlay.addEventListener('click', (e)=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
+
   // ---------- Drag & drop (con reemplazo) ----------
   let ghost=null, dragging=null, startRect=null;
 
@@ -161,6 +192,8 @@
     document.body.appendChild(ghost);
     moveGhost(e.clientX,e.clientY);
     highlightPlayerSlots(true);
+    // cerrar zoom si estaba abierto
+    zoomOverlay.classList.remove('visible');
 
     const move = ev=> moveGhost(ev.clientX, ev.clientY);
     const up = ev=>{
@@ -183,6 +216,7 @@
         ghost.style.top =(startRect.top +startRect.height/2)+'px';
         setTimeout(removeGhost, 110);
       }
+      el._lastDragUpTime = Date.now();
       dragging=null;
     };
     window.addEventListener('pointermove', move, {passive:false});
@@ -230,22 +264,8 @@
   }
 
   function enemyPlaceCard(){
-    const free = [0,1,2]; // con reemplazo permitido, puede elegir cualquier línea
     if(!state.eHand.length) return;
-
-    // Heurística: si el rival atacará, intenta poner donde NO tengamos carta (si daño directo fuera posible más tarde).
-    // Si defenderá, intenta oponerse a una carta nuestra.
-    let laneChoice = null;
-
-    if(state.attacker==='enemy'){
-      // Colocar donde tú no tengas (o aleatorio)
-      const candidates = free.filter(i => !state.lanes[i].p);
-      laneChoice = candidates.length ? candidates[rand(0,candidates.length-1)] : rand(0,2);
-    } else {
-      const opp = free.filter(i => !!state.lanes[i].p);
-      laneChoice = opp.length ? opp[rand(0,opp.length-1)] : rand(0,2);
-    }
-
+    const laneChoice = rand(0,2); // con reemplazo: cualquiera
     // Elegir carta: si atacará, prioriza ⚔; si defenderá, prioriza ❤️
     let chosenIdx = 0, bestScore = -1;
     if(state.attacker==='enemy'){
@@ -253,7 +273,6 @@
     } else {
       state.eHand.forEach((c,idx)=>{ const sc=c.hp*2 + c.pw; if(sc>bestScore){bestScore=sc; chosenIdx=idx;} });
     }
-
     const eCard = state.eHand.splice(chosenIdx,1)[0];
     state.lanes[laneChoice].e = { ...eCard }; // reemplaza si estaba ocupada
   }
@@ -265,26 +284,21 @@
     updateAttackerUI();
     renderBoard();
 
-    // Mostrar/ocultar barra de acción
     if(state.attacker==='player'){
       actionBar.classList.remove('hidden');
       actionMsg.textContent = 'Toca una de tus cartas para atacar o pulsa Pasar';
-      faceBtn.classList.add('hidden'); // se mostrará si el rival no tiene cartas
+      faceBtn.classList.add('hidden');
       if(defenderHasNoCards('enemy')) faceBtn.classList.remove('hidden');
 
       passBtn.onclick = () => { endActionPhase(); };
-
-      // seleccionar atacante al tocar carta en renderBoard -> selectAttacker(i)
       faceBtn.onclick = () => {
         if(!defenderHasNoCards('enemy')) return;
         if(state.selectedAttackerLane===null){
-          toast('Primero elige con qué carta atacas');
-          return;
+          toast('Primero elige con qué carta atacas'); return;
         }
         resolveAttack(state.selectedAttackerLane, null); // null = atacar jugador
       };
     } else {
-      // IA ataca tras breve pausa
       actionBar.classList.add('hidden');
       setTimeout(()=> {
         enemyAttack();
@@ -313,29 +327,22 @@
     if(!state.lanes[laneIdx].p) return;
     state.selectedAttackerLane = laneIdx;
 
-    // mostrar posibilidad de atacar a jugador si no tiene cartas
     if(defenderHasNoCards('enemy')) faceBtn.classList.remove('hidden'); else faceBtn.classList.add('hidden');
 
-    // resaltar objetivos enemigos (solo slots con carta)
     highlightEnemyTargets(true);
 
-    // escuchar taps sobre slots enemigos para elegir objetivo
     for(let i=0;i<LANES;i++){
       const slot = slotsEnemy[i];
       slot.onclick = null;
       if(state.lanes[i].e){
-        slot.onclick = () => {
-          resolveAttack(laneIdx, i);
-        };
+        slot.onclick = () => { resolveAttack(laneIdx, i); };
       }
     }
     toast('Elige objetivo');
   }
 
-  // --- Resolución de ataque (fromLane = atacante; targetLane=null => jugador) ---
+  // --- Resolución de ataque ---
   function resolveAttack(fromLane, targetLane){
-    const atkSide = 'player';
-    const defSide = 'enemy';
     const A = state.lanes[fromLane].p;
     if(!A){ toast('No hay atacante'); return; }
 
@@ -357,12 +364,12 @@
       toast('Bloqueado ⚔️→🛡', 'rgba(255,215,107,.9)');
     } else if(raw >= D.hp){
       const overflow = raw - D.hp;
-      state.lanes[targetLane].e = null; // destruir
+      state.lanes[targetLane].e = null;
       state.eHP = Math.max(0, state.eHP - overflow);
       updateHP();
       toast(overflow>0 ? `¡Destruyes la carta! Exceso -${overflow} PV` : '¡Destruyes la carta!', 'rgba(123,255,154,.9)');
     } else {
-      D.hp -= raw; // daño persistente
+      D.hp -= raw;
       toast(`Daño ${raw}`, 'rgba(123,255,154,.9)');
     }
     renderBoard();
@@ -372,9 +379,7 @@
 
   // --- IA ataque ---
   function enemyAttack(){
-    // Si jugador no tiene cartas, atacar a jugador con la carta de mayor ⚔️
     if(!anyCards('player')){
-      // elegir atacante con mayor pw
       let bestLane = null, bestPw = -1;
       for(let i=0;i<LANES;i++){
         const c = state.lanes[i].e;
@@ -389,7 +394,6 @@
       return;
     }
 
-    // De lo contrario, buscar mejor objetivo: destruir carta si es posible; si no, máximo daño
     let atkLane = null, tgtLane = null, bestScore = -1;
     for(let i=0;i<LANES;i++){
       const A = state.lanes[i].e;
@@ -400,21 +404,15 @@
         let score = 0;
         if(raw >= D.hp){
           const overflow = raw - D.hp;
-          score = 100 + overflow; // destruir es muy valioso
+          score = 100 + overflow;
         } else {
           score = raw;
         }
         if(score > bestScore){ bestScore = score; atkLane=i; tgtLane=j; }
       }
     }
+    if(atkLane===null){ toast('El rival pasa'); return; }
 
-    if(atkLane===null){
-      // no tiene atacantes -> pasa
-      toast('El rival pasa');
-      return;
-    }
-
-    // Ejecutar ataque
     const A = state.lanes[atkLane].e;
     const D = state.lanes[tgtLane].p;
     const raw = Math.max(0, A.pw - D.pw);
@@ -452,7 +450,8 @@
     state.attacker='player'; updateAttackerUI();
     state.phase='placing'; setBannerPlacing();
     state.lanes = Array.from({length: LANES}, () => ({ p:null, e:null }));
-    state.pDeck = makeDeck(); state.eDeck = makeDeck();
+    state.pDeck = makeDeck(true);  // ✅ incluye Spiderman en tu mazo
+    state.eDeck = makeDeck(false);
     state.pHand=[]; state.eHand=[];
     drawToHand(); renderHand(); renderBoard();
     state.resolving=false;
@@ -468,9 +467,9 @@
 
   // Overlays: permitir clics en panel; bloquear fuera
   const gate = (e)=>{
-    const anyVisible = startOverlay.classList.contains('visible') || endOverlay.classList.contains('visible');
+    const anyVisible = startOverlay.classList.contains('visible') || endOverlay.classList.contains('visible') || zoomOverlay.classList.contains('visible');
     if(!anyVisible) return;
-    if(e.target.closest('.overlay .panel')) return;
+    if(e.target.closest('.overlay .panel, .zoom-panel')) return;
     e.stopPropagation(); e.preventDefault();
   };
   document.addEventListener('pointerdown', gate, {capture:true});
