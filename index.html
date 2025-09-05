@@ -3,60 +3,56 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <title>Duelo · 3 Líneas — Fase de Acción</title>
+  <title>Cartas — Coste & Puntos</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main id="game" aria-label="Duelo de cartas con 3 líneas">
+  <main id="game" aria-label="Cartas de coste y puntos">
     <header class="hud">
-      <h1 class="logo">Duelo · 3 Líneas</h1>
+      <h1 class="logo">Coste & Puntos</h1>
       <div class="score" aria-live="polite">
-        <span class="pill">Ataca: <strong id="whoAtk">Tú</strong></span>
-        <span>👤 PV <strong id="pHP">10</strong></span>
+        <span class="pill">Ronda <strong id="roundNo">1</strong></span>
+        <span class="pill">Tus monedas 💰 <strong id="pCoins">3</strong></span>
+        <span class="pill">Puntos 👤 <strong id="pScore">0</strong></span>
         <span>•</span>
-        <span>🤖 PV <strong id="eHP">10</strong></span>
+        <span class="pill">Monedas 🤖 <strong id="eCoins">3</strong></span>
+        <span class="pill">Puntos 🤖 <strong id="eScore">0</strong></span>
       </div>
       <button id="resetBtn" class="btn" aria-label="Reiniciar">↺</button>
     </header>
 
     <div class="turnbar">
-      <span class="who you" id="youTag">TÚ TURNO</span>
-      <span>⇄</span>
-      <span class="who" id="botTag">TURNO RIVAL</span>
-    </div>
-
-    <div id="phaseBanner" class="banner">Coloca una carta</div>
-
-    <div id="actionBar" class="actionbar hidden">
-      <span id="actionMsg" class="muted">Elige una de tus cartas para atacar o pulsa Pasar</span>
+      <span class="who you" id="turnTag">TU FASE</span>
       <div class="row-btns">
-        <button id="faceBtn" class="btn hidden">Atacar jugador</button>
-        <button id="passBtn" class="btn">Pasar</button>
+        <button id="passBtn" class="btn">Pasar turno</button>
       </div>
     </div>
+
+    <div id="phaseBanner" class="banner">Arrastra cartas mientras tengas monedas</div>
 
     <!-- Tablero con 3 líneas -->
     <section class="board" aria-label="Tablero de 3 líneas">
       <div class="row row-enemy">
         <div class="name">Rival</div>
         <div class="lanes">
-          <div class="slot enemy" data-side="enemy" data-lane="0" aria-label="Rival línea 1"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="1" aria-label="Rival línea 2"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="2" aria-label="Rival línea 3"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="0"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="1"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="2"></div>
         </div>
       </div>
 
-      <div class="center-hint">Arrastra una carta a una de tus 3 líneas (puedes reemplazar)</div>
+      <div class="center-hint">Coloca cartas en tus 3 líneas (puedes reemplazar)</div>
 
       <div class="row row-player">
         <div class="lanes">
-          <div class="slot" data-side="player" data-lane="0" aria-label="Tu línea 1"></div>
-          <div class="slot" data-side="player" data-lane="1" aria-label="Tu línea 2"></div>
-          <div class="slot" data-side="player" data-lane="2" aria-label="Tu línea 3"></div>
+          <div class="slot" data-side="player" data-lane="0"></div>
+          <div class="slot" data-side="player" data-lane="1"></div>
+          <div class="slot" data-side="player" data-lane="2"></div>
         </div>
         <div class="name">Tú</div>
       </div>
 
+      <!-- Mano -->
       <div class="hand-wrap">
         <div class="name">Tu mano (toca para ampliar, arrastra para jugar)</div>
         <div id="hand" class="hand" role="list"></div>
@@ -65,26 +61,14 @@
   </main>
 
   <!-- Overlays -->
-  <div id="startOverlay" class="overlay visible" role="dialog" aria-labelledby="startTitle">
+  <div id="startOverlay" class="overlay visible" role="dialog">
     <div class="panel">
-      <h2 id="startTitle">Fase de Acción Manual</h2>
+      <h2>Nuevo modo: Coste 💰 y Puntos ⭐</h2>
       <p class="muted">
-        Toca una carta de la mano para verla ampliada. Para jugarla, <b>arrástrala</b> a una línea (puedes <b>reemplazar</b> la tuya).<br>
-        Luego, el atacante elige: atacar con una de sus cartas o <b>pasar</b>. Daño directo al jugador solo si el defensor <b>no tiene cartas</b> en mesa.
+        Juega todas las cartas que puedas con tus monedas. Al colocar frente al rival, el mayor ⭐ destruye al menor (igual = ambos fuera).
+        Cuando ambos pasan, sumas los ⭐ de las cartas que queden a tus <b>puntos totales</b>. Nueva ronda: +1 moneda base y robar hasta 5.
       </p>
-      <div class="row-btns">
-        <button id="startBtn" class="btn">Jugar ▶</button>
-        <button id="howBtn" class="btn">¿Detalles?</button>
-      </div>
-      <details id="how" class="muted">
-        <summary>Reglas de daño</summary>
-        <ul>
-          <li>Daño = <code>max(0, ⚔ atacante − ⚔ defensor)</code>.</li>
-          <li>Si el daño ≥ ❤️ defensor ⇒ se destruye; el exceso resta PV.</li>
-          <li>Sin cartas defensoras ⇒ se permite “Atacar jugador”.</li>
-          <li>Vida persiste en mesa.</li>
-        </ul>
-      </details>
+      <button id="startBtn" class="btn">Jugar ▶</button>
     </div>
   </div>
 
@@ -100,9 +84,9 @@
   </div>
 
   <!-- ZOOM carta -->
-  <div id="zoomOverlay" class="overlay" role="dialog" aria-labelledby="zoomTitle" aria-modal="true">
+  <div id="zoomOverlay" class="overlay" role="dialog" aria-modal="true">
     <div class="zoom-panel">
-      <h2 id="zoomTitle" class="zoom-title">Vista de carta</h2>
+      <h2 class="zoom-title">Vista de carta</h2>
       <div id="zoomCardWrap"></div>
       <div class="row-btns">
         <button id="closeZoomBtn" class="btn">Cerrar</button>
