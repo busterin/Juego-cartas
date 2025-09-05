@@ -42,6 +42,8 @@
   };
 
   // ---------- Card model / decks ----------
+  const SPIDEY = { name:'Spiderman', hp:5, pw:6, art:'assets/Spiderman.png' };
+
   function makeRandomCard(){
     const hp = rand(2,7);
     const pw = rand(1,6);
@@ -53,19 +55,18 @@
     for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; }
     return d;
   }
-
-  // Always show Spiderman in opening hand
-  const SPIDEY = { name:'Spiderman', hp:5, pw:6, art:'assets/Spiderman.png' };
-
   function drawToHand(){
     while(state.pHand.length<5 && state.pDeck.length) state.pHand.push(state.pDeck.pop());
     while(state.eHand.length<5 && state.eDeck.length) state.eHand.push(state.eDeck.pop());
   }
 
-  // ---------- UI ----------
+  // ---------- UI helpers ----------
   const badgeHP = v => `<div class="badge b-hp" title="Vida">❤️<span>${v}</span></div>`;
   const badgePW = v => `<div class="badge b-pw" title="Fuerza">⚔️<span>${v}</span></div>`;
 
+  function artHTML(src){ return `<div class="art">${src ? `<img src="${src}" alt="">` : ""}</div>`; }
+
+  // ----- Hand card element (mini tipo Snap) -----
   function createCardEl(card, index){
     const el = document.createElement('div');
     el.className = 'card';
@@ -74,14 +75,17 @@
     el.dataset.pw = String(card.pw);
     el.dataset.name = card.name || '';
     el.dataset.art = card.art || '';
-    el.innerHTML = `${badgeHP(card.hp)} ${badgePW(card.pw)} <div class="big">${card.hp}/${card.pw}</div><div class="label">${card.name ? card.name : 'Toca para ver / Arrastra para jugar'}</div>`;
+    el.innerHTML = `
+      ${artHTML(el.dataset.art)}
+      ${badgeHP(card.hp)} ${badgePW(card.pw)}
+      <div class="label">${card.name || 'Carta'}</div>
+    `;
 
-    // Tap para abrir ZOOM (siempre con un toque)
+    // Tap: ZOOM inmediato (no juega)
     el.addEventListener('click', ()=>{
       openZoom({
         name: el.dataset.name || 'Carta',
-        hp: parseInt(el.dataset.hp,10),
-        pw: parseInt(el.dataset.pw,10),
+        hp: +el.dataset.hp, pw: +el.dataset.pw,
         art: el.dataset.art || ''
       });
     });
@@ -98,26 +102,33 @@
   function renderBoard(){
     for(let i=0;i<LANES;i++){
       const ps = slotsPlayer[i], es = slotsEnemy[i];
-      ps.innerHTML = ''; es.innerHTML = ''; // evita superposiciones
+      ps.innerHTML = ''; es.innerHTML = ''; // limpieza para evitar solapes
       const p = state.lanes[i].p, e = state.lanes[i].e;
 
       if(p){
-        const el = document.createElement('div');
-        el.className = 'placed';
-        if(state.phase==='action' && state.attacker==='player' && state.selectedAttackerLane===i) el.classList.add('attacker');
-        el.innerHTML = `${badgeHP(p.hp)} ${badgePW(p.pw)} <div class="big">${p.hp}/${p.pw}</div>`;
-        ps.appendChild(el);
+        const div = document.createElement('div');
+        div.className = 'placed' + (state.phase==='action' && state.attacker==='player' && state.selectedAttackerLane===i ? ' attacker' : '');
+        div.innerHTML = `
+          ${artHTML(p.art)}
+          ${badgeHP(p.hp)} ${badgePW(p.pw)}
+          <div class="name">${p.name || ''}</div>
+        `;
+        ps.appendChild(div);
 
-        // Selección/deselección por toque en tu turno de acción
+        // Selección/deselección en tu turno de acción (toggle)
         if(state.phase==='action' && state.attacker==='player'){
-          el.addEventListener('click', () => toggleSelectAttacker(i));
+          div.addEventListener('click', () => toggleSelectAttacker(i));
         }
       }
       if(e){
-        const el = document.createElement('div');
-        el.className = 'placed enemy';
-        el.innerHTML = `${badgeHP(e.hp)} ${badgePW(e.pw)} <div class="big">${e.hp}/${e.pw}</div>`;
-        es.appendChild(el);
+        const div = document.createElement('div');
+        div.className = 'placed enemy';
+        div.innerHTML = `
+          ${artHTML(e.art)}
+          ${badgeHP(e.hp)} ${badgePW(e.pw)}
+          <div class="name">${e.name || ''}</div>
+        `;
+        es.appendChild(div);
       }
     }
   }
@@ -152,7 +163,7 @@
       const es = slotsEnemy[i];
       const hasEnemy = !!state.lanes[i].e;
       es.classList.toggle('targetable', !!on && hasEnemy);
-      es.onclick = null; // limpia handlers antiguos
+      es.onclick = null;
       if(on && hasEnemy && state.attacker==='player' && state.selectedAttackerLane!==null){
         es.onclick = () => resolveAttack(state.selectedAttackerLane, i);
       }
@@ -163,9 +174,9 @@
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
+        <div class="art">${card.art ? `<img src="${card.art}" alt="${card.name}">` : ''}</div>
         <div class="zoom-badge hp">❤️ ${card.hp}</div>
         <div class="zoom-badge pw">⚔️ ${card.pw}</div>
-        <div class="art">${card.art ? `<img src="${card.art}" alt="${card.name}">` : ''}</div>
         <div class="name">${card.name || 'Carta'}</div>
       </div>
       <p class="zoom-text">Arrastra desde la mano para jugarla. Tocar solo abre esta vista.</p>
@@ -187,13 +198,19 @@
     const el = e.currentTarget; dragging = el;
     el.setPointerCapture(e.pointerId);
     startRect = el.getBoundingClientRect();
+
+    // ghost con arte
     ghost = document.createElement('div');
     ghost.className='ghost';
-    ghost.innerHTML = `${badgeHP(el.dataset.hp)} ${badgePW(el.dataset.pw)} <div class="big">${el.dataset.hp}/${el.dataset.pw}</div>`;
+    ghost.innerHTML = `
+      ${artHTML(el.dataset.art)}
+      ${badgeHP(el.dataset.hp)} ${badgePW(el.dataset.pw)}
+      <div class="label">${el.dataset.name || 'Carta'}</div>
+    `;
     document.body.appendChild(ghost);
     moveGhost(e.clientX,e.clientY);
     highlightPlayerSlots(true);
-    closeZoom(); // por si estaba abierto
+    closeZoom();
 
     const move = ev=> moveGhost(ev.clientX, ev.clientY);
     const up = ev=>{
@@ -228,14 +245,13 @@
   function laneIndexUnderPointer(x,y){
     for(let i=0;i<LANES;i++){
       const r = slotsPlayer[i].getBoundingClientRect();
-      const over = (x>=r.left && x<=r.right && y>=r.top && y<=r.bottom);
-      if(over) return i;
+      if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom) return i;
     }
     return -1;
   }
   function centerOf(el){ const r=el.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
 
-  // ---------- Helpers de board ----------
+  // ---------- Helpers ----------
   const anyCards = (side) => state.lanes.some(l => !!l[side]);
   const defenderHasNoCards = (defSide) => !anyCards(defSide);
 
@@ -246,12 +262,12 @@
 
     state.resolving = true;
 
-    // Player places (con reemplazo)
+    // Colocar (reemplaza si ocupada)
     const pCard = state.pHand.splice(handIndex,1)[0];
     state.lanes[laneIndex].p = { ...pCard };
     renderHand(); renderBoard();
 
-    // Enemy places (con reemplazo también)
+    // Rival coloca (reemplazo permitido)
     setTimeout(()=>{
       enemyPlaceCard();
       renderBoard();
@@ -264,9 +280,8 @@
 
   function enemyPlaceCard(){
     if(!state.eHand.length) return;
-    const laneChoice = rand(0,2); // con reemplazo: cualquiera
-
-    // Elegir carta: si atacará, prioriza ⚔; si defenderá, prioriza ❤️
+    const laneChoice = rand(0,2);
+    // priorizar ⚔ si ataca; ❤️ si defiende
     let chosenIdx = 0, bestScore = -1;
     if(state.attacker==='enemy'){
       state.eHand.forEach((c,idx)=>{ const sc=c.pw*2 + c.hp; if(sc>bestScore){bestScore=sc; chosenIdx=idx;} });
@@ -300,7 +315,6 @@
   }
 
   function updateFaceButton(){
-    // Daño directo solo si el defensor NO tiene cartas
     faceBtn.classList.toggle('hidden', !defenderHasNoCards('enemy'));
     faceBtn.onclick = () => {
       if(defenderHasNoCards('enemy')){
@@ -315,9 +329,8 @@
     highlightEnemyTargets(false);
     actionBar.classList.add('hidden');
 
-    // Robar y alternar atacante; volver a fase de colocación
-    drawToHand();
-    renderHand();
+    // Robar y alternar atacante; volver a “Coloca una carta”
+    drawToHand(); renderHand();
     state.attacker = (state.attacker==='player') ? 'enemy' : 'player';
     updateAttackerUI();
     state.phase = 'placing';
@@ -330,7 +343,6 @@
     if(!state.lanes[laneIdx].p) return;
 
     if(state.selectedAttackerLane === laneIdx){
-      // deseleccionar
       state.selectedAttackerLane = null;
       highlightEnemyTargets(false);
       renderBoard();
@@ -339,7 +351,7 @@
     }
     state.selectedAttackerLane = laneIdx;
     highlightEnemyTargets(true);
-    renderBoard(); // para marcar la carta seleccionada
+    renderBoard();
     updateFaceButton();
     toast('Elige objetivo');
   }
@@ -352,8 +364,7 @@
     if(targetLane===null){
       if(!defenderHasNoCards('enemy')){ toast('El rival aún tiene cartas'); return; }
       state.eHP = Math.max(0, state.eHP - A.pw);
-      updateHP();
-      renderBoard();
+      updateHP(); renderBoard();
       if(checkEnd()) return;
       endActionPhase();
       return;
@@ -380,9 +391,8 @@
     endActionPhase();
   }
 
-  // --- IA ataque ---
+  // --- IA ataque (cara solo si no hay cartas del jugador) ---
   function enemyAttack(){
-    // Cara solo si jugador no tiene cartas
     if(!anyCards('player')){
       let bestLane = null, bestPw = -1;
       for(let i=0;i<LANES;i++){
@@ -398,7 +408,7 @@
       return;
     }
 
-    // Si hay cartas, NO puede ir a cara: busca mejor objetivo
+    // buscar mejor objetivo
     let atkLane = null, tgtLane = null, bestScore = -1;
     for(let i=0;i<LANES;i++){
       const A = state.lanes[i].e;
@@ -406,13 +416,7 @@
       for(let j=0;j<LANES;j++){
         const D = state.lanes[j].p; if(!D) continue;
         const raw = Math.max(0, A.pw - D.pw);
-        let score = 0;
-        if(raw >= D.hp){
-          const overflow = raw - D.hp;
-          score = 100 + overflow; // destruir > dañar
-        } else {
-          score = raw;
-        }
+        const score = raw >= D.hp ? (100 + (raw - D.hp)) : raw;
         if(score > bestScore){ bestScore = score; atkLane=i; tgtLane=j; }
       }
     }
@@ -436,7 +440,7 @@
     renderBoard();
   }
 
-  // ---------- Fin de partida ----------
+  // ---------- Fin ----------
   function checkEnd(){
     if(state.pHP<=0 || state.eHP<=0){
       const win = state.pHP>0;
@@ -448,37 +452,35 @@
     return false;
   }
 
-  // ---------- New game / controls ----------
-  function setBannerPlacing(){ setBanner('Coloca una carta'); }
+  // ---------- New game ----------
   function newGame(){
     state.pHP = START_HP; state.eHP = START_HP; updateHP();
     state.attacker='player'; updateAttackerUI();
-    state.phase='placing'; setBannerPlacing();
+    state.phase='placing'; setBanner('Coloca una carta');
     state.lanes = Array.from({length: LANES}, () => ({ p:null, e:null }));
 
-    // Tu mazo: mano inicial con Spiderman garantizado
-    state.pDeck = makeDeckRandom(18);
-    state.pHand = [ { ...SPIDEY } ]; // Spiderman en mano
+    // Tu mano: Spiderman garantizado + 4 aleatorias con posible arte vacío
+    state.pDeck = makeDeckRandom(20);
+    state.pHand = [ { ...SPIDEY } ];
     drawToHand();
 
-    // Mazo enemigo
-    state.eDeck = makeDeckRandom(18);
-    state.eHand = [];
-    drawToHand();
+    // Enemigo
+    state.eDeck = makeDeckRandom(20);
+    state.eHand = []; drawToHand();
 
     renderHand(); renderBoard();
     state.resolving=false;
     state.selectedAttackerLane = null;
   }
 
+  // ---------- Controls ----------
   $('#resetBtn').addEventListener('click', ()=>{ newGame(); toast('Partida reiniciada'); });
-
   $('#startBtn').addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
   $('#howBtn').addEventListener('click', ()=>{ const d=$('#how'); d.open=!d.open; });
   $('#againBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
   $('#menuBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
 
-  // Overlays: permitir clics en panel; bloquear fuera
+  // Overlays: permitir clics dentro del panel; bloquear fuera
   const gate = (e)=>{
     const anyVisible = startOverlay.classList.contains('visible') || endOverlay.classList.contains('visible') || zoomOverlay.classList.contains('visible');
     if(!anyVisible) return;
@@ -487,6 +489,4 @@
   };
   document.addEventListener('pointerdown', gate, {capture:true});
   document.addEventListener('click', gate, {capture:true});
-
-  // ---------- Init (espera "Jugar") ----------
 })();
