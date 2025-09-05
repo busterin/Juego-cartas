@@ -517,15 +517,18 @@
         startOverlay.classList.add('visible');
       });
 
-      // Seguridad: pausar inputs mientras overlay
-      const blockWhenOverlay = (e) => {
-        if (startOverlay.classList.contains('visible') || endOverlay.classList.contains('visible')){
-          e.stopPropagation(); e.preventDefault();
-        }
-      };
-      document.addEventListener('pointerdown', blockWhenOverlay, {capture:true});
-      document.addEventListener('click', blockWhenOverlay, {capture:true});
-
+      // ✅ Bloquea solo clics FUERA del panel cuando el overlay está visible
+const blockWhenOverlay = (e) => {
+  const anyVisible = startOverlay.classList.contains('visible') || endOverlay.classList.contains('visible');
+  if (!anyVisible) return;
+  // Permitir interacción con los controles del overlay (panel y su contenido)
+  if (e.target.closest('.overlay .panel')) return;
+  // Bloquear clics en el resto de la página
+  e.stopPropagation();
+  e.preventDefault();
+};
+document.addEventListener('pointerdown', blockWhenOverlay, {capture:true});
+document.addEventListener('click', blockWhenOverlay, {capture:true});
       // Ajustes al cambiar tamaño (solo para resaltar hitbox)
       const ro = new ResizeObserver(()=>{ /* layout responsive sin JS extra */ });
       ro.observe(document.body);
