@@ -12,6 +12,10 @@
   /* Cartas */
   --card-w: clamp(66px, 17vw, 96px);
   --card-h: calc(var(--card-w) * 1.4);
+
+  /* Animaciones */
+  --score-float-dur: 900ms;
+  --vanish-dur: 700ms;
 }
 
 /* Base */
@@ -69,7 +73,7 @@ body{
 }
 
 /* Board */
-.board{ display:grid; gap:10px; }
+.board{ display:grid; gap:10px; position:relative; }
 .row{ display:grid; grid-template-columns: auto 1fr; align-items:center; gap:8px; }
 .row-player{ grid-template-columns: 1fr auto; }
 .name{ color:var(--muted); font-weight:700; font-size:.95rem; }
@@ -148,6 +152,35 @@ body{
   transform: translate(-50%, -50%) scale(1.06);
   transition: left .12s ease, top .12s ease;
   border:1px solid rgba(255,255,255,.35);
+}
+
+/* —— Animaciones de puntuación —— */
+.score-float{
+  position:absolute; z-index:50;
+  padding:6px 10px; border-radius:12px;
+  background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.2);
+  font-weight:900; color:#eaf2ff;
+  left:50%; transform:translateX(-50%);
+  animation: scoreFloat var(--score-float-dur) ease-out both;
+}
+.score-float.you{ top:10%; }
+.score-float.enemy{ top:20%; }
+
+@keyframes scoreFloat{
+  0%{ opacity:0; transform:translate(-50%, 8px) scale(.9); }
+  15%{ opacity:1; transform:translate(-50%, 0) scale(1); }
+  70%{ opacity:1; }
+  100%{ opacity:0; transform:translate(-50%, -14px) scale(.98); }
+}
+
+/* Desvanecer cartas al limpiar tablero */
+.vanish{
+  animation: vanish var(--vanish-dur) ease-in forwards;
+}
+@keyframes vanish{
+  0%{ opacity:1; transform:scale(1); }
+  60%{ opacity:.3; transform:scale(.96); filter: blur(0px); }
+  100%{ opacity:0; transform:scale(.94); filter: blur(2px); }
 }
 
 /* Overlays / Toasts */
