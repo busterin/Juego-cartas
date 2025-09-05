@@ -51,6 +51,21 @@ body{
 .who.you{ outline:2px solid rgba(105,240,255,.4); }
 .who.bot{ outline:2px solid rgba(255,108,132,.4); }
 
+/* Banner de fase y acción */
+.banner{
+  text-align:center; font-weight:800; color:#d7e6ff;
+  border:1px solid var(--panel-br); background:var(--panel);
+  padding:8px 10px; border-radius:10px; box-shadow:var(--glow);
+}
+.actionbar{
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  border:1px solid var(--panel-br); background:var(--panel);
+  padding:8px 10px; border-radius:10px; box-shadow:var(--glow);
+}
+.actionbar.hidden{ display:none; }
+.row-btns{ display:flex; gap:8px; flex-wrap:wrap; }
+.hidden{ display:none !important; }
+
 /* Board */
 .board{ display:grid; gap:12px; }
 .row{ display:grid; grid-template-columns: auto 1fr; align-items:center; gap:10px; }
@@ -69,6 +84,7 @@ body{
 }
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
 .slot.highlight{ box-shadow: 0 0 0 3px rgba(105,240,255,.35); transform: scale(1.02); }
+.slot.targetable{ outline:3px solid rgba(255,215,107,.65); }
 
 .center-hint{
   text-align:center; color:var(--muted); font-weight:700;
@@ -94,7 +110,9 @@ body{
   scroll-snap-align:center; transition: transform .12s ease, box-shadow .12s ease; display:grid; place-items:center;
 }
 .card:hover{ transform: translateY(-2px); }
+.card.attacker{ outline:3px solid rgba(123,255,154,.65); }
 
+/* Badges y contenido */
 .badge{
   position:absolute; top:6px; width:30px; height:30px; border-radius:8px;
   display:grid; place-items:center; font-size:.9rem; border:1px solid rgba(255,255,255,.25);
@@ -146,7 +164,6 @@ body{
   border:1px solid var(--panel-br); padding:18px; border-radius:16px; box-shadow:var(--glow); text-align:center;
 }
 .panel h2{ margin-top:0 }
-.row-btns{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
 
 #toasts{ position:fixed; left:50%; top:18%; transform:translateX(-50%); z-index:200; display:grid; gap:6px; }
 .toast{
