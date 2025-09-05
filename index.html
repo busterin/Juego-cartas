@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <title>Duelo 3 Líneas — 10 PV</title>
+  <title>Duelo · 3 Líneas — Fase de Acción</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -20,9 +20,21 @@
     </header>
 
     <div class="turnbar">
-      <span class="who you" id="youTag">Tú</span>
+      <span class="who you" id="youTag">TÚ TURNO</span>
       <span>⇄</span>
-      <span class="who bot" id="botTag">🤖</span>
+      <span class="who" id="botTag">TURNO RIVAL</span>
+    </div>
+
+    <!-- Banner de fase -->
+    <div id="phaseBanner" class="banner">Coloca una carta</div>
+
+    <!-- Barra de acción (solo en tu turno de ataque) -->
+    <div id="actionBar" class="actionbar hidden">
+      <span id="actionMsg" class="muted">Elige una de tus cartas para atacar o pulsa Pasar</span>
+      <div class="row-btns">
+        <button id="faceBtn" class="btn hidden">Atacar jugador</button>
+        <button id="passBtn" class="btn">Pasar</button>
+      </div>
     </div>
 
     <!-- Tablero con 3 líneas -->
@@ -38,7 +50,7 @@
       </div>
 
       <!-- Separador / hints -->
-      <div class="center-hint">Arrastra una carta a una de tus 3 líneas</div>
+      <div class="center-hint">Arrastra una carta a una de tus 3 líneas (puedes reemplazar)</div>
 
       <!-- Fila Jugador -->
       <div class="row row-player">
@@ -61,10 +73,10 @@
   <!-- Overlays -->
   <div id="startOverlay" class="overlay visible" role="dialog" aria-labelledby="startTitle">
     <div class="panel">
-      <h2 id="startTitle">Vida persistente + 3 líneas</h2>
+      <h2 id="startTitle">Fase de Acción Manual</h2>
       <p class="muted">
-        Cada turno ambos juegan 1 carta (si hay hueco). Luego <b>ataca el jugador inicial</b> del turno (alterna).<br>
-        Si no hay carta enfrente, el daño va directo a los PV del jugador.
+        Cada turno ambos colocan 1 carta (puedes <b>reemplazar</b> la tuya). Luego el <b>atacante</b> decide: elegir una de sus cartas y seleccionar objetivo, o <b>pasar</b>.<br>
+        <u>Daño directo al jugador</u> solo si el defensor <b>no tiene ninguna carta</b> en mesa.
       </p>
       <div class="row-btns">
         <button id="startBtn" class="btn">Jugar ▶</button>
@@ -74,9 +86,9 @@
         <summary>Reglas de daño</summary>
         <ul>
           <li>Daño en línea = <code>max(0, ⚔ atacante − ⚔ defensor)</code>.</li>
-          <li>Si el daño ≥ ❤️ defensor ⇒ destruye y el exceso daña los PV del jugador.</li>
-          <li>Si no hay defensor ⇒ daño = ⚔ atacante a los PV del jugador.</li>
-          <li>Las cartas <b>permanecen</b> con su ❤️ restante.</li>
+          <li>Si el daño ≥ ❤️ defensor ⇒ se destruye; el exceso resta PV al jugador.</li>
+          <li>Sin defensor en mesa ⇒ puedes atacar al jugador (si y solo si no tiene cartas).</li>
+          <li>Las cartas mantienen su ❤️ restante en mesa.</li>
         </ul>
       </details>
     </div>
