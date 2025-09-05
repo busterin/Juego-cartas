@@ -49,7 +49,6 @@
         </div>
       </div>
 
-      <!-- Separador / hints -->
       <div class="center-hint">Arrastra una carta a una de tus 3 líneas (puedes reemplazar)</div>
 
       <!-- Fila Jugador -->
@@ -64,19 +63,19 @@
 
       <!-- Mano -->
       <div class="hand-wrap">
-        <div class="name">Tu mano</div>
+        <div class="name">Tu mano (toca para ver, arrastra para jugar)</div>
         <div id="hand" class="hand" role="list"></div>
       </div>
     </section>
   </main>
 
-  <!-- Overlays -->
+  <!-- Overlay: inicio -->
   <div id="startOverlay" class="overlay visible" role="dialog" aria-labelledby="startTitle">
     <div class="panel">
       <h2 id="startTitle">Fase de Acción Manual</h2>
       <p class="muted">
-        Cada turno ambos colocan 1 carta (puedes <b>reemplazar</b> la tuya). Luego el <b>atacante</b> decide: elegir una de sus cartas y seleccionar objetivo, o <b>pasar</b>.<br>
-        <u>Daño directo al jugador</u> solo si el defensor <b>no tiene ninguna carta</b> en mesa.
+        Toca una carta de la mano para verla ampliada. Para jugarla, <b>arrástrala</b> a una línea (puedes <b>reemplazar</b> la tuya).<br>
+        Luego, el atacante elige: atacar con una de sus cartas o <b>pasar</b>. Daño directo al jugador solo si el defensor <b>no tiene cartas</b> en mesa.
       </p>
       <div class="row-btns">
         <button id="startBtn" class="btn">Jugar ▶</button>
@@ -94,6 +93,7 @@
     </div>
   </div>
 
+  <!-- Overlay: fin -->
   <div id="endOverlay" class="overlay" role="dialog" aria-live="polite">
     <div class="panel">
       <h2 id="endTitle">Resultado</h2>
@@ -101,6 +101,17 @@
       <div class="row-btns">
         <button id="againBtn" class="btn">Jugar de nuevo</button>
         <button id="menuBtn" class="btn">Menú</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay: ZOOM de carta -->
+  <div id="zoomOverlay" class="overlay" role="dialog" aria-labelledby="zoomTitle" aria-modal="true">
+    <div class="zoom-panel">
+      <h2 id="zoomTitle" class="zoom-title">Vista de carta</h2>
+      <div id="zoomCardWrap"></div>
+      <div class="row-btns">
+        <button id="closeZoomBtn" class="btn">Cerrar</button>
       </div>
     </div>
   </div>
