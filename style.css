@@ -79,15 +79,12 @@ body{
   border-radius:14px; display:grid; place-items:center;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
   transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-  position:relative; overflow:visible;
+  position:relative; overflow:visible; z-index:0;
 }
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
 .slot.highlight{ box-shadow: 0 0 0 3px rgba(105,240,255,.35); transform: scale(1.02); }
 .slot.targetable{ outline:3px solid rgba(255,215,107,.65); }
-
-.center-hint{
-  text-align:center; color:var(--muted); font-weight:700;
-}
+.slot > *{ z-index:1; } /* evita superposición visual rara */
 
 /* Hand */
 .hand-wrap{ display:grid; gap:6px; }
@@ -100,7 +97,7 @@ body{
 
 /* Card (mano y tablero) */
 .card{
-  position:relative; flex:0 0 auto;
+  position:relative; flex:0 0 auto; z-index:1;
   width: clamp(74px, 18vw, 100px); aspect-ratio: 5/7;
   border-radius:12px; border:1px solid rgba(255,255,255,.18);
   background: linear-gradient(160deg, var(--card1) 0%, var(--card2) 60%);
@@ -130,7 +127,7 @@ body{
   background: linear-gradient(160deg, #20326d 0%, #0e142d 60%);
   border:1px solid rgba(255,255,255,.25);
   box-shadow: 0 6px 24px rgba(0,0,0,.55), inset 0 0 22px rgba(255,255,255,.06);
-  font-size: clamp(22px, 6.5vw, 34px);
+  font-size: clamp(22px, 6.5vw, 34px); z-index:1;
 }
 .placed.enemy{
   background: linear-gradient(160deg, #5a1f35 0%, #1c0f1a 60%);
@@ -214,7 +211,7 @@ body{
 .zoom-badge.pw{ right:8px; color:#ffd76b; }
 .zoom-text{ color:var(--muted); margin:0 auto 8px auto; max-width: 460px; }
 
-/* Responsive tweaks */
+/* Responsive */
 @media (max-width: 520px){
   .lanes{ gap:6px }
 }
