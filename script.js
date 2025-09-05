@@ -16,21 +16,29 @@
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
   const toasts = $('#toasts');
 
+  const phaseBanner = $('#phaseBanner');
+  const actionBar = $('#actionBar');
+  const actionMsg = $('#actionMsg');
+  const passBtn = $('#passBtn');
+  const faceBtn = $('#faceBtn');
+
   // ---------- State ----------
   const START_HP = 10;
   const LANES = 3;
 
   const state = {
     pHP: START_HP, eHP: START_HP,
-    attacker: 'player',  // 'player' | 'enemy' alterna cada turno
+    attacker: 'player',     // 'player' | 'enemy' (quién PUEDE atacar en la fase de acción)
     resolving: false,
+    phase: 'placing',       // 'placing' | 'action'
     lanes: Array.from({length: LANES}, () => ({ p: null, e: null })), // {hp, pw}
-    pDeck: [], eDeck: [], pHand: [], eHand: []
+    pDeck: [], eDeck: [], pHand: [], eHand: [],
+    selectedAttackerLane: null
   };
 
   // ---------- Decks / hands ----------
   function makeDeck(){
-    // 18 cartas: Vida 2–7, Fuerza 1–6 (distribución simple)
+    // 18 cartas: Vida 2–7, Fuerza 1–6
     const d=[];
     for(let i=0;i<18;i++){
       const hp = rand(2,7);
@@ -43,7 +51,6 @@
     }
     return d;
   }
-
   function drawToHand(){
     while(state.pHand.length<5 && state.pDeck.length) state.pHand.push(state.pDeck.pop());
     while(state.eHand.length<5 && state.eDeck.length) state.eHand.push(state.eDeck.pop());
@@ -59,19 +66,13 @@
     el.dataset.index = String(index);
     el.dataset.hp = String(card.hp);
     el.dataset.pw = String(card.pw);
-    el.innerHTML = `${badgeHP(card.hp)} ${badgePW(card.pw)} <div class="big">${card.hp}/${card.pw}</div><div class="label">Arrastra</div>`;
+    el.innerHTML = `${badgeHP(card.hp)} ${badgePW(card.pw)} <div class="big">${card.hp}/${card.pw}</div><div class="label">Arrastra (reemplaza si hay)</div>`;
     attachDragHandlers(el);
+    // Tap rápido: si hay una única línea libre, jugar directo; si no, resaltar
     el.addEventListener('click', ()=>{
-      // tap rápido: elegir línea disponible si hay solo una; si hay varias, resaltarlas
-      const free = freePlayerLanes();
-      if(state.resolving) return;
-      if(!free.length){ toast('No tienes huecos en tus líneas'); return; }
-      if(free.length===1){ playFromHandToLane(parseInt(el.dataset.index,10), free[0]); }
-      else {
-        // resaltar slots y esperar drag; o jugar al primero por comodidad
-        toast('Elige una línea (arrastra)');
-        highlightPlayerSlots(true);
-      }
+      if(state.resolving || state.phase!=='placing') return;
+      const free = [0,1,2]; // con reemplazo permitido, cualquiera vale
+      toast('Arrastra sobre la línea que quieras (puedes reemplazar)');
     });
     return el;
   }
@@ -82,22 +83,30 @@
   }
 
   function renderBoard(){
-    // Limpia slots y vuelve a pintar cartas persistentes
     for(let i=0;i<LANES;i++){
       const ps = slotsPlayer[i], es = slotsEnemy[i];
       ps.innerHTML = ''; es.innerHTML = '';
       const p = state.lanes[i].p, e = state.lanes[i].e;
       if(p){
         const el = document.createElement('div');
-        el.className = 'placed';
+        el.className = 'placed' + (state.phase==='action' && state.attacker==='player' ? ' attacker-candidate' : '');
         el.innerHTML = `${badgeHP(p.hp)} ${badgePW(p.pw)} <div class="big">${p.hp}/${p.pw}</div>`;
         ps.appendChild(el);
+        // Click para elegir atacante en tu turno
+        if(state.phase==='action' && state.attacker==='player'){
+          el.classList.add('card','attacker');
+          el.addEventListener('click', () => selectAttacker(i), {once:false});
+        }
       }
       if(e){
         const el = document.createElement('div');
         el.className = 'placed enemy';
         el.innerHTML = `${badgeHP(e.hp)} ${badgePW(e.pw)} <div class="big">${e.hp}/${e.pw}</div>`;
         es.appendChild(el);
+        // Si has seleccionado atacante, estos pueden ser target
+        if(state.phase==='action' && state.attacker==='player' && state.selectedAttackerLane!==null){
+          es.parentElement.querySelector('.slot.enemy')?.classList.add('targetable');
+        }
       }
     }
   }
@@ -106,12 +115,14 @@
     pHPEl.textContent = state.pHP;
     eHPEl.textContent = state.eHP;
   }
-
   function updateAttackerUI(){
     whoAtkEl.textContent = state.attacker === 'player' ? 'Tú' : '🤖';
     youTag.classList.toggle('you', state.attacker==='player');
     botTag.classList.toggle('bot', state.attacker==='enemy');
+    youTag.textContent = 'TÚ TURNO';
+    botTag.textContent = 'TURNO RIVAL';
   }
+  function setBanner(text){ phaseBanner.textContent = text; }
 
   function toast(msg, color=''){
     const t = document.createElement('div');
@@ -125,15 +136,22 @@
   function highlightPlayerSlots(on){
     slotsPlayer.forEach(s => s.classList.toggle('highlight', !!on));
   }
+  function highlightEnemyTargets(on){
+    for(let i=0;i<LANES;i++){
+      const es = slotsEnemy[i];
+      const hasEnemy = !!state.lanes[i].e;
+      es.classList.toggle('targetable', !!on && hasEnemy);
+    }
+  }
 
-  // ---------- Drag & drop ----------
+  // ---------- Drag & drop (con reemplazo) ----------
   let ghost=null, dragging=null, startRect=null;
 
   function attachDragHandlers(cardEl){
     cardEl.addEventListener('pointerdown', onDown, {passive:false});
   }
   function onDown(e){
-    if(state.resolving) return;
+    if(state.resolving || state.phase!=='placing') return;
     const el = e.currentTarget; dragging = el;
     el.setPointerCapture(e.pointerId);
     startRect = el.getBoundingClientRect();
@@ -184,28 +202,18 @@
   }
   function centerOf(el){ const r=el.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
 
-  function freePlayerLanes(){
-    const arr=[];
-    for(let i=0;i<LANES;i++){ if(!state.lanes[i].p) arr.push(i); }
-    return arr;
-  }
-  function freeEnemyLanes(){
-    const arr=[];
-    for(let i=0;i<LANES;i++){ if(!state.lanes[i].e) arr.push(i); }
-    return arr;
-  }
+  // ---------- Helpers de board ----------
+  const anyCards = (side) => state.lanes.some(l => !!l[side]);
+  const defenderHasNoCards = (defSide) => !anyCards(defSide);
 
-  // ---------- Play flow ----------
+  // ---------- Colocar / turno ----------
   function playFromHandToLane(handIndex, laneIndex){
-    if(state.resolving) return;
+    if(state.resolving || state.phase!=='placing') return;
     if(handIndex<0 || handIndex>=state.pHand.length) return;
 
-    if(state.lanes[laneIndex].p){
-      toast('Esa línea ya está ocupada'); return;
-    }
     state.resolving = true;
 
-    // Player places
+    // Player places (con reemplazo)
     const pCard = state.pHand.splice(handIndex,1)[0];
     state.lanes[laneIndex].p = { ...pCard };
     renderHand(); renderBoard();
@@ -215,42 +223,30 @@
       enemyPlaceCard();
       renderBoard();
 
-      // Resolve attacks for current attacker
-      setTimeout(()=>{
-        resolveTurnDamage();
-        if(checkEnd()) return;
-
-        // Draw new cards
-        drawToHand();
-        renderHand();
-
-        // Alternate attacker and end
-        state.attacker = (state.attacker==='player') ? 'enemy' : 'player';
-        updateAttackerUI();
-        state.resolving = false;
-      }, 450);
-    }, 350);
+      // Entrar en fase de acción (sin auto-ataque)
+      enterActionPhase();
+      state.resolving = false;
+    }, 300);
   }
 
   function enemyPlaceCard(){
-    const free = freeEnemyLanes();
-    if(!state.eHand.length || !free.length){ return; }
+    const free = [0,1,2]; // con reemplazo permitido, puede elegir cualquier línea
+    if(!state.eHand.length) return;
 
-    // Simple heuristic: si enemigo ataca, intenta poner en una línea vacía enfrente de un hueco para pegar a PV;
-    // si defiende, intenta oponerse donde tú tengas carta.
+    // Heurística: si el rival atacará, intenta poner donde NO tengamos carta (si daño directo fuera posible más tarde).
+    // Si defenderá, intenta oponerse a una carta nuestra.
     let laneChoice = null;
 
     if(state.attacker==='enemy'){
-      // Prefiere una línea donde tú NO tienes carta (para daño directo)
-      const candidate = free.find(i => !state.lanes[i].p);
-      laneChoice = (candidate!==undefined) ? candidate : free[rand(0, free.length-1)];
+      // Colocar donde tú no tengas (o aleatorio)
+      const candidates = free.filter(i => !state.lanes[i].p);
+      laneChoice = candidates.length ? candidates[rand(0,candidates.length-1)] : rand(0,2);
     } else {
-      // Prefiere una línea donde tú SÍ tienes carta y su slot está libre
-      const options = free.filter(i => !!state.lanes[i].p);
-      laneChoice = options.length ? options[rand(0, options.length-1)] : free[rand(0, free.length-1)];
+      const opp = free.filter(i => !!state.lanes[i].p);
+      laneChoice = opp.length ? opp[rand(0,opp.length-1)] : rand(0,2);
     }
 
-    // Elegir carta: si ataca, prioriza ⚔; si defiende, prioriza ❤️.
+    // Elegir carta: si atacará, prioriza ⚔; si defenderá, prioriza ❤️
     let chosenIdx = 0, bestScore = -1;
     if(state.attacker==='enemy'){
       state.eHand.forEach((c,idx)=>{ const sc=c.pw*2 + c.hp; if(sc>bestScore){bestScore=sc; chosenIdx=idx;} });
@@ -259,45 +255,185 @@
     }
 
     const eCard = state.eHand.splice(chosenIdx,1)[0];
-    state.lanes[laneChoice].e = { ...eCard };
+    state.lanes[laneChoice].e = { ...eCard }; // reemplaza si estaba ocupada
   }
 
-  // ---------- Damage resolution ----------
-  function resolveTurnDamage(){
-    const atk = state.attacker;           // 'player' | 'enemy'
-    const def = atk==='player' ? 'enemy' : 'player';
+  // ---------- Fase de acción ----------
+  function enterActionPhase(){
+    state.phase = 'action';
+    setBanner(state.attacker==='player' ? 'Elige atacante y objetivo' : 'El rival decidirá su ataque');
+    updateAttackerUI();
+    renderBoard();
 
+    // Mostrar/ocultar barra de acción
+    if(state.attacker==='player'){
+      actionBar.classList.remove('hidden');
+      actionMsg.textContent = 'Toca una de tus cartas para atacar o pulsa Pasar';
+      faceBtn.classList.add('hidden'); // se mostrará si el rival no tiene cartas
+      if(defenderHasNoCards('enemy')) faceBtn.classList.remove('hidden');
+
+      passBtn.onclick = () => { endActionPhase(); };
+
+      // seleccionar atacante al tocar carta en renderBoard -> selectAttacker(i)
+      faceBtn.onclick = () => {
+        if(!defenderHasNoCards('enemy')) return;
+        if(state.selectedAttackerLane===null){
+          toast('Primero elige con qué carta atacas');
+          return;
+        }
+        resolveAttack(state.selectedAttackerLane, null); // null = atacar jugador
+      };
+    } else {
+      // IA ataca tras breve pausa
+      actionBar.classList.add('hidden');
+      setTimeout(()=> {
+        enemyAttack();
+        endActionPhase();
+      }, 600);
+    }
+  }
+
+  function endActionPhase(){
+    state.selectedAttackerLane = null;
+    highlightEnemyTargets(false);
+    actionBar.classList.add('hidden');
+
+    // Robar y alternar atacante; volver a fase de colocación
+    drawToHand();
+    renderHand();
+    state.attacker = (state.attacker==='player') ? 'enemy' : 'player';
+    updateAttackerUI();
+    state.phase = 'placing';
+    setBanner('Coloca una carta');
+  }
+
+  // --- Selección de atacante (jugador) y objetivos ---
+  function selectAttacker(laneIdx){
+    if(state.attacker!=='player' || state.phase!=='action') return;
+    if(!state.lanes[laneIdx].p) return;
+    state.selectedAttackerLane = laneIdx;
+
+    // mostrar posibilidad de atacar a jugador si no tiene cartas
+    if(defenderHasNoCards('enemy')) faceBtn.classList.remove('hidden'); else faceBtn.classList.add('hidden');
+
+    // resaltar objetivos enemigos (solo slots con carta)
+    highlightEnemyTargets(true);
+
+    // escuchar taps sobre slots enemigos para elegir objetivo
     for(let i=0;i<LANES;i++){
-      const lane = state.lanes[i];
-      const A = atk==='player' ? lane.p : lane.e;
-      if(!A) continue; // no ataca si no hay carta
+      const slot = slotsEnemy[i];
+      slot.onclick = null;
+      if(state.lanes[i].e){
+        slot.onclick = () => {
+          resolveAttack(laneIdx, i);
+        };
+      }
+    }
+    toast('Elige objetivo');
+  }
 
-      const D = def==='player' ? lane.p : lane.e;
+  // --- Resolución de ataque (fromLane = atacante; targetLane=null => jugador) ---
+  function resolveAttack(fromLane, targetLane){
+    const atkSide = 'player';
+    const defSide = 'enemy';
+    const A = state.lanes[fromLane].p;
+    if(!A){ toast('No hay atacante'); return; }
 
-      if(D){
-        // Daño = max(0, atk.pw - def.pw)
+    if(targetLane===null){
+      if(!defenderHasNoCards('enemy')){ toast('El rival aún tiene cartas'); return; }
+      state.eHP = Math.max(0, state.eHP - A.pw);
+      updateHP();
+      renderBoard();
+      if(checkEnd()) return;
+      endActionPhase();
+      return;
+    }
+
+    const D = state.lanes[targetLane].e;
+    if(!D){ toast('Objetivo inválido'); return; }
+
+    const raw = Math.max(0, A.pw - D.pw);
+    if(raw===0){
+      toast('Bloqueado ⚔️→🛡', 'rgba(255,215,107,.9)');
+    } else if(raw >= D.hp){
+      const overflow = raw - D.hp;
+      state.lanes[targetLane].e = null; // destruir
+      state.eHP = Math.max(0, state.eHP - overflow);
+      updateHP();
+      toast(overflow>0 ? `¡Destruyes la carta! Exceso -${overflow} PV` : '¡Destruyes la carta!', 'rgba(123,255,154,.9)');
+    } else {
+      D.hp -= raw; // daño persistente
+      toast(`Daño ${raw}`, 'rgba(123,255,154,.9)');
+    }
+    renderBoard();
+    if(checkEnd()) return;
+    endActionPhase();
+  }
+
+  // --- IA ataque ---
+  function enemyAttack(){
+    // Si jugador no tiene cartas, atacar a jugador con la carta de mayor ⚔️
+    if(!anyCards('player')){
+      // elegir atacante con mayor pw
+      let bestLane = null, bestPw = -1;
+      for(let i=0;i<LANES;i++){
+        const c = state.lanes[i].e;
+        if(c && c.pw > bestPw){ bestPw = c.pw; bestLane = i; }
+      }
+      if(bestLane!==null){
+        state.pHP = Math.max(0, state.pHP - state.lanes[bestLane].e.pw);
+        updateHP();
+        toast(`El rival golpea directo -${state.lanes[bestLane].e.pw} PV`, 'rgba(255,108,132,.9)');
+      }
+      renderBoard();
+      return;
+    }
+
+    // De lo contrario, buscar mejor objetivo: destruir carta si es posible; si no, máximo daño
+    let atkLane = null, tgtLane = null, bestScore = -1;
+    for(let i=0;i<LANES;i++){
+      const A = state.lanes[i].e;
+      if(!A) continue;
+      for(let j=0;j<LANES;j++){
+        const D = state.lanes[j].p; if(!D) continue;
         const raw = Math.max(0, A.pw - D.pw);
-        if(raw===0){ continue; }
+        let score = 0;
         if(raw >= D.hp){
           const overflow = raw - D.hp;
-          // destruir carta defensora
-          if(def==='player'){ lane.p = null; state.pHP = Math.max(0, state.pHP - overflow); }
-          else { lane.e = null; state.eHP = Math.max(0, state.eHP - overflow); }
-        }else{
-          // reducir vida persistente
-          D.hp -= raw;
+          score = 100 + overflow; // destruir es muy valioso
+        } else {
+          score = raw;
         }
-      } else {
-        // Sin defensor: daño directo = ⚔ atacante
-        if(def==='player'){ state.pHP = Math.max(0, state.pHP - A.pw); }
-        else { state.eHP = Math.max(0, state.eHP - A.pw); }
+        if(score > bestScore){ bestScore = score; atkLane=i; tgtLane=j; }
       }
     }
 
-    updateHP();
+    if(atkLane===null){
+      // no tiene atacantes -> pasa
+      toast('El rival pasa');
+      return;
+    }
+
+    // Ejecutar ataque
+    const A = state.lanes[atkLane].e;
+    const D = state.lanes[tgtLane].p;
+    const raw = Math.max(0, A.pw - D.pw);
+    if(raw===0){
+      toast('Bloqueas el ataque', 'rgba(255,215,107,.9)');
+    } else if(raw >= D.hp){
+      const overflow = raw - D.hp;
+      state.lanes[tgtLane].p = null;
+      state.pHP = Math.max(0, state.pHP - overflow);
+      updateHP();
+      toast(overflow>0 ? `Te destruye una carta (-${overflow} PV)` : 'Te destruye una carta', 'rgba(255,108,132,.9)');
+    } else {
+      D.hp -= raw;
+      toast(`Recibes ${raw} de daño a carta`, 'rgba(255,108,132,.9)');
+    }
     renderBoard();
   }
 
+  // ---------- Fin de partida ----------
   function checkEnd(){
     if(state.pHP<=0 || state.eHP<=0){
       const win = state.pHP>0;
@@ -310,14 +446,17 @@
   }
 
   // ---------- New game / controls ----------
+  function setBannerPlacing(){ setBanner('Coloca una carta'); }
   function newGame(){
     state.pHP = START_HP; state.eHP = START_HP; updateHP();
     state.attacker='player'; updateAttackerUI();
+    state.phase='placing'; setBannerPlacing();
     state.lanes = Array.from({length: LANES}, () => ({ p:null, e:null }));
     state.pDeck = makeDeck(); state.eDeck = makeDeck();
     state.pHand=[]; state.eHand=[];
     drawToHand(); renderHand(); renderBoard();
     state.resolving=false;
+    state.selectedAttackerLane = null;
   }
 
   $('#resetBtn').addEventListener('click', ()=>{ newGame(); toast('Partida reiniciada'); });
@@ -327,7 +466,7 @@
   $('#againBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
   $('#menuBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
 
-  // Permitir clics dentro del panel de overlay; bloquear fuera
+  // Overlays: permitir clics en panel; bloquear fuera
   const gate = (e)=>{
     const anyVisible = startOverlay.classList.contains('visible') || endOverlay.classList.contains('visible');
     if(!anyVisible) return;
