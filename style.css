@@ -58,7 +58,7 @@ body{
 .portrait{ display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; min-width:0; }
 .portrait.enemy{ justify-self:end; }
 
-/* SIN marco: solo los emojis (quitamos clip, border, fondo, sombra) */
+/* SIN marco: solo los emojis */
 .frame.hex{
   width:var(--hex); height:var(--hex);
   background:transparent; border:none; border-radius:0; clip-path:none; box-shadow:none;
@@ -147,28 +147,57 @@ body{
 /* ===== Cartas base / ghost ===== */
 .card, .ghost{
   border-radius:12px; border:1px solid rgba(255,255,255,.18); overflow:hidden; background:#0f1633;
-  user-select:none; touch-action:none;
+  user-select:none; touch-action:none; position:relative;
 }
 .card .art, .ghost .art{ position:absolute; inset:0; }
 .card .art img, .ghost .art img{
   width:100%; height:100%; object-fit:cover; /* sin bordes negros */
 }
-.card::after, .ghost::after{
-  content:""; position:absolute; inset:0;
-  background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.5) 60%, rgba(0,0,0,.72));
-  pointer-events:none;
-}
+
+/* Tokens (coste/pts) */
 .token, .ghost .token{
   position:absolute; top:5px; width:28px; height:28px; border-radius:50%;
-  display:grid; place-items:center; font-size:.9rem; font-weight:900; z-index:2; color:#101010;
+  display:grid; place-items:center; font-size:.9rem; font-weight:900; z-index:3; color:#101010;
   box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35),
               0 0 0 1px rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.4);
 }
 .t-cost{ left:6px; background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .t-pts { right:6px; background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
-.label{
-  position:absolute; left:6px; right:6px; bottom:6px; z-index:2; color:#eaf2ff; font-size:.7rem; font-weight:900;
-  text-align:center; background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:4px 6px;
+
+/* Nombre arriba, centrado (entre los tokens) */
+.name-top{
+  position:absolute;
+  top:6px; left:34px; right:34px;
+  text-align:center;
+  font-weight:900;
+  font-size:.7rem;
+  color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,.6);
+  z-index:3;
+  background:rgba(0,0,0,.28);
+  border-radius:8px;
+  padding:2px 4px;
+}
+
+/* Descripción abajo */
+.desc{
+  position:absolute;
+  left:6px; right:6px; bottom:6px;
+  z-index:3;
+  font-size:.55rem;
+  color:#e0e8ff;
+  text-align:center;
+  line-height:1.2;
+  background:rgba(0,0,0,.25);
+  border-radius:6px;
+  padding:2px 4px;
+}
+
+/* Sombra superior para legibilidad */
+.card::after, .ghost::after, .placed::after{
+  content:""; position:absolute; inset:0;
+  background: linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,0) 35%, rgba(0,0,0,.55) 75%);
+  pointer-events:none; z-index:2;
 }
 
 /* Ghost drag */
@@ -216,18 +245,24 @@ body{
 .zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
 .zoom-card .art img{ width:100%; height:100%; object-fit:cover; } /* sin bordes negros */
 .zoom-card .zoom-token{
-  position:absolute; top:10px; width:40px; height:40px; border-radius:50%;
+  position:absolute; top:12px; width:44px; height:44px; border-radius:50%;
   display:grid; place-items:center; font-weight:900; color:#101010;
   box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35),
               0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42);
-  font-size:1rem;
+  font-size:1.05rem; z-index:3;
 }
-.zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
-.zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
-.zoom-card .name{
-  position:absolute; left:10px; right:10px; bottom:12px;
-  text-align:center; font-weight:900; background: rgba(255,255,255,.1);
-  border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:10px 12px; color:#eaf2ff;
+.zoom-card .zoom-token.cost{ left:12px; background: radial-gradient(#ffeaa3, #e1a700); }
+.zoom-card .zoom-token.pts{ right:12px; background: radial-gradient(#b6ffd1, #20b86a); }
+.zoom-card .name-top{
+  position:absolute; top:12px; left:58px; right:58px;
+  transform:none; text-align:center;
+  font-size:1rem; font-weight:900; color:#fff;
+  background:rgba(0,0,0,.35); padding:6px 10px; border-radius:10px; z-index:3;
+}
+.zoom-card .desc{
+  position:absolute; bottom:12px; left:12px; right:12px;
+  font-size:.85rem; line-height:1.25; text-align:center; color:#eaf2ff;
+  background:rgba(0,0,0,.28); padding:8px 10px; border-radius:10px; z-index:3;
 }
 
 /* Toast central de turno */
@@ -258,4 +293,6 @@ body{
     --lanes-gap: 8px; --slot-inset:5px;
     --slotH: clamp(120px, 20vh, 180px);
   }
+  .name-top{ top:5px; font-size:.66rem; }
+  .desc{ font-size:.5rem; }
 }
