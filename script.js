@@ -29,12 +29,12 @@
 
   const state = {
     round: 1,
-    pCoins: 3, eCoins: 3,     // empiezas con 3
+    pCoins: 3, eCoins: 3,
     pScore: 0, eScore: 0,
     pDeck: [], eDeck: [],
     pHand: [], eHand: [],
-    center: Array.from({length: SLOTS}, () => ({ p:null, e:null })), // columnas (0..5)
-    turn: 'player', // 'player' | 'enemy'
+    center: Array.from({length: SLOTS}, () => ({ p:null, e:null })),
+    turn: 'player',
     playerPassed: false,
     enemyPassed: false,
     resolving: false
@@ -80,7 +80,7 @@
   closeZoomBtn.addEventListener('click', closeZoom);
   $('#zoomOverlay').addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
 
-  // ===== Hand (abanico dinámico, ajustado al ancho visible) =====
+  // ===== Hand (más separada) =====
   function createHandCardEl(card, index, total){
     const el = document.createElement('div');
     el.className = 'card';
@@ -96,14 +96,16 @@
       <div class="label">${card.name || 'Carta'}</div>
     `;
 
-    // Posición en abanico: 10%..90% para que no se salga
-    const margin = 10; // %
+    // Distribución 8%..92% + desplazamiento extra por carta para separarlas
+    const margin = 8; // %
     const leftPct = (total === 1) ? 50 : margin + (index)*( (100 - margin*2) / (total-1) );
     const mid = (total - 1) / 2;
-    const angle = (index - mid) * 8; // grados
+    const angle = (index - mid) * 10; // más ángulo ⇒ más separación visual
+    const extraPx = (index - mid) * 14; // desplazamiento adicional en px
 
     el.style.setProperty('--x', `calc(${leftPct}% - 50%)`);
     el.style.setProperty('--rot', `${angle}deg`);
+    el.style.setProperty('--off', `${extraPx}px`);
 
     // Zoom al tocar
     el.addEventListener('click', ()=> openZoom({name:el.dataset.name||'Carta', cost:+el.dataset.cost, pts:+el.dataset.pts, art:el.dataset.art||''}));
@@ -204,7 +206,6 @@
   function moveGhost(x,y){ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
   function removeGhost(){ ghost?.remove(); ghost=null; }
   function laneIndexUnderPointer(x,y){
-    // slots de jugador (0..5) están en dos filas de 3; basta comprobar todos
     for(let i=0;i<SLOTS;i++){
       const r = slotsPlayer[i].getBoundingClientRect();
       if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom) return i;
