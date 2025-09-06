@@ -1,10 +1,8 @@
 :root{
-  /* Tema */
   --bg1:#0b0f1e; --bg2:#151b36; --ink:#eaf2ff; --muted:#a5b3cc;
   --panel:rgba(255,255,255,.06); --panel-br:rgba(255,255,255,.14);
   --glow:0 10px 30px rgba(0,0,0,.45), inset 0 0 40px rgba(255,255,255,.035);
 
-  /* Layout base */
   --game-max:760px;
   --gap:10px;
 
@@ -13,12 +11,10 @@
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
 
-  /* Tablero centrado */
-  --board-h: clamp(220px, 36vh, 320px);   /* Altura TOTAL del bloque tablero */
-  --lanes-gap: 8px;                       /* separación entre slots */
-  --slot-ratio: 2/3;                      /* más “baja”, estilo Snap */
-  --slot-inset: 5px;                      /* padding interno de la carta */
-  --slot-br: 12px;
+  /* Tablero centrado y grande */
+  --lanes-gap: 10px;
+  --slot-inset: 6px;
+  --slot-br: 14px;
 
   --bottom-pad: 10px;
 }
@@ -39,8 +35,8 @@ body{
   max-width: var(--game-max);
   margin-inline:auto;
   display: grid;
-  grid-template-rows: auto auto /* HUD+banner */
-                      1fr       /* zona flexible para CENTRAR el tablero */
+  grid-template-rows: auto auto /* HUD + banner */
+                      1fr       /* TABLERO ocupa todo lo que haya */
                       auto      /* mano */
                       auto;     /* footer */
   gap: var(--gap);
@@ -91,37 +87,38 @@ body{
   font-size:.86rem;
 }
 
-/* ===== TABLERO CENTRADO ===== */
+/* ===== TABLERO — ocupa todo y agranda los slots ===== */
 .board{
-  /* Esta fila ocupa 1fr. Centramos su contenido verticalmente: */
-  display:grid; place-items:center; min-height:0;
-}
-.board-inner{
-  width:100%;
-  max-width:var(--game-max);
-  height: var(--board-h);           /* ALTURA FIJA/RESPONSIVA DEL TABLERO */
-  display:flex; flex-direction:column; justify-content:center; gap:6px;
+  /* Grid de 3 filas: enemigo (1fr), hint (auto), jugador (1fr) */
+  display:grid;
+  grid-template-rows: 1fr auto 1fr;
+  gap: 6px;
+  align-items:stretch;
+  min-height:0;
 }
 .center-hint{
-  text-align:center; color:#aecdff; font-weight:700; font-size:.86rem;
+  text-align:center; color:#aecdff; font-weight:700; font-size:.86rem; line-height:1.1;
+  padding:0 0 2px;
 }
+
+/* Cada bloque de 6 huecos usa 100% de la altura disponible */
 .lanes-6x2{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 1fr;      /* 2 filas iguales */
   gap: var(--lanes-gap);
-  /* Los dos grids (enemigo y jugador) comparten la misma altura disponible */
+  height: 100%;             /* ¡clave! ocupa toda la fila (1fr) */
+  min-height:0;
 }
-.row-enemy .lanes-6x2,
-.row-player .lanes-6x2{
-  height: calc((var(--board-h) - 20px - 1.2em) / 2); /* resta hint + gaps */
-  min-height: 0;
-}
+
+/* Slots: quitamos aspect-ratio para que llenen la celda */
 .slot{
-  aspect-ratio: var(--slot-ratio);
+  /* sin aspect-ratio: el alto viene dado por la celda 1fr */
   border:2px dashed rgba(105,240,255,.35);
   border-radius:var(--slot-br);
   display:grid; place-items:center; position:relative;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
+  overflow:visible;
 }
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
 .placed{
@@ -132,7 +129,7 @@ body{
 }
 .placed .art, .placed .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 
-/* ===== Mano (separada y sin invadir tablero) ===== */
+/* ===== Mano (no invade el tablero) ===== */
 .hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; }
 .hand{ position:relative; width:100%; height:100%; }
 .hand .card{
@@ -148,7 +145,7 @@ body{
   z-index:10;
 }
 
-/* ===== Cartas base ===== */
+/* ===== Cartas base / tokens / ghost ===== */
 .card, .ghost{ border-radius:12px; border:1px solid rgba(255,255,255,.18); overflow:hidden; background:#0f1633; user-select:none; touch-action:none; }
 .card .art, .ghost .art{ position:absolute; inset:0; }
 .card .art img, .ghost .art img{ width:100%; height:100%; object-fit:cover; }
@@ -157,21 +154,17 @@ body{
 .t-cost{ left:6px; background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .t-pts { right:6px; background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 .label{ position:absolute; left:6px; right:6px; bottom:6px; z-index:2; color:#eaf2ff; font-size:.7rem; font-weight:900; text-align:center; background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:4px 6px; }
-
-/* Ghost drag */
 .ghost{ position:fixed; z-index:9999; pointer-events:none; width:var(--card-w); height:var(--card-h); transform: translate(-50%, -50%) scale(1.06); border:1px solid rgba(255,255,255,.35); border-radius:12px; }
 
-/* Score float */
+/* ===== Score float y footer ===== */
 .score-float{ position:absolute; z-index:50; padding:6px 10px; border-radius:12px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.2); font-weight:900; color:#eaf2ff; left:50%; transform:translateX(-50%); animation: scoreFloat 900ms ease-out both; }
 .score-float.you{ top:10%; } .score-float.enemy{ top:20%; }
 @keyframes scoreFloat{ 0%{ opacity:0; transform:translate(-50%, 8px) scale(.9) } 15%{ opacity:1; transform:translate(-50%, 0) scale(1) } 100%{ opacity:0; transform:translate(-50%, -14px) scale(.98) } }
-
-/* Footer */
 .bottom-bar{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; padding:8px 8px var(--bottom-pad); background: linear-gradient(180deg, rgba(5,8,18,0), rgba(5,8,18,.55)); }
 .btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
 .btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
 
-/* Overlays / Zoom */
+/* ===== Overlays / Zoom ===== */
 .overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100; }
 .overlay.visible{ opacity:1; pointer-events:auto; }
 .panel{ width:min(92%, 460px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); padding:16px; border-radius:16px; box-shadow:var(--glow); text-align:center; }
@@ -188,23 +181,24 @@ body{
 @media (max-height: 720px){
   :root{
     --hex: 52px; --round-sz: 44px; --meter-sz: 24px;
-    --board-h: clamp(200px, 34vh, 300px);
     --card-w: clamp(68px, 15vw, 102px);
   }
   .center-hint{ font-size:.8rem }
+  /* en pantallas bajas, reducimos un poco los gaps para aún más tamaño de slot */
+  .board{ gap: 4px }
+  .lanes-6x2{ gap: 8px }
 }
 @media (max-height: 640px){
   :root{
     --hex: 48px; --round-sz: 40px; --meter-sz: 22px;
-    --board-h: clamp(180px, 30vh, 260px);
     --card-w: clamp(62px, 14vw, 96px);
-    --lanes-gap: 7px; --slot-inset: 4px; --slot-ratio: 2/3;
+    --lanes-gap: 7px; --slot-inset: 4px;
   }
   .center-hint{ display:none }
   .hand-zone{ height: calc(var(--card-h) + 8px) }
   .btn{ padding:8px 12px }
+  .board{ gap: 4px }
 }
 @media (max-height: 560px){
-  :root{ --board-h: clamp(160px, 28vh, 220px); }
   .btn{ padding:7px 10px; border-radius:10px; }
 }
