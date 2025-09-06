@@ -89,14 +89,15 @@ body{
   padding:6px 8px; border-radius:10px; box-shadow:var(--glow);
 }
 
-/* Board */
-.board{ display:grid; gap:10px; position:relative; }
+/* Board ocupa el espacio y empuja la mano abajo */
+.board{ display:flex; flex-direction:column; gap:10px; position:relative; flex:1; }
 .row{ display:grid; grid-template-columns: auto 1fr; align-items:center; gap:8px; }
 .row-player{ grid-template-columns: 1fr auto; }
 .name{ color:var(--muted); font-weight:700; font-size:.95rem; }
 .center-hint{ text-align:center; color:var(--muted); font-weight:700; font-size:.9rem; }
 
 .lanes{ display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; }
+.lanes-5{ grid-template-columns: repeat(5, 1fr); }
 .slot{
   aspect-ratio: 5/3; border:2px dashed rgba(105,240,255,.35);
   border-radius:14px; display:grid; place-items:center;
@@ -106,8 +107,8 @@ body{
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
 .slot.highlight{ box-shadow: 0 0 0 3px rgba(105,240,255,.35); transform: scale(1.02); }
 
-/* Mano: siempre visible y con altura mínima */
-.hand-wrap{ display:grid; gap:6px; }
+/* Mano: pegada al fondo */
+.hand-wrap{ display:grid; gap:6px; margin-top:auto; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
 .hand{
   display:flex; gap:8px; overflow:auto; padding:6px;
   border:1px solid var(--panel-br); border-radius:12px; background:rgba(255,255,255,.04);
@@ -192,10 +193,8 @@ body{
   100%{ opacity:0; transform:translate(-50%, -14px) scale(.98); }
 }
 
-/* Desvanecer cartas al limpiar tablero */
-.vanish{
-  animation: vanish var(--vanish-dur) ease-in forwards;
-}
+/* (Opcional) desvanecer si en el futuro se eliminan por efectos */
+.vanish{ animation: vanish var(--vanish-dur) ease-in forwards; }
 @keyframes vanish{
   0%{ opacity:1; transform:scale(1); }
   60%{ opacity:.3; transform:scale(.96); filter: blur(0px); }
