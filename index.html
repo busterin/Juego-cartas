@@ -25,37 +25,41 @@
     </header>
 
     <div class="turnbar">
-      <span class="muted">Tu fase: juega todas las cartas que puedas</span>
+      <span class="muted">Tu fase: juega cartas mientras tengas monedas</span>
       <div class="row-btns">
         <button id="passBtn" class="btn">Pasar turno</button>
       </div>
     </div>
 
-    <div id="phaseBanner" class="banner">Arrastra cartas mientras tengas monedas</div>
+    <div id="phaseBanner" class="banner">Arrastra cartas a tus huecos (máx. 5)</div>
 
-    <!-- Tablero con 3 líneas -->
-    <section class="board" aria-label="Tablero de 3 líneas">
+    <!-- Tablero central con 5 columnas por bando -->
+    <section class="board" aria-label="Tablero central 5x2">
       <div class="row row-enemy">
         <div class="name">Rival</div>
-        <div class="lanes">
+        <div class="lanes lanes-5">
           <div class="slot enemy" data-side="enemy" data-lane="0"></div>
           <div class="slot enemy" data-side="enemy" data-lane="1"></div>
           <div class="slot enemy" data-side="enemy" data-lane="2"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="3"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="4"></div>
         </div>
       </div>
 
-      <div class="center-hint">Coloca cartas en tus 3 líneas (puedes reemplazar las tuyas)</div>
+      <div class="center-hint">Hasta 5 cartas por lado. Reemplazar tus propias cartas es posible.</div>
 
       <div class="row row-player">
-        <div class="lanes">
+        <div class="lanes lanes-5">
           <div class="slot" data-side="player" data-lane="0"></div>
           <div class="slot" data-side="player" data-lane="1"></div>
           <div class="slot" data-side="player" data-lane="2"></div>
+          <div class="slot" data-side="player" data-lane="3"></div>
+          <div class="slot" data-side="player" data-lane="4"></div>
         </div>
         <div class="name">Tú</div>
       </div>
 
-      <!-- Mano -->
+      <!-- Mano (abajo del todo) -->
       <div class="hand-wrap">
         <div class="name">Tu mano (toca para ampliar, arrastra para jugar)</div>
         <div id="hand" class="hand" role="list"></div>
@@ -68,10 +72,10 @@
     <div class="panel">
       <h2>Modo: Coste y Puntos</h2>
       <p class="muted">
-        Coloca cartas pagando su <b>coste</b> con tus monedas. Puedes jugar varias por turno.
-        No se destruyen al colocar (más adelante añadiremos efectos).
-        Al terminar ambos, se suman los <b>puntos</b> de las cartas que queden.
-        Cada <b>turno</b> ganas <b>+1</b> moneda.
+        Coloca cartas pagando su <b>coste</b> (💰). Puedes jugar varias por turno.
+        Las cartas <b>no se eliminan</b> al colocar (salvo efectos futuros) y <b>permanecen</b> entre turnos.
+        Al terminar ambos, se recolectan los <b>puntos</b> (⭐) de las cartas que sigan.
+        Cada <b>turno</b> ganas <b>+1</b> moneda al comenzar tu fase.
       </p>
       <button id="startBtn" class="btn">Jugar ▶</button>
     </div>
