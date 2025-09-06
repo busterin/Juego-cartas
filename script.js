@@ -33,13 +33,13 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cartas (stats aleatorios UNA VEZ; quedan fijos hasta recargar) ----------
+  // ---------- Cartas fijas ----------
   const CARDS = [
-    { name:'Spiderman', art:'assets/Spiderman.png',  cost: rand(1,4), pts: rand(2,6) },
-    { name:'Leonardo',  art:'assets/Leonardo.PNG',   cost: rand(1,4), pts: rand(2,6) },
-    { name:'Shepard',   art:'assets/Shepard.JPG',    cost: rand(1,4), pts: rand(2,6) },
-    { name:'Geralt',    art:'assets/Geralt.JPG',     cost: rand(1,4), pts: rand(2,6) },
-    { name:'Jill',      art:'assets/Jill.JPG',       cost: rand(1,4), pts: rand(2,6) }
+    { name:'Spiderman', art:'assets/Spiderman.png',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
+    { name:'Leonardo',  art:'assets/Leonardo.PNG',   cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
+    { name:'Shepard',   art:'assets/Shepard.JPG',    cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
+    { name:'Geralt',    art:'assets/Geralt.JPG',     cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
+    { name:'Jill',      art:'assets/Jill.JPG',       cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." }
   ];
 
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
@@ -51,41 +51,42 @@
     while(state.eHand.length<HAND_SIZE && state.eDeck.length) state.eHand.push(state.eDeck.pop());
   }
 
-  // ---------- Zoom (muestra Coste y Puntos) ----------
+  // ---------- Zoom ----------
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
         <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
         <div class="zoom-token cost">${card.cost}</div>
         <div class="zoom-token pts">${card.pts}</div>
-        <div class="name">${card.name||'Carta'}</div>
+        <div class="name-top">${card.name}</div>
+        <div class="desc">${card.text}</div>
       </div>`;
     zoomOverlay.classList.add('visible');
   }
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
   zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
 
-  // ---------- Mano (abanico más abierto) ----------
+  // ---------- Mano ----------
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
     el.className='card';
     el.dataset.index=i; el.dataset.cost=card.cost; el.dataset.pts=card.pts;
-    el.dataset.name=card.name||''; el.dataset.art=card.art||'';
-    el.innerHTML=`${artHTML(card.art)}${tokenCost(card.cost)}${tokenPts(card.pts)}<div class="label">${card.name||'Carta'}</div>`;
-
+    el.dataset.name=card.name; el.dataset.art=card.art; el.dataset.text=card.text;
+    el.innerHTML=`
+      ${artHTML(card.art)}
+      ${tokenCost(card.cost)}${tokenPts(card.pts)}
+      <div class="name-top">${card.name}</div>
+      <div class="desc">${card.text}</div>`;
     const margin=8;
     const leftPct = (n===1)?50: margin + i*((100-margin*2)/(n-1));
     const mid=(n-1)/2;
-    const angle=(i-mid)*12;   // antes 10 → más rotación
-    const extra=(i-mid)*22;   // antes 14 → más separación
+    const angle=(i-mid)*12;
+    const extra=(i-mid)*22;
     el.style.setProperty('--x',`calc(${leftPct}% - 50%)`);
     el.style.setProperty('--rot',`${angle}deg`);
     el.style.setProperty('--off',`${extra}px`);
 
-    el.addEventListener('click', ()=> openZoom({
-      name:el.dataset.name||'Carta',
-      cost:+el.dataset.cost, pts:+el.dataset.pts, art:el.dataset.art||''
-    }));
+    el.addEventListener('click', ()=> openZoom(card));
     attachDragHandlers(el);
     return el;
   }
@@ -99,14 +100,14 @@
       if(p){
         const d=document.createElement('div');
         d.className='placed';
-        d.innerHTML = `${artHTML(p.art)}${tokenPts(p.pts)}<div class="name">${p.name||''}</div>`;
+        d.innerHTML = `${artHTML(p.art)}${tokenPts(p.pts)}<div class="name-top">${p.name}</div><div class="desc">${p.text}</div>`;
         d.addEventListener('click', ()=> openZoom(p));
         ps.appendChild(d);
       }
       if(e){
         const d=document.createElement('div');
         d.className='placed enemy';
-        d.innerHTML = `${artHTML(e.art)}${tokenPts(e.pts)}<div class="name">${e.name||''}</div>`;
+        d.innerHTML = `${artHTML(e.art)}${tokenPts(e.pts)}<div class="name-top">${e.name}</div><div class="desc">${e.text}</div>`;
         d.addEventListener('click', ()=> openZoom(e));
         es.appendChild(d);
       }
@@ -120,7 +121,7 @@
     pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore;
   }
 
-  // ---------- Turn Toast ----------
+  // ---------- Toast ----------
   let toastTimer=null;
   function showTurnToast(text, ms=1200){
     const el = document.getElementById('turnToast');
@@ -138,7 +139,7 @@
     if(state.turn!=='player'||state.resolving) return;
     const src=e.currentTarget; src.setPointerCapture(e.pointerId);
     ghost=document.createElement('div'); ghost.className='ghost';
-    ghost.innerHTML=`${artHTML(src.dataset.art)}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="label">${src.dataset.name||'Carta'}</div>`;
+    ghost.innerHTML=`${artHTML(src.dataset.art)}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="name-top">${src.dataset.name}</div><div class="desc">${src.dataset.text}</div>`;
     document.body.appendChild(ghost); moveGhost(e.clientX,e.clientY);
     const move=ev=> moveGhost(ev.clientX,ev.clientY);
     const up=ev=>{
@@ -157,21 +158,14 @@
 
   // ---------- Reglas ----------
   const canAfford = c => state.pCoins>=c.cost;
-  const playerOccupancy = ()=> state.center.filter(c=>!!c.p).length;
-  const enemyOccupancy  = ()=> state.center.filter(c=>!!c.e).length;
-
   function tryPlayFromHandToSlot(handIndex, slotIndex){
     if(handIndex<0||handIndex>=state.pHand.length) return;
     const card=state.pHand[handIndex];
     if(!canAfford(card)) return;
-    const slot=state.center[slotIndex];
-    if(!slot.p && playerOccupancy()>=SLOTS) return;
-
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
     state.pHand.splice(handIndex,1);
     if(state.pDeck.length) state.pHand.push(state.pDeck.pop());
-
     renderHand(); renderBoard(); updateHUD();
   }
 
@@ -179,23 +173,19 @@
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     showTurnToast('TURNO RIVAL');
-
-    const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins) && enemyOccupancy()<SLOTS;
+    const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins);
     const tryPlayOnce=()=>{
       if(!canPlay()) return false;
       let best=-1,score=-1;
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
       const card=state.eHand[best];
-
       let target=-1;
       for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1) return false;
-
       state.eCoins-=card.cost; state.center[target].e={...card};
       state.eHand.splice(best,1); if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
       renderBoard(); updateHUD(); return true;
     };
-
     const loop=()=>{ if(!tryPlayOnce()){ state.enemyPassed=true; setTimeout(()=>{state.resolving=false; checkBothPassedThenScore();},500); return; } setTimeout(loop,200); };
     loop();
   }
@@ -211,22 +201,14 @@
     endOverlay.classList.add('visible');
   }
 
-  // ---------- Puntuación / cambio de ronda ----------
+  // ---------- Puntuación ----------
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
   function scoreTurn(){
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
     state.pScore+=p; state.eScore+=e; updateHUD();
-
-    if(state.round === 8){
-      setTimeout(endGame, 300);
-      return;
-    }
-
-    state.round+=1;
-    state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
-    drawToHand();
-    roundNoEl.textContent = state.round;
-    setTimeout(()=> showTurnToast('TU TURNO'), 250);
+    if(state.round === 8){ setTimeout(endGame, 300); return; }
+    state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
+    drawToHand(); roundNoEl.textContent = state.round; setTimeout(()=> showTurnToast('TU TURNO'), 250);
   }
   function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
 
@@ -235,29 +217,18 @@
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
-
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.eDeck = [...CARDS].sort(()=> Math.random()-0.5);
-
     state.pHand=[]; state.eHand=[];
-    drawToHand();
-
-    state.pCoins+=1;
-
+    drawToHand(); state.pCoins+=1;
     renderBoard(); renderHand(); updateHUD();
     showTurnToast('TU TURNO');
   }
 
   // ---------- Eventos ----------
-  startBtn.addEventListener('click', ()=>{
-    startOverlay.classList.remove('visible');
-    newGame();
-  });
+  startBtn.addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
   againBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
   menuBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
   resetBtn.addEventListener('click', ()=> newGame());
-  passBtn.addEventListener('click', ()=>{
-    if(state.turn!=='player'||state.resolving) return;
-    state.playerPassed=true; state.turn='enemy'; enemyTurn();
-  });
+  passBtn.addEventListener('click', ()=>{ if(state.turn!=='player'||state.resolving) return; state.playerPassed=true; state.turn='enemy'; enemyTurn(); });
 })();
