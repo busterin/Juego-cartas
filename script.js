@@ -1,10 +1,10 @@
 (() => {
-  // ---------- Helpers ----------
+  // Helpers
   const $  = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
   const rand = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
 
-  // ---------- Elements ----------
+  // Elements
   const handEl = $('#hand');
   const slotsPlayer = $$('.slot[data-side="player"]');
   const slotsEnemy  = $$('.slot[data-side="enemy"]');
@@ -16,12 +16,13 @@
 
   const startOverlay = $('#startOverlay');
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
-  const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
+
+  const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap'); const closeZoomBtn = $('#closeZoomBtn');
 
   const passBtn = $('#passBtn'); const resetBtn = $('#resetBtn');
 
-  // ---------- State ----------
-  const SLOTS = 6, HAND_SIZE = 5, TARGET_SCORE = 30;
+  // State
+  const SLOTS = 6, HAND_SIZE = 5;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
     pDeck: [], eDeck: [], pHand: [], eHand: [],
@@ -29,18 +30,15 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cards ----------
+  // Cards
   const SPIDEY = { name:'Spiderman', cost:3, pts:6, art:'assets/Spiderman.png' };
 
+  // UI helpers
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
   const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
-  function makeRandomCard(){ const cost=rand(1,4), pts=rand(cost+1,cost+5); return {name:'',cost,pts,art:''}; }
-  function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=Math.random()* (i+1) | 0; [d[i],d[j]]=[d[j],d[i]]; } return d; }
-  function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
-
-  // ===== ZOOM =====
+  // Zoom
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
@@ -54,10 +52,15 @@
     zoomOverlay.classList.add('visible');
   }
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
-  $('#closeZoomBtn').addEventListener('click', closeZoom);
+  closeZoomBtn.addEventListener('click', closeZoom);
   $('#zoomOverlay').addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
 
-  // ===== Mano (abanico con más separación) =====
+  // Decks
+  function makeRandomCard(){ const cost=rand(1,4), pts=rand(cost+1,cost+5); return {name:'',cost,pts,art:''}; }
+  function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; } return d; }
+  function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
+
+  // Hand
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
     el.className='card';
@@ -76,20 +79,42 @@
   }
   function renderHand(){ handEl.innerHTML=''; const n=state.pHand.length; state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n))); }
 
-  // ===== Board =====
+  // Board (colocar solo PUNTOS en el centro, y permitir zoom al pulsar)
   function renderBoard(){
     for(let i=0;i<SLOTS;i++){
-      const ps=slotsPlayer[i], es=slotsEnemy[i]; ps.innerHTML=''; es.innerHTML='';
+      const ps=slotsPlayer[i], es=slotsEnemy[i];
+      ps.innerHTML=''; es.innerHTML='';
       const p=state.center[i].p, e=state.center[i].e;
-      if(p){ const d=document.createElement('div'); d.className='placed'; d.innerHTML=`${artHTML(p.art)}${tokenCost(p.cost)}${tokenPts(p.pts)}<div class="name">${p.name||''}</div>`; ps.appendChild(d); }
-      if(e){ const d=document.createElement('div'); d.className='placed enemy'; d.innerHTML=`${artHTML(e.art)}${tokenCost(e.cost)}${tokenPts(e.pts)}<div class="name">${e.name||''}</div>`; es.appendChild(d); }
+
+      if(p){
+        const div=document.createElement('div');
+        div.className='placed';
+        div.innerHTML = `${artHTML(p.art)} ${tokenPts(p.pts)} <div class="name">${p.name||''}</div>`;
+        // Abrir zoom al pulsar
+        div.addEventListener('click', ()=> openZoom(p));
+        ps.appendChild(div);
+      }
+      if(e){
+        const div=document.createElement('div');
+        div.className='placed enemy';
+        div.innerHTML = `${artHTML(e.art)} ${tokenPts(e.pts)} <div class="name">${e.name||''}</div>`;
+        div.addEventListener('click', ()=> openZoom(e));
+        es.appendChild(div);
+      }
     }
   }
 
-  function updateHUD(){ roundNoEl.textContent=state.round; pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins; pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore; }
+  // HUD
+  function updateHUD(){
+    $('#roundNo').textContent = state.round;
+    $('#pCoins').textContent = state.pCoins;
+    $('#eCoins').textContent = state.eCoins;
+    $('#pScore').textContent = state.pScore;
+    $('#eScore').textContent = state.eScore;
+  }
   function setBanner(t){ phaseBanner.textContent=t; }
 
-  // ===== Drag & drop =====
+  // Drag & drop
   let ghost=null;
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
@@ -98,6 +123,7 @@
     ghost=document.createElement('div'); ghost.className='ghost';
     ghost.innerHTML=`${artHTML(src.dataset.art)}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="label">${src.dataset.name||'Carta'}</div>`;
     document.body.appendChild(ghost); moveGhost(e.clientX,e.clientY);
+
     const move=ev=> moveGhost(ev.clientX,ev.clientY);
     const up=ev=>{
       src.releasePointerCapture(e.pointerId);
@@ -113,7 +139,7 @@
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
   function laneUnder(x,y){ for(let i=0;i<SLOTS;i++){ const r=slotsPlayer[i].getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return i; } return -1; }
 
-  // ===== Reglas =====
+  // Reglas de colocación (persisten entre turnos)
   const canAfford = c => state.pCoins>=c.cost;
   const playerOccupancy = ()=> state.center.filter(c=>!!c.p).length;
   const enemyOccupancy  = ()=> state.center.filter(c=>!!c.e).length;
@@ -122,39 +148,51 @@
     if(handIndex<0||handIndex>=state.pHand.length) return;
     const card=state.pHand[handIndex];
     if(!canAfford(card)) return;
+
     const slot=state.center[slotIndex];
     if(!slot.p && playerOccupancy()>=SLOTS) return;
+
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
+
     state.pHand.splice(handIndex,1);
     if(state.pDeck.length) state.pHand.push(state.pDeck.pop());
+
     renderHand(); renderBoard(); updateHUD();
   }
 
-  // ===== IA rival =====
+  // IA rival
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins) && enemyOccupancy()<SLOTS;
+
     const tryPlayOnce=()=>{
       if(!canPlay()) return false;
       let best=-1,score=-1;
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
       const card=state.eHand[best];
+
       let target=-1, worst=-1, wp=Infinity;
       for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1){
-        for(let i=0;i<SLOTS;i++){ const e=state.center[i].e; if(e&&e.pts<wp){wp=e.pts; worst=i;} }
+        for(let i=0;i<SLOTS;i++){ const ex=state.center[i].e; if(ex&&ex.pts<wp){wp=ex.pts; worst=i;} }
         if(card.pts>wp) target=worst; else return false;
       }
-      state.eCoins-=card.cost; state.center[target].e={...card};
-      state.eHand.splice(best,1); if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
+
+      state.eCoins-=card.cost;
+      state.center[target].e={...card};
+
+      state.eHand.splice(best,1);
+      if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
+
       renderBoard(); updateHUD(); return true;
     };
+
     const loop=()=>{ if(!tryPlayOnce()){ state.enemyPassed=true; setTimeout(()=>{state.resolving=false; checkBothPassedThenScore();},600); return; } setTimeout(loop,220); };
     loop();
   }
 
-  // ===== Puntuación =====
+  // Puntuación
   function floatScore(label,who){
     const d=document.createElement('div'); d.className=`score-float ${who}`; d.textContent=label;
     document.querySelector('.board').appendChild(d); setTimeout(()=>d.remove(),1100);
@@ -168,18 +206,23 @@
       state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
       while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop());
       while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop());
-      phaseBanner.textContent='Nueva ronda: juega cartas mientras tengas monedas';
+      setBanner('Nueva ronda: juega cartas mientras tengas monedas');
     },400);
   }
   function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
 
-  // ===== New game =====
+  // New game
   function newGame(){
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
-    state.pDeck=makeDeckRandom(30); state.pHand=[{...SPIDEY}]; drawToHand();
-    state.eDeck=makeDeckRandom(30); state.eHand=[]; drawToHand();
+
+    state.pDeck=makeDeckRandom(30);
+    state.pHand=[{...SPIDEY}]; drawToHand();
+
+    state.eDeck=makeDeckRandom(30);
+    state.eHand=[]; drawToHand();
+
     state.pCoins+=1;
     renderBoard(); renderHand(); updateHUD();
     setBanner('Arrastra cartas a tus huecos (2×3 por lado)');
