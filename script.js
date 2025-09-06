@@ -21,7 +21,7 @@
   const passBtn = $('#passBtn'); const resetBtn = $('#resetBtn');
 
   // ---------- State ----------
-  const SLOTS = 4, HAND_SIZE = 5;
+  const SLOTS = 3, HAND_SIZE = 5;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
     pDeck: [], eDeck: [], pHand: [], eHand: [],
@@ -188,7 +188,7 @@
     state.pCoins+=1;
 
     renderBoard(); renderHand(); updateHUD();
-    setBanner('Arrastra cartas a tus huecos (4 por lado)');
+    setBanner('Arrastra cartas a tus huecos (3 por lado)');
   }
 
   // Events
