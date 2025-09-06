@@ -39,7 +39,7 @@
 
     <div id="phaseBanner" class="banner">Arrastra cartas a tus huecos (3 por lado)</div>
 
-    <!-- Tablero: 1 línea (3 huecos) por lado -->
+    <!-- Tablero -->
     <section class="board" aria-label="Tablero central">
       <!-- Rival -->
       <div class="row row-enemy">
@@ -72,15 +72,15 @@
     </footer>
   </main>
 
-  <!-- Overlays -->
- <!-- Portada -->
-<div id="startOverlay" class="overlay visible" role="dialog">
-  <div class="cover-screen">
-    <img src="assets/Portadacartas.PNG" alt="Portada del juego" class="cover-bg" />
-    <button id="startBtn" class="btn big">JUGAR</button>
+  <!-- Portada -->
+  <div id="startOverlay" class="overlay visible" role="dialog">
+    <div class="cover-screen">
+      <img src="assets/Portadacartas.PNG" alt="Portada del juego" class="cover-bg" />
+      <button id="startBtn" class="btn big">JUGAR</button>
+    </div>
   </div>
-</div>
 
+  <!-- Fin de partida -->
   <div id="endOverlay" class="overlay" role="dialog" aria-live="polite">
     <div class="panel">
       <h2 id="endTitle">Resultado</h2>
@@ -93,11 +93,11 @@
   </div>
 
   <!-- Zoom carta -->
-<div id="zoomOverlay" class="overlay" role="dialog" aria-modal="true">
-  <div class="zoom-panel">
-    <div id="zoomCardWrap"></div>
+  <div id="zoomOverlay" class="overlay" role="dialog" aria-modal="true">
+    <div class="zoom-panel">
+      <div id="zoomCardWrap"></div>
+    </div>
   </div>
-</div>
 
   <div id="toasts" aria-live="polite" aria-atomic="true"></div>
   <script src="script.js"></script>
