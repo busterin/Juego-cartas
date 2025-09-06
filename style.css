@@ -11,7 +11,7 @@
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
 
-  /* Tablero centrado y grande */
+  /* Tablero grande y centrado */
   --lanes-gap: 10px;
   --slot-inset: 6px;
   --slot-br: 14px;
@@ -19,7 +19,7 @@
   --bottom-pad: 10px;
 }
 
-/* ===== Base y grid sin scroll ===== */
+/* Base */
 *{ box-sizing:border-box }
 html,body{ height:100% }
 body{
@@ -35,16 +35,13 @@ body{
   max-width: var(--game-max);
   margin-inline:auto;
   display: grid;
-  grid-template-rows: auto auto /* HUD + banner */
-                      1fr       /* TABLERO ocupa todo lo que haya */
-                      auto      /* mano */
-                      auto;     /* footer */
+  grid-template-rows: auto auto 1fr auto auto; /* HUD, banner, tablero, mano, footer */
   gap: var(--gap);
   padding: 6px 8px calc(var(--bottom-pad) + env(safe-area-inset-bottom));
   overflow:hidden;
 }
 
-/* ===== HUD ===== */
+/* HUD */
 .top-hud{
   display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
   align-items:center; gap:6px; padding-inline:2px;
@@ -79,7 +76,7 @@ body{
 .meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .meter.pts { background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 
-/* ===== Banner ===== */
+/* Banner */
 .banner{
   text-align:center; font-weight:800; color:#d7e6ff;
   border:1px solid var(--panel-br); background:var(--panel);
@@ -87,49 +84,43 @@ body{
   font-size:.86rem;
 }
 
-/* ===== TABLERO — ocupa todo y agranda los slots ===== */
-.board{
-  /* Grid de 3 filas: enemigo (1fr), hint (auto), jugador (1fr) */
+/* TABLERO (centrado y a máxima escala) */
+.board{ display:grid; place-items:center; min-height:0; }
+.board-inner{
+  width:100%; max-width:var(--game-max);
+  height: 100%; /* llena la zona 1fr */
   display:grid;
-  grid-template-rows: 1fr auto 1fr;
-  gap: 6px;
-  align-items:stretch;
-  min-height:0;
+  grid-template-rows: 1fr auto 1fr; /* enemigo, hint, jugador */
+  gap:6px;
 }
 .center-hint{
   text-align:center; color:#aecdff; font-weight:700; font-size:.86rem; line-height:1.1;
   padding:0 0 2px;
 }
-
-/* Cada bloque de 6 huecos usa 100% de la altura disponible */
 .lanes-6x2{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-auto-rows: 1fr;      /* 2 filas iguales */
+  grid-auto-rows: 1fr;  /* 2 filas iguales */
   gap: var(--lanes-gap);
-  height: 100%;             /* ¡clave! ocupa toda la fila (1fr) */
+  height: 100%;
   min-height:0;
 }
-
-/* Slots: quitamos aspect-ratio para que llenen la celda */
 .slot{
-  /* sin aspect-ratio: el alto viene dado por la celda 1fr */
   border:2px dashed rgba(105,240,255,.35);
   border-radius:var(--slot-br);
   display:grid; place-items:center; position:relative;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
-  overflow:visible;
 }
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
 .placed{
   position:absolute; inset:var(--slot-inset);
   border-radius:calc(var(--slot-br) - 2px); overflow:hidden;
   border:1px solid rgba(255,255,255,.25); box-shadow: 0 6px 24px rgba(0,0,0,.5);
-  background:#0f1633;
+  background:#0f1633; cursor:pointer; /* <- para indicar que se puede ampliar */
 }
 .placed .art, .placed .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 
-/* ===== Mano (no invade el tablero) ===== */
+/* Mano */
 .hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; }
 .hand{ position:relative; width:100%; height:100%; }
 .hand .card{
@@ -145,7 +136,7 @@ body{
   z-index:10;
 }
 
-/* ===== Cartas base / tokens / ghost ===== */
+/* Carta base / tokens / ghost */
 .card, .ghost{ border-radius:12px; border:1px solid rgba(255,255,255,.18); overflow:hidden; background:#0f1633; user-select:none; touch-action:none; }
 .card .art, .ghost .art{ position:absolute; inset:0; }
 .card .art img, .ghost .art img{ width:100%; height:100%; object-fit:cover; }
@@ -156,7 +147,7 @@ body{
 .label{ position:absolute; left:6px; right:6px; bottom:6px; z-index:2; color:#eaf2ff; font-size:.7rem; font-weight:900; text-align:center; background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:4px 6px; }
 .ghost{ position:fixed; z-index:9999; pointer-events:none; width:var(--card-w); height:var(--card-h); transform: translate(-50%, -50%) scale(1.06); border:1px solid rgba(255,255,255,.35); border-radius:12px; }
 
-/* ===== Score float y footer ===== */
+/* Score + footer */
 .score-float{ position:absolute; z-index:50; padding:6px 10px; border-radius:12px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.2); font-weight:900; color:#eaf2ff; left:50%; transform:translateX(-50%); animation: scoreFloat 900ms ease-out both; }
 .score-float.you{ top:10%; } .score-float.enemy{ top:20%; }
 @keyframes scoreFloat{ 0%{ opacity:0; transform:translate(-50%, 8px) scale(.9) } 15%{ opacity:1; transform:translate(-50%, 0) scale(1) } 100%{ opacity:0; transform:translate(-50%, -14px) scale(.98) } }
@@ -164,7 +155,7 @@ body{
 .btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
 .btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
 
-/* ===== Overlays / Zoom ===== */
+/* Overlays / Zoom */
 .overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100; }
 .overlay.visible{ opacity:1; pointer-events:auto; }
 .panel{ width:min(92%, 460px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); padding:16px; border-radius:16px; box-shadow:var(--glow); text-align:center; }
@@ -177,27 +168,18 @@ body{
 .zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
 .zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
 
-/* ===== Modos compactos por ALTURA ===== */
+/* Compactos por altura */
 @media (max-height: 720px){
-  :root{
-    --hex: 52px; --round-sz: 44px; --meter-sz: 24px;
-    --card-w: clamp(68px, 15vw, 102px);
-  }
+  :root{ --hex: 52px; --round-sz: 44px; --meter-sz: 24px; --card-w: clamp(68px, 15vw, 102px); }
+  .board-inner{ gap:4px }
+  .lanes-6x2{ gap:8px }
   .center-hint{ font-size:.8rem }
-  /* en pantallas bajas, reducimos un poco los gaps para aún más tamaño de slot */
-  .board{ gap: 4px }
-  .lanes-6x2{ gap: 8px }
 }
 @media (max-height: 640px){
-  :root{
-    --hex: 48px; --round-sz: 40px; --meter-sz: 22px;
-    --card-w: clamp(62px, 14vw, 96px);
-    --lanes-gap: 7px; --slot-inset: 4px;
-  }
+  :root{ --hex: 48px; --round-sz: 40px; --meter-sz: 22px; --card-w: clamp(62px, 14vw, 96px); --lanes-gap:7px; --slot-inset:4px; }
   .center-hint{ display:none }
   .hand-zone{ height: calc(var(--card-h) + 8px) }
   .btn{ padding:8px 12px }
-  .board{ gap: 4px }
 }
 @media (max-height: 560px){
   .btn{ padding:7px 10px; border-radius:10px; }
