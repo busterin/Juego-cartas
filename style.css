@@ -16,6 +16,9 @@
   /* Tablero 1×3 */
   --lanes-gap:10px; --slot-inset:6px; --slot-br:14px;
 
+  /* Altura dedicada a CADA fila del tablero (evita solapes) */
+  --slotH: clamp(140px, 22vh, 200px);
+
   --bottom-pad:10px;
 }
 
@@ -38,8 +41,8 @@ body{
   display:grid;
   grid-template-rows:
     auto           /* HUD */
-    auto           /* banner (lo ocultamos visualmente) */
-    minmax(0,1fr)  /* tablero */
+    auto           /* banner oculto */
+    auto           /* tablero: altura propia */
     auto           /* mano */
     auto;          /* footer */
   gap: var(--gap);
@@ -73,37 +76,28 @@ body{
   box-shadow:0 0 16px rgba(107,226,255,.5), inset 0 4px 15px rgba(255,255,255,.45), inset 0 -6px 20px rgba(0,0,0,.25);
   border:1px solid rgba(255,255,255,.5);
 }
-.meter{
-  width:var(--meter-sz); height:var(--meter-sz); border-radius:50%;
-  display:grid; place-items:center; font-weight:900; color:#101010;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.18), 0 3px 8px rgba(0,0,0,.35);
-  font-size:.85rem;
-}
-.meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
-.meter.pts { background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 
 /* ===== Banner (oculto) ===== */
 .banner{ display:none; }
 
-/* ===== Tablero 1×3 por lado (huecos grandes como antes) ===== */
+/* ===== Tablero 1×3 por lado (sin solapes) ===== */
 .board{
   display:grid;
-  grid-template-rows: 1fr 1fr;  /* enemigo / jugador */
+  grid-template-rows: var(--slotH) var(--slotH); /* enemigo / jugador con altura fija */
   gap: var(--gap);
-  min-height:0;
   z-index:0;
-  height: clamp(280px, 38vh, 420px); /* altura dedicada al tablero */
 }
-.row{ display:grid; grid-template-rows:1fr; min-height:0; }
+.row{ height:100%; }
 .lanes-3x1{
+  height:100%;
   display:grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--lanes-gap);
-  height:100%;
-  min-height:0;
+  align-content:stretch;
 }
 .slot{
-  aspect-ratio: 2/3; /* proporción vertical estilo carta */
+  /* altura controlada por la fila; sin aspect-ratio para evitar desbordes */
+  height:100%;
   border:2px dashed rgba(105,240,255,.35);
   border-radius:var(--slot-br);
   position:relative;
@@ -121,8 +115,11 @@ body{
 }
 .placed .art, .placed .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 
-/* ===== Mano ===== */
-.hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; position:relative; z-index:2; }
+/* ===== Mano (siempre abajo, por encima del tablero) ===== */
+.hand-zone{
+  height: calc(var(--card-h) + 12px);
+  min-height:0; position:relative; z-index:2;
+}
 .hand{ position:relative; width:100%; height:100%; }
 .hand .card{
   position:absolute; bottom:0; left:50%;
@@ -196,7 +193,20 @@ body{
 }
 .zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
 .zoom-card .art img{ width:100%; height:100%; object-fit:contain; }
-.zoom-title, .row-btns{ display:none!important; }
+.zoom-card .zoom-token{
+  position:absolute; top:10px; width:40px; height:40px; border-radius:50%;
+  display:grid; place-items:center; font-weight:900; color:#101010;
+  box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35),
+              0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42);
+  font-size:1rem;
+}
+.zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
+.zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
+.zoom-card .name{
+  position:absolute; left:10px; right:10px; bottom:12px;
+  text-align:center; font-weight:900; background: rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:10px 12px; color:#eaf2ff;
+}
 
 /* Toast central de turno */
 .turn-toast{
@@ -224,6 +234,6 @@ body{
     --hex:48px; --round-sz:40px; --meter-sz:22px;
     --card-w: clamp(62px, 14vw, 96px);
     --lanes-gap: 8px; --slot-inset:5px;
+    --slotH: clamp(120px, 20vh, 180px);
   }
-  .board{ height: clamp(240px, 34vh, 360px); } /* un poco más compacto en pantallas bajas */
 }
