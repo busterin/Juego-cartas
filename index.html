@@ -11,7 +11,7 @@
     <!-- HUD superior -->
     <header class="top-hud">
       <div class="portrait player">
-        <div class="frame hex"><img src="assets/player.png" alt="Jugador" /></div>
+        <div class="frame hex"><div class="emoji">🐻</div></div>
         <div class="info">
           <div class="name">JUGADOR</div>
           <div class="meters">
@@ -26,7 +26,7 @@
       </div>
 
       <div class="portrait enemy">
-        <div class="frame hex"><img src="assets/enemy.png" alt="Rival" /></div>
+        <div class="frame hex"><div class="emoji">😈</div></div>
         <div class="info">
           <div class="name">RIVAL</div>
           <div class="meters">
@@ -37,7 +37,8 @@
       </div>
     </header>
 
-    <div id="phaseBanner" class="banner">Arrastra cartas a tus huecos (3 por lado)</div>
+    <!-- Ocultamos el banner tradicional -->
+    <div id="phaseBanner" class="banner" aria-hidden="true"></div>
 
     <!-- Tablero: 1 línea por lado (3 huecos) -->
     <section class="board" aria-label="Tablero central">
@@ -69,6 +70,9 @@
       <button id="resetBtn" class="btn">Reiniciar</button>
     </footer>
   </main>
+
+  <!-- Toast central de turno -->
+  <div id="turnToast" class="turn-toast" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Portada (overlay independiente) -->
   <div id="startOverlay" class="overlay visible" role="dialog" aria-label="Portada">
