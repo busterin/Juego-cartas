@@ -38,7 +38,7 @@ body{
   display:grid;
   grid-template-rows:
     auto           /* HUD */
-    auto           /* banner */
+    auto           /* banner (lo ocultamos visualmente) */
     minmax(0,1fr)  /* tablero */
     auto           /* mano */
     auto;          /* footer */
@@ -59,9 +59,9 @@ body{
   clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   background:#223; border:2px solid rgba(255,255,255,.25); border-radius:8px;
   box-shadow:0 6px 18px rgba(0,0,0,.5), inset 0 0 18px rgba(255,255,255,.08);
-  overflow:hidden;
+  display:grid; place-items:center; overflow:hidden;
 }
-.frame.hex img{ width:100%; height:100%; object-fit:cover; }
+.frame.hex .emoji{ font-size: calc(var(--hex)*0.7); line-height:1; transform: translateY(-2%); }
 .info{ display:flex; flex-direction:column; gap:3px; min-width:0;}
 .info .name{ font-weight:900; font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .meters{ display:flex; gap:6px; flex-wrap:wrap; }
@@ -73,14 +73,17 @@ body{
   box-shadow:0 0 16px rgba(107,226,255,.5), inset 0 4px 15px rgba(255,255,255,.45), inset 0 -6px 20px rgba(0,0,0,.25);
   border:1px solid rgba(255,255,255,.5);
 }
-
-/* ===== Banner ===== */
-.banner{
-  text-align:center; font-weight:800; color:#d7e6ff;
-  border:1px solid var(--panel-br); background:var(--panel);
-  padding:4px 8px; border-radius:10px; box-shadow:var(--glow);
-  font-size:.86rem;
+.meter{
+  width:var(--meter-sz); height:var(--meter-sz); border-radius:50%;
+  display:grid; place-items:center; font-weight:900; color:#101010;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.18), 0 3px 8px rgba(0,0,0,.35);
+  font-size:.85rem;
 }
+.meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
+.meter.pts { background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
+
+/* ===== Banner (oculto) ===== */
+.banner{ display:none; }
 
 /* ===== Tablero 1×3 por lado ===== */
 .board{
@@ -159,7 +162,7 @@ body{
 .overlay{ position:fixed; inset:0; display:grid; place-items:center; background: rgba(0,0,0,.7); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100; }
 .overlay.visible{ opacity:1; pointer-events:auto; }
 
-/* Portada (no interfiere con el layout) */
+/* Portada */
 .cover-screen{ position:relative; width:100%; height:100dvh; }
 .cover-bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cover-screen .btn.big{ position:absolute; bottom:10%; left:50%; transform:translateX(-50%); z-index:2; }
@@ -171,11 +174,27 @@ body{
 .zoom-card .art img{ width:100%; height:100%; object-fit:contain; }
 .zoom-title, .row-btns{ display:none!important; }
 
-/* Ocultar contenedores auxiliares */
+/* Toast central de turno */
+.turn-toast{
+  position:fixed; inset:0; display:grid; place-items:center;
+  pointer-events:none; z-index:90; /* por debajo de overlays */
+  opacity:0; transition: opacity .25s ease;
+}
+.turn-toast.show{ opacity:1; }
+.turn-toast::before{
+  content: attr(data-text);
+  padding:12px 18px; border-radius:14px;
+  background: rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.2);
+  color:#eaf2ff; font-weight:900; font-size:1.2rem;
+  text-shadow:0 2px 8px rgba(0,0,0,.5);
+  box-shadow:0 8px 30px rgba(0,0,0,.45), inset 0 0 40px rgba(255,255,255,.04);
+}
+
+/* Aux */
 #toasts{ display:none; }
 
 /* ===== Compactos por ALTURA ===== */
 @media (max-height: 640px){
   :root{ --hex:48px; --round-sz:40px; --meter-sz:22px; --card-w: clamp(62px, 14vw, 96px); --lanes-gap: 8px; --slot-inset:5px; }
-  .banner{ font-size:.8rem; padding:3px 8px; }
 }
