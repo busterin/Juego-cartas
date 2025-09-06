@@ -81,8 +81,32 @@
     for(let i=0;i<SLOTS;i++){
       const ps=slotsPlayer[i], es=slotsEnemy[i]; ps.innerHTML=''; es.innerHTML='';
       const p=state.center[i].p, e=state.center[i].e;
-      if(p){ const d=document.createElement('div'); d.className='placed'; d.innerHTML=`${artHTML(p.art)}${tokenCost(p.cost)}${tokenPts(p.pts)}<div class="name">${p.name||''}</div>`; ps.appendChild(d); }
-      if(e){ const d=document.createElement('div'); d.className='placed enemy'; d.innerHTML=`${artHTML(e.art)}${tokenCost(e.cost)}${tokenPts(e.pts)}<div class="name">${e.name||''}</div>`; es.appendChild(d); }
+
+      // Jugador: en tablero se ve SOLO PUNTOS; permite zoom al tocar
+      if(p){
+        const d=document.createElement('div');
+        d.className='placed';
+        d.dataset.name = p.name||'';
+        d.dataset.cost = p.cost;
+        d.dataset.pts  = p.pts;
+        d.dataset.art  = p.art||'';
+        d.innerHTML = `${artHTML(p.art)}${tokenPts(p.pts)}<div class="name">${p.name||''}</div>`;
+        d.addEventListener('click', ()=> openZoom({name:p.name||'Carta', cost:p.cost, pts:p.pts, art:p.art||''}));
+        ps.appendChild(d);
+      }
+
+      // Rival: igual, SOLO PUNTOS; también permite zoom (útil para revisar)
+      if(e){
+        const d=document.createElement('div');
+        d.className='placed enemy';
+        d.dataset.name = e.name||'';
+        d.dataset.cost = e.cost;
+        d.dataset.pts  = e.pts;
+        d.dataset.art  = e.art||'';
+        d.innerHTML = `${artHTML(e.art)}${tokenPts(e.pts)}<div class="name">${e.name||''}</div>`;
+        d.addEventListener('click', ()=> openZoom({name:e.name||'Carta', cost:e.cost, pts:e.pts, art:e.art||''}));
+        es.appendChild(d);
+      }
     }
   }
 
