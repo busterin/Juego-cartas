@@ -39,9 +39,10 @@
 
     <div id="phaseBanner" class="banner">Arrastra cartas a tus huecos (2×3 por lado)</div>
 
-    <!-- TABLERO con contenedor interno para ambas zonas -->
+    <!-- TABLERO centrado y a máxima escala -->
     <section class="board" aria-label="Tablero central">
       <div class="board-inner">
+        <!-- Rival -->
         <div class="row row-enemy">
           <div class="lanes lanes-6x2 enemy">
             <div class="slot enemy" data-side="enemy" data-lane="0"></div>
@@ -55,14 +56,15 @@
 
         <div class="center-hint">Las cartas permanecen entre turnos. Puedes reemplazar tus propias cartas.</div>
 
+        <!-- Jugador (misma estructura que rival) -->
         <div class="row row-player">
-          <div class="lanes lanes-6x2">
-            <div class="slot" data-side="player" data-lane="0"></div>
-            <div class="slot" data-side="player" data-lane="1"></div>
-            <div class="slot" data-side="player" data-lane="2"></div>
-            <div class="slot" data-side="player" data-lane="3"></div>
-            <div class="slot" data-side="player" data-lane="4"></div>
-            <div class="slot" data-side="player" data-lane="5"></div>
+          <div class="lanes lanes-6x2 player">
+            <div class="slot player" data-side="player" data-lane="0"></div>
+            <div class="slot player" data-side="player" data-lane="1"></div>
+            <div class="slot player" data-side="player" data-lane="2"></div>
+            <div class="slot player" data-side="player" data-lane="3"></div>
+            <div class="slot player" data-side="player" data-lane="4"></div>
+            <div class="slot player" data-side="player" data-lane="5"></div>
           </div>
         </div>
       </div>
@@ -114,6 +116,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Contenedor de tooltips -->
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
 
   <div id="toasts" aria-live="polite" aria-atomic="true"></div>
   <script src="script.js"></script>
