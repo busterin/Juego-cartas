@@ -40,7 +40,7 @@
   function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [d[i],d[j]]=[d[j],d[i]]; } return d; }
   function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
 
-  // ===== ZOOM =====
+  // ===== ZOOM (limpio, grande y sin botón) =====
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
@@ -49,13 +49,15 @@
         <div class="zoom-token pts">${card.pts}</div>
         <div class="name">${card.name||'Carta'}</div>
       </div>
-      <p class="muted">Arrastra desde la mano para jugarla.</p>
     `;
     zoomOverlay.classList.add('visible');
   }
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
-  $('#closeZoomBtn').addEventListener('click', closeZoom);
-  $('#zoomOverlay').addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
+
+  // Cerrar tocando fuera de la tarjeta
+  zoomOverlay.addEventListener('click', e=>{
+    if(!e.target.closest('.zoom-card')) closeZoom();
+  });
 
   // ===== Mano (abanico) =====
   function createHandCardEl(card,i,n){
@@ -76,13 +78,12 @@
   }
   function renderHand(){ handEl.innerHTML=''; const n=state.pHand.length; state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n))); }
 
-  // ===== Board =====
+  // ===== Board (clic en cartas colocadas para ampliar; sin coste en mesa) =====
   function renderBoard(){
     for(let i=0;i<SLOTS;i++){
       const ps=slotsPlayer[i], es=slotsEnemy[i]; ps.innerHTML=''; es.innerHTML='';
       const p=state.center[i].p, e=state.center[i].e;
 
-      // Jugador: en tablero se ve SOLO PUNTOS; permite zoom al tocar
       if(p){
         const d=document.createElement('div');
         d.className='placed';
@@ -95,7 +96,6 @@
         ps.appendChild(d);
       }
 
-      // Rival: igual, SOLO PUNTOS; también permite zoom (útil para revisar)
       if(e){
         const d=document.createElement('div');
         d.className='placed enemy';
