@@ -185,7 +185,8 @@
       const card=state.eHand[best];
 
       let target=-1;
-      for(let i=0;i	SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
+      // ⬇⬇⬇ CORREGIDO: el bucle tenía un error de sintaxis
+      for(let i=0; i<SLOTS; i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1) return false;
 
       state.eCoins-=card.cost; state.center[target].e={...card};
