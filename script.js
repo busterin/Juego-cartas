@@ -34,18 +34,25 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cartas ----------
-  const SPIDEY = { name:'Spiderman', cost:3, pts:6, art:'assets/Spiderman.png' };
+  // ---------- Cartas (stats aleatorios UNA VEZ; quedan fijos hasta recargar) ----------
+  const CARDS = [
+    { name:'Spiderman', art:'assets/Spiderman.png',  cost: rand(1,4), pts: rand(2,6) },
+    { name:'Leonardo',  art:'assets/Leonardo.PNG',   cost: rand(1,4), pts: rand(2,6) },
+    { name:'Shepard',   art:'assets/Shepard.JPG',    cost: rand(1,4), pts: rand(2,6) },
+    { name:'Geralt',    art:'assets/Geralt.JPG',     cost: rand(1,4), pts: rand(2,6) },
+    { name:'Jill',      art:'assets/Jill.JPG',       cost: rand(1,4), pts: rand(2,6) }
+  ];
 
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
   const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
-  function makeRandomCard(){ const cost=rand(1,4), pts=rand(cost+1,cost+5); return {name:'',cost,pts,art:''}; }
-  function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [d[i],d[j]]=[d[j],d[i]]; } return d; }
-  function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
+  function drawToHand(){
+    while(state.pHand.length<HAND_SIZE && state.pDeck.length) state.pHand.push(state.pDeck.pop());
+    while(state.eHand.length<HAND_SIZE && state.eDeck.length) state.eHand.push(state.eDeck.pop());
+  }
 
-  // ---------- Zoom (ahora muestra Coste y Puntos) ----------
+  // ---------- Zoom (muestra Coste y Puntos) ----------
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
@@ -173,10 +180,12 @@
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins) && enemyOccupancy()<SLOTS;
     const tryPlayOnce=()=>{
       if(!canPlay()) return false;
+      // elige una carta jugable con mejor ratio pts/cost
       let best=-1,score=-1;
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
       const card=state.eHand[best];
 
+      // primer hueco libre
       let target=-1;
       for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1) return false;
@@ -210,8 +219,12 @@
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
 
-    state.pDeck=makeDeckRandom(30); state.pHand=[{...SPIDEY}]; drawToHand();
-    state.eDeck=makeDeckRandom(30); state.eHand=[]; drawToHand();
+    // Usamos SIEMPRE las mismas 5 cartas (stats ya fijados al cargar)
+    state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
+    state.eDeck = [...CARDS].sort(()=> Math.random()-0.5);
+
+    state.pHand=[]; state.eHand=[];
+    drawToHand();
 
     // +1 moneda al inicio de tu primera fase
     state.pCoins+=1;
