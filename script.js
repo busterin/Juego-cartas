@@ -1,10 +1,8 @@
 (() => {
-  // ---------- Helpers ----------
   const $  = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
   const rand = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
 
-  // ---------- Elements ----------
   const handEl = $('#hand');
   const slotsPlayer = $$('.slot[data-side="player"]');
   const slotsEnemy  = $$('.slot[data-side="enemy"]');
@@ -20,100 +18,56 @@
 
   const passBtn = $('#passBtn'); const resetBtn = $('#resetBtn');
 
-  // ---------- State ----------
   const SLOTS = 3, HAND_SIZE = 5;
-  const state = {
-    round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
-    pDeck: [], eDeck: [], pHand: [], eHand: [],
-    center: Array.from({length:SLOTS},()=>({p:null,e:null})),
-    turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
-  };
+  const state = { round:1, pCoins:3, eCoins:3, pScore:0, eScore:0,
+    pDeck:[], eDeck:[], pHand:[], eHand:[],
+    center:Array.from({length:SLOTS},()=>({p:null,e:null})),
+    turn:'player', playerPassed:false, enemyPassed:false, resolving:false };
 
-  // ---------- Cards ----------
   const SPIDEY = { name:'Spiderman', cost:3, pts:6, art:'assets/Spiderman.png' };
 
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
-  const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
+  const artHTML = src => `<div class="art">${src?`<img src="${src}">`:''}</div>`;
 
   function makeRandomCard(){ const cost=rand(1,4), pts=rand(cost+1,cost+5); return {name:'',cost,pts,art:''}; }
-  function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [d[i],d[j]]=[d[j],d[i]]; } return d; }
+  function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); return d.sort(()=>Math.random()-0.5); }
   function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
 
-  // ===== ZOOM (limpio, grande y sin botón) =====
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
         <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
-        <div class="zoom-token cost">${card.cost}</div>
-        <div class="zoom-token pts">${card.pts}</div>
         <div class="name">${card.name||'Carta'}</div>
-      </div>
-    `;
+      </div>`;
     zoomOverlay.classList.add('visible');
   }
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
+  zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
 
-  // Cerrar tocando fuera de la tarjeta
-  zoomOverlay.addEventListener('click', e=>{
-    if(!e.target.closest('.zoom-card')) closeZoom();
-  });
-
-  // ===== Mano (abanico) =====
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
-    el.className='card';
-    el.dataset.index=i; el.dataset.cost=card.cost; el.dataset.pts=card.pts;
+    el.className='card'; el.dataset.index=i;
+    el.dataset.cost=card.cost; el.dataset.pts=card.pts;
     el.dataset.name=card.name||''; el.dataset.art=card.art||'';
     el.innerHTML=`${artHTML(card.art)}${tokenCost(card.cost)}${tokenPts(card.pts)}<div class="label">${card.name||'Carta'}</div>`;
-    const margin=8;
-    const leftPct = (n===1)?50: margin + i*((100-margin*2)/(n-1));
-    const mid=(n-1)/2, angle=(i-mid)*10, extra=(i-mid)*14;
-    el.style.setProperty('--x',`calc(${leftPct}% - 50%)`);
-    el.style.setProperty('--rot',`${angle}deg`);
-    el.style.setProperty('--off',`${extra}px`);
-    el.addEventListener('click', ()=> openZoom({name:el.dataset.name||'Carta', cost:+el.dataset.cost, pts:+el.dataset.pts, art:el.dataset.art||''}));
-    attachDragHandlers(el);
-    return el;
+    el.addEventListener('click', ()=> openZoom(card));
+    attachDragHandlers(el); return el;
   }
   function renderHand(){ handEl.innerHTML=''; const n=state.pHand.length; state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n))); }
 
-  // ===== Board (clic en cartas colocadas para ampliar; sin coste en mesa) =====
   function renderBoard(){
     for(let i=0;i<SLOTS;i++){
       const ps=slotsPlayer[i], es=slotsEnemy[i]; ps.innerHTML=''; es.innerHTML='';
       const p=state.center[i].p, e=state.center[i].e;
-
-      if(p){
-        const d=document.createElement('div');
-        d.className='placed';
-        d.dataset.name = p.name||'';
-        d.dataset.cost = p.cost;
-        d.dataset.pts  = p.pts;
-        d.dataset.art  = p.art||'';
-        d.innerHTML = `${artHTML(p.art)}${tokenPts(p.pts)}<div class="name">${p.name||''}</div>`;
-        d.addEventListener('click', ()=> openZoom({name:p.name||'Carta', cost:p.cost, pts:p.pts, art:p.art||''}));
-        ps.appendChild(d);
-      }
-
-      if(e){
-        const d=document.createElement('div');
-        d.className='placed enemy';
-        d.dataset.name = e.name||'';
-        d.dataset.cost = e.cost;
-        d.dataset.pts  = e.pts;
-        d.dataset.art  = e.art||'';
-        d.innerHTML = `${artHTML(e.art)}${tokenPts(e.pts)}<div class="name">${e.name||''}</div>`;
-        d.addEventListener('click', ()=> openZoom({name:e.name||'Carta', cost:e.cost, pts:e.pts, art:e.art||''}));
-        es.appendChild(d);
-      }
+      if(p){ const d=document.createElement('div'); d.className='placed'; d.innerHTML=`${artHTML(p.art)}${tokenPts(p.pts)}<div class="name">${p.name||''}</div>`; d.addEventListener('click', ()=> openZoom(p)); ps.appendChild(d); }
+      if(e){ const d=document.createElement('div'); d.className='placed enemy'; d.innerHTML=`${artHTML(e.art)}${tokenPts(e.pts)}<div class="name">${e.name||''}</div>`; d.addEventListener('click', ()=> openZoom(e)); es.appendChild(d); }
     }
   }
 
   function updateHUD(){ roundNoEl.textContent=state.round; pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins; pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore; }
   function setBanner(t){ phaseBanner.textContent=t; }
 
-  // ===== Drag & drop =====
   let ghost=null;
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
@@ -137,91 +91,35 @@
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
   function laneUnder(x,y){ for(let i=0;i<SLOTS;i++){ const r=slotsPlayer[i].getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return i; } return -1; }
 
-  // ===== Reglas =====
   const canAfford = c => state.pCoins>=c.cost;
-  const playerOccupancy = ()=> state.center.filter(c=>!!c.p).length;
-  const enemyOccupancy  = ()=> state.center.filter(c=>!!c.e).length;
 
   function tryPlayFromHandToSlot(handIndex, slotIndex){
-    if(handIndex<0||handIndex>=state.pHand.length) return;
-    const card=state.pHand[handIndex];
-    if(!canAfford(card)) return;
-    const slot=state.center[slotIndex];
-    if(!slot.p && playerOccupancy()>=SLOTS) return;
-    state.pCoins -= card.cost;
-    state.center[slotIndex].p = {...card};
-    state.pHand.splice(handIndex,1);
-    if(state.pDeck.length) state.pHand.push(state.pDeck.pop());
+    const card=state.pHand[handIndex]; if(!card||!canAfford(card)) return;
+    state.pCoins -= card.cost; state.center[slotIndex].p = {...card};
+    state.pHand.splice(handIndex,1); if(state.pDeck.length) state.pHand.push(state.pDeck.pop());
     renderHand(); renderBoard(); updateHUD();
   }
 
-  // ===== IA rival =====
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
-    const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins) && enemyOccupancy()<SLOTS;
-    const tryPlayOnce=()=>{
-      if(!canPlay()) return false;
-      let best=-1,score=-1;
-      state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
-      const card=state.eHand[best];
-      let target=-1, worst=-1, wp=Infinity;
-      for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
-      if(target===-1){
-        for(let i=0;i<SLOTS;i++){ const e=state.center[i].e; if(e&&e.pts<wp){wp=e.pts; worst=i;} }
-        if(card.pts>wp) target=worst; else return false;
-      }
-      state.eCoins-=card.cost; state.center[target].e={...card};
-      state.eHand.splice(best,1); if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
-      renderBoard(); updateHUD(); return true;
-    };
-    const loop=()=>{ if(!tryPlayOnce()){ state.enemyPassed=true; setTimeout(()=>{state.resolving=false; checkBothPassedThenScore();},600); return; } setTimeout(loop,220); };
-    loop();
+    const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins);
+    if(canPlay()){ const card=state.eHand.pop(); state.center.find(s=>!s.e).e=card; state.eCoins-=card.cost; }
+    renderBoard(); updateHUD();
+    state.enemyPassed=true; setTimeout(()=>{state.resolving=false; checkBothPassedThenScore();},600);
   }
 
-  // ===== Puntuación =====
-  function floatScore(label,who){
-    const d=document.createElement('div'); d.className=`score-float ${who}`; d.textContent=label;
-    document.querySelector('.board').appendChild(d); setTimeout(()=>d.remove(),1100);
-  }
-  const bothPassed=()=> state.playerPassed && state.enemyPassed;
   function scoreTurn(){
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
-    if(p>0) floatScore(`+${p}`,'you'); if(e>0) floatScore(`+${e}`,'enemy');
-    setTimeout(()=>{
-      state.pScore+=p; state.eScore+=e; updateHUD();
-      state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
-      while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop());
-      while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop());
-      setBanner('Nueva ronda: juega cartas mientras tengas monedas');
-    },400);
+    state.pScore+=p; state.eScore+=e; updateHUD();
+    state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
+    drawToHand(); setBanner('Nueva ronda');
   }
-  function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
+  function checkBothPassedThenScore(){ if(state.playerPassed && state.enemyPassed) scoreTurn(); }
 
-  // ===== New game =====
   function newGame(){
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
-    state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
-
-    state.pDeck=makeDeckRandom(30);
-    state.pHand=[{...SPIDEY}]; drawToHand();
-
-    state.eDeck=makeDeckRandom(30);
-    state.eHand=[]; drawToHand();
-
-    state.pCoins+=1;
-
+    state.pDeck=makeDeckRandom(30); state.pHand=[{...SPIDEY}]; drawToHand();
+    state.eDeck=makeDeckRandom(30); state.eHand=[]; drawToHand();
     renderBoard(); renderHand(); updateHUD();
-    setBanner('Arrastra cartas a tus huecos (3 por lado)');
-  }
-
-  // Events
-  $('#startBtn').addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
-  $('#againBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
-  $('#menuBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
-  resetBtn.addEventListener('click', ()=> newGame());
-  passBtn.addEventListener('click', ()=>{
-    if(state.turn!=='player'||state.resolving) return;
-    state.playerPassed=true; state.turn='enemy'; enemyTurn();
-  });
-})();
+    setBanner('Arrastra cartas
