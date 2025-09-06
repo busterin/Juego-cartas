@@ -22,7 +22,7 @@
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap'); const closeZoomBtn = $('#closeZoomBtn');
 
   // ---------- State ----------
-  const SLOTS = 6;          // ⬅️ hasta 6 cartas por lado
+  const SLOTS = 6;          // 6 huecos por lado
   const HAND_SIZE = 5;
   const TARGET_SCORE = 30;   // fin opcional
 
@@ -32,8 +32,7 @@
     pScore: 0, eScore: 0,
     pDeck: [], eDeck: [],
     pHand: [], eHand: [],
-    // cada índice representa la columna central [0..5]
-    center: Array.from({length: SLOTS}, () => ({ p:null, e:null })), // {cost, pts, name, art}
+    center: Array.from({length: SLOTS}, () => ({ p:null, e:null })), // columnas [0..5]
     turn: 'player', // 'player' | 'enemy'
     playerPassed: false,
     enemyPassed: false,
@@ -45,7 +44,7 @@
 
   function makeRandomCard(){
     const cost = rand(1,4);
-    const pts  = rand(cost+1, cost+5); // puntos algo mayores que el coste
+    const pts  = rand(cost+1, cost+5);
     return { name:'', cost, pts, art:'' };
   }
   function makeDeckRandom(n=30){
@@ -58,12 +57,30 @@
     while(state.eHand.length<HAND_SIZE && state.eDeck.length) state.eHand.push(state.eDeck.pop());
   }
 
-  // ---------- UI ----------
+  // ---------- UI helpers ----------
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
   const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
-  function createHandCardEl(card, index){
+  // ===== ZOOM =====
+  function openZoom(card){
+    zoomWrap.innerHTML = `
+      <div class="zoom-card">
+        <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
+        <div class="zoom-token cost">${card.cost}</div>
+        <div class="zoom-token pts">${card.pts}</div>
+        <div class="name">${card.name||'Carta'}</div>
+      </div>
+      <p class="muted">Arrastra desde la mano para jugarla. Tocar solo abre esta vista.</p>
+    `;
+    zoomOverlay.classList.add('visible');
+  }
+  function closeZoom(){ zoomOverlay.classList.remove('visible'); }
+  $('#closeZoomBtn').addEventListener('click', closeZoom);
+  $('#zoomOverlay').addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
+
+  // ===== Hand (abanico dinámico) =====
+  function createHandCardEl(card, index, total){
     const el = document.createElement('div');
     el.className = 'card';
     el.dataset.index = String(index);
@@ -71,13 +88,25 @@
     el.dataset.pts  = String(card.pts);
     el.dataset.name = card.name || '';
     el.dataset.art  = card.art  || '';
+
     el.innerHTML = `
       ${artHTML(el.dataset.art)}
       ${tokenCost(card.cost)} ${tokenPts(card.pts)}
       <div class="label">${card.name || 'Carta'}</div>
     `;
+
+    // Posición en abanico calculada
+    // distribuye X en porcentajes y rota en torno al centro
+    const leftPct = ((index + 1) / (total + 1)) * 100; // 0..100
+    const mid = (total - 1) / 2;
+    const angle = (index - mid) * 8; // grados
+    el.style.left = `${leftPct}%`;
+    el.style.setProperty('--tx', `calc(${leftPct}% - 50%)`);
+    el.style.transform = `translateX(calc(${leftPct}% - 50%)) rotate(${angle}deg)`;
+
     // Zoom al tocar
     el.addEventListener('click', ()=> openZoom({name:el.dataset.name||'Carta', cost:+el.dataset.cost, pts:+el.dataset.pts, art:el.dataset.art||''}));
+
     // Drag
     attachDragHandlers(el);
     return el;
@@ -85,15 +114,15 @@
 
   function renderHand(){
     handEl.innerHTML = '';
-    state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i)));
-    handEl.style.visibility = 'visible';
-    handEl.scrollTo({left:0, behavior:'instant'});
+    const n = state.pHand.length;
+    state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n)));
   }
 
+  // ===== Board =====
   function renderBoard(){
     for(let i=0;i<SLOTS;i++){
       const ps = slotsPlayer[i], es = slotsEnemy[i];
-      ps.innerHTML = ''; es.innerHTML = ''; // limpieza
+      ps.innerHTML = ''; es.innerHTML = '';
       const p = state.center[i].p, e = state.center[i].e;
 
       if(p){
@@ -119,6 +148,7 @@
     eScoreEl.textContent = state.eScore;
   }
 
+  function setBanner(text){ phaseBanner.textContent = text; }
   function toast(msg){
     const t = document.createElement('div');
     t.className = 'toast';
@@ -127,27 +157,9 @@
     setTimeout(()=> t.remove(), 1500);
   }
 
-  function setBanner(text){ phaseBanner.textContent = text; }
   function highlightPlayerSlots(on){ $$('.slot[data-side="player"]').forEach(s=>s.classList.toggle('highlight', !!on)); }
 
-  // ---------- Zoom ----------
-  function openZoom(card){
-    zoomWrap.innerHTML = `
-      <div class="zoom-card">
-        <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
-        <div class="zoom-token cost">${card.cost}</div>
-        <div class="zoom-token pts">${card.pts}</div>
-        <div class="name">${card.name||'Carta'}</div>
-      </div>
-      <p class="zoom-text">Arrastra desde la mano para jugarla. Tocar solo abre esta vista.</p>
-    `;
-    zoomOverlay.classList.add('visible');
-  }
-  function closeZoom(){ zoomOverlay.classList.remove('visible'); }
-  closeZoomBtn.addEventListener('click', closeZoom);
-  zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
-
-  // ---------- Drag ----------
+  // ===== Drag & Drop =====
   let ghost=null, dragging=null;
   function attachDragHandlers(cardEl){ cardEl.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
@@ -155,7 +167,7 @@
     const el = e.currentTarget; dragging = el;
     el.setPointerCapture(e.pointerId);
 
-    // ghost con arte
+    // ghost
     ghost = document.createElement('div');
     ghost.className='ghost';
     ghost.innerHTML = `
@@ -198,7 +210,7 @@
     return -1;
   }
 
-  // ---------- Colocar (máx. 6, sin destruir al rival) ----------
+  // ===== Reglas de colocación (persistentes) =====
   const canAfford = (card) => state.pCoins >= card.cost;
   const playerOccupancy = () => state.center.filter(c => !!c.p).length;
   const enemyOccupancy  = () => state.center.filter(c => !!c.e).length;
@@ -226,7 +238,7 @@
     renderHand(); renderBoard(); updateHUD();
   }
 
-  // ---------- Enemy AI ----------
+  // ===== IA Rival =====
   function enemyTurn(){
     state.resolving = true;
     state.enemyPassed = false;
@@ -260,7 +272,7 @@
           const e = state.center[i].e;
           if(e && e.pts < worstPts){ worstPts=e.pts; worstIdx=i; }
         }
-        if(card.pts > worstPts) target=worstIdx; else return false; // no mejora ⇒ pasa
+        if(card.pts > worstPts) target=worstIdx; else return false;
       }
 
       // pagar y jugar
@@ -277,21 +289,16 @@
     const loop = ()=>{
       if(!tryPlayOnce()){
         state.enemyPassed = true;
-        // Pausa para ver sus cartas antes de puntuar
-        setTimeout(endEnemyPhase, 700);
+        setTimeout(endEnemyPhase, 700); // pausa visible
         return;
       }
       setTimeout(loop, 300);
     };
     loop();
   }
+  function endEnemyPhase(){ state.resolving = false; checkBothPassedThenScore(); }
 
-  function endEnemyPhase(){
-    state.resolving = false;
-    checkBothPassedThenScore();
-  }
-
-  // ---------- Flujo de turnos / puntuación (persistente) ----------
+  // ===== Puntuación (cartas persisten) =====
   const bothHavePassed = () => state.playerPassed && state.enemyPassed;
 
   function floatScore(label, who){
@@ -303,7 +310,6 @@
   }
 
   function scoreTurn(){
-    // sumar puntos de todas las cartas que siguen en mesa (persisten)
     let pTurn=0, eTurn=0;
     state.center.forEach(c=>{
       if(c.p) pTurn += c.p.pts;
@@ -313,16 +319,15 @@
     if(pTurn>0) floatScore(`+${pTurn}`, 'you');
     if(eTurn>0) floatScore(`+${eTurn}`, 'enemy');
 
-    // aplicar puntuación tras breve pausa para ver los +N
     setTimeout(()=>{
       state.pScore += pTurn; state.eScore += eTurn;
       updateHUD();
 
-      // siguiente ronda/turno: vuelve al jugador y gana +1 moneda al iniciar su turno
+      // siguiente ronda → empieza el jugador (+1 moneda)
       state.round += 1;
       state.playerPassed = false; state.enemyPassed = false;
       state.turn = 'player';
-      state.pCoins += 1;    // +1 por inicio de turno del jugador
+      state.pCoins += 1;
 
       // robar hasta 5
       while(state.pHand.length<HAND_SIZE && state.pDeck.length) state.pHand.push(state.pDeck.pop());
@@ -330,7 +335,6 @@
 
       setBanner('Nueva ronda: juega cartas mientras tengas monedas');
 
-      // fin opcional
       if(state.pScore >= TARGET_SCORE || state.eScore >= TARGET_SCORE){
         endTitle.textContent = state.pScore>=TARGET_SCORE ? '¡Victoria!' : 'Derrota';
         endLine.textContent = `Puntos: Tú ${state.pScore} · 🤖 ${state.eScore}`;
@@ -338,13 +342,9 @@
       }
     }, 450);
   }
+  function checkBothPassedThenScore(){ if(bothHavePassed()) scoreTurn(); }
 
-  function checkBothPassedThenScore(){
-    if(!bothHavePassed()) return;
-    scoreTurn(); // NO se limpia el tablero (las cartas persisten)
-  }
-
-  // ---------- New game ----------
+  // ===== New game =====
   function newGame(){
     state.round=1;
     state.pCoins=3; state.eCoins=3;
@@ -366,7 +366,7 @@
     setBanner('Arrastra cartas a tus huecos (máx. 6)');
   }
 
-  // ---------- Events ----------
+  // ===== Events =====
   $('#startBtn').addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
   $('#againBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
   $('#menuBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
@@ -375,7 +375,6 @@
   passBtn.addEventListener('click', ()=>{
     if(state.turn!=='player' || state.resolving) return;
     state.playerPassed = true;
-    // turno rival
     state.turn = 'enemy';
     setBanner('Turno rival…');
     enemyTurn();
