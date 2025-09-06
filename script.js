@@ -13,7 +13,6 @@
   const pCoinsEl = $('#pCoins'), eCoinsEl = $('#eCoins');
   const pScoreEl = $('#pScore'), eScoreEl = $('#eScore');
   const phaseBanner = $('#phaseBanner');
-  const passBtn = $('#passBtn');
 
   const startOverlay = $('#startOverlay');
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
@@ -21,8 +20,10 @@
 
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap'); const closeZoomBtn = $('#closeZoomBtn');
 
+  const passBtn = $('#passBtn'); const resetBtn = $('#resetBtn');
+
   // ---------- State ----------
-  const SLOTS = 6;          // 6 huecos por lado
+  const SLOTS = 6;          // 6 huecos por lado (2x3)
   const HAND_SIZE = 5;
   const TARGET_SCORE = 30;   // fin opcional
 
@@ -32,7 +33,7 @@
     pScore: 0, eScore: 0,
     pDeck: [], eDeck: [],
     pHand: [], eHand: [],
-    center: Array.from({length: SLOTS}, () => ({ p:null, e:null })), // columnas [0..5]
+    center: Array.from({length: SLOTS}, () => ({ p:null, e:null })), // columnas (0..5)
     turn: 'player', // 'player' | 'enemy'
     playerPassed: false,
     enemyPassed: false,
@@ -76,7 +77,7 @@
     zoomOverlay.classList.add('visible');
   }
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
-  $('#closeZoomBtn').addEventListener('click', closeZoom);
+  closeZoomBtn.addEventListener('click', closeZoom);
   $('#zoomOverlay').addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
 
   // ===== Hand (abanico dinámico, ajustado al ancho visible) =====
@@ -95,16 +96,12 @@
       <div class="label">${card.name || 'Carta'}</div>
     `;
 
-    // Posición en abanico: distribuimos entre márgenes 10%..90% (para que NUNCA se salga)
+    // Posición en abanico: 10%..90% para que no se salga
     const margin = 10; // %
-    let leftPct;
-    if (total === 1) leftPct = 50;
-    else leftPct = margin + (index)*( (100 - margin*2) / (total-1) );
-
+    const leftPct = (total === 1) ? 50 : margin + (index)*( (100 - margin*2) / (total-1) );
     const mid = (total - 1) / 2;
     const angle = (index - mid) * 8; // grados
 
-    // Pasamos a variables CSS para hover consistente
     el.style.setProperty('--x', `calc(${leftPct}% - 50%)`);
     el.style.setProperty('--rot', `${angle}deg`);
 
@@ -207,6 +204,7 @@
   function moveGhost(x,y){ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
   function removeGhost(){ ghost?.remove(); ghost=null; }
   function laneIndexUnderPointer(x,y){
+    // slots de jugador (0..5) están en dos filas de 3; basta comprobar todos
     for(let i=0;i<SLOTS;i++){
       const r = slotsPlayer[i].getBoundingClientRect();
       if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom) return i;
@@ -293,14 +291,13 @@
     const loop = ()=>{
       if(!tryPlayOnce()){
         state.enemyPassed = true;
-        setTimeout(endEnemyPhase, 700); // pausa visible
+        setTimeout(()=>{ state.resolving=false; checkBothPassedThenScore(); }, 700);
         return;
       }
       setTimeout(loop, 300);
     };
     loop();
   }
-  function endEnemyPhase(){ state.resolving = false; checkBothPassedThenScore(); }
 
   // ===== Puntuación (cartas persisten) =====
   const bothHavePassed = () => state.playerPassed && state.enemyPassed;
@@ -338,12 +335,6 @@
       while(state.eHand.length<HAND_SIZE && state.eDeck.length) state.eHand.push(state.eDeck.pop());
 
       setBanner('Nueva ronda: juega cartas mientras tengas monedas');
-
-      if(state.pScore >= TARGET_SCORE || state.eScore >= TARGET_SCORE){
-        endTitle.textContent = state.pScore>=TARGET_SCORE ? '¡Victoria!' : 'Derrota';
-        endLine.textContent = `Puntos: Tú ${state.pScore} · 🤖 ${state.eScore}`;
-        endOverlay.classList.add('visible');
-      }
     }, 450);
   }
   function checkBothPassedThenScore(){ if(bothHavePassed()) scoreTurn(); }
@@ -358,8 +349,7 @@
 
     // mazos y manos (Spiderman garantizado en tu mano)
     state.pDeck = makeDeckRandom(30);
-    state.pHand = [{ name:'Spiderman', cost:3, pts:6, art:'assets/Spiderman.png' }];
-    drawToHand();
+    state.pHand = [{...SPIDEY}]; drawToHand();
 
     state.eDeck = makeDeckRandom(30);
     state.eHand = []; drawToHand();
@@ -368,14 +358,15 @@
     state.pCoins += 1;
 
     renderBoard(); renderHand(); updateHUD();
-    setBanner('Arrastra cartas a tus huecos (máx. 6)');
+    setBanner('Arrastra cartas a tus huecos (2×3 por lado)');
   }
 
   // ===== Events =====
-  $('#startBtn')?.addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
-  $('#againBtn')?.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
-  $('#menuBtn')?.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
-  $('#resetBtn').addEventListener('click', ()=> newGame());
+  $('#startBtn').addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
+  $('#againBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
+  $('#menuBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
+
+  resetBtn.addEventListener('click', ()=> newGame());
 
   passBtn.addEventListener('click', ()=>{
     if(state.turn!=='player' || state.resolving) return;
