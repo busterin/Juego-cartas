@@ -11,16 +11,16 @@
     <!-- HUD: izquierda jugador, centro ronda+reset, derecha enemigo -->
     <header class="hud">
       <div class="score side player">
-        <span class="pill"><strong id="pCoins">3</strong></span>
-        <span class="pill"><strong id="pScore">0</strong></span>
+        <span class="meter coin" title="Tus monedas"><span class="value" id="pCoins">3</span></span>
+        <span class="meter pts"  title="Tus puntos"><span class="value" id="pScore">0</span></span>
       </div>
       <div class="center-info">
         <span class="pill">Ronda <strong id="roundNo">1</strong></span>
         <button id="resetBtn" class="btn" aria-label="Reiniciar">↺</button>
       </div>
       <div class="score side enemy">
-        <span class="pill"><strong id="eCoins">3</strong></span>
-        <span class="pill"><strong id="eScore">0</strong></span>
+        <span class="meter coin" title="Monedas rival"><span class="value" id="eCoins">3</span></span>
+        <span class="meter pts"  title="Puntos rival"><span class="value" id="eScore">0</span></span>
       </div>
     </header>
 
@@ -31,30 +31,32 @@
       </div>
     </div>
 
-    <div id="phaseBanner" class="banner">Arrastra cartas a tus huecos (máx. 5)</div>
+    <div id="phaseBanner" class="banner">Arrastra cartas a tus huecos (máx. 6)</div>
 
-    <!-- Tablero central con 5 columnas por bando -->
-    <section class="board" aria-label="Tablero central 5x2">
+    <!-- Tablero central con 6 columnas por bando -->
+    <section class="board" aria-label="Tablero central 6x2">
       <div class="row row-enemy">
         <div class="name">Rival</div>
-        <div class="lanes lanes-5">
+        <div class="lanes lanes-6">
           <div class="slot enemy" data-side="enemy" data-lane="0"></div>
           <div class="slot enemy" data-side="enemy" data-lane="1"></div>
           <div class="slot enemy" data-side="enemy" data-lane="2"></div>
           <div class="slot enemy" data-side="enemy" data-lane="3"></div>
           <div class="slot enemy" data-side="enemy" data-lane="4"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="5"></div>
         </div>
       </div>
 
-      <div class="center-hint">Hasta 5 cartas por lado. Reemplazar tus propias cartas es posible.</div>
+      <div class="center-hint">Hasta 6 cartas por lado. Puedes reemplazar tus propias cartas.</div>
 
       <div class="row row-player">
-        <div class="lanes lanes-5">
+        <div class="lanes lanes-6">
           <div class="slot" data-side="player" data-lane="0"></div>
           <div class="slot" data-side="player" data-lane="1"></div>
           <div class="slot" data-side="player" data-lane="2"></div>
           <div class="slot" data-side="player" data-lane="3"></div>
           <div class="slot" data-side="player" data-lane="4"></div>
+          <div class="slot" data-side="player" data-lane="5"></div>
         </div>
         <div class="name">Tú</div>
       </div>
@@ -72,9 +74,9 @@
     <div class="panel">
       <h2>Modo: Coste y Puntos</h2>
       <p class="muted">
-        Coloca cartas pagando su <b>coste</b> (💰). Puedes jugar varias por turno.
-        Las cartas <b>no se eliminan</b> al colocar (salvo efectos futuros) y <b>permanecen</b> entre turnos.
-        Al terminar ambos, se recolectan los <b>puntos</b> (⭐) de las cartas que sigan.
+        Coloca cartas pagando su <b>coste</b>. Puedes jugar varias por turno.
+        Las cartas <b>no se eliminan</b> al colocar y <b>permanecen</b> entre turnos (salvo efectos).
+        Al terminar ambos, se recolectan los <b>puntos</b> de las cartas en mesa.
         Cada <b>turno</b> ganas <b>+1</b> moneda al comenzar tu fase.
       </p>
       <button id="startBtn" class="btn">Jugar ▶</button>
