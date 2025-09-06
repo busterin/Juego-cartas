@@ -13,7 +13,7 @@
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
 
-  /* Tablero 1×4 por lado */
+  /* Tablero 1×3 por lado */
   --lanes-gap: 10px;
   --slot-inset: 6px;
   --slot-br: 14px;
@@ -41,7 +41,7 @@ body{
   grid-template-rows:
     auto           /* HUD */
     auto           /* banner */
-    minmax(0,1fr)  /* tablero (llena todo lo disponible) */
+    minmax(0,1fr)  /* tablero (llena sin empujar) */
     auto           /* mano */
     auto;          /* footer */
   gap: var(--gap);
@@ -92,7 +92,7 @@ body{
   font-size:.86rem;
 }
 
-/* ===== TABLERO: 1 línea por lado (4 columnas) ===== */
+/* ===== TABLERO: 1 línea por lado (3 columnas) ===== */
 .board{
   display:grid;
   grid-template-rows: 1fr 1fr; /* enemigo / jugador */
@@ -102,9 +102,9 @@ body{
   z-index:0;
 }
 .row{ display:grid; grid-template-rows:1fr; min-height:0; }
-.lanes-4x1{
+.lanes-3x1{
   display:grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   grid-auto-rows: 1fr;
   gap: var(--lanes-gap);
   height: 100%;
