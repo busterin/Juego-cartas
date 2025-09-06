@@ -1,8 +1,10 @@
 (() => {
+  // ---------- Helpers ----------
   const $  = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
   const rand = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
 
+  // ---------- Elements ----------
   const handEl = $('#hand');
   const slotsPlayer = $$('.slot[data-side="player"]');
   const slotsEnemy  = $$('.slot[data-side="enemy"]');
@@ -18,8 +20,8 @@
 
   const passBtn = $('#passBtn'); const resetBtn = $('#resetBtn');
 
+  // ---------- State ----------
   const SLOTS = 6, HAND_SIZE = 5, TARGET_SCORE = 30;
-
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
     pDeck: [], eDeck: [], pHand: [], eHand: [],
@@ -27,6 +29,7 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
+  // ---------- Cards ----------
   const SPIDEY = { name:'Spiderman', cost:3, pts:6, art:'assets/Spiderman.png' };
 
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
@@ -34,9 +37,10 @@
   const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
   function makeRandomCard(){ const cost=rand(1,4), pts=rand(cost+1,cost+5); return {name:'',cost,pts,art:''}; }
-  function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; } return d; }
+  function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=Math.random()* (i+1) | 0; [d[i],d[j]]=[d[j],d[i]]; } return d; }
   function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
 
+  // ===== ZOOM =====
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
@@ -47,12 +51,13 @@
       </div>
       <p class="muted">Arrastra desde la mano para jugarla.</p>
     `;
-    $('#zoomOverlay').classList.add('visible');
+    zoomOverlay.classList.add('visible');
   }
-  function closeZoom(){ $('#zoomOverlay').classList.remove('visible'); }
+  function closeZoom(){ zoomOverlay.classList.remove('visible'); }
   $('#closeZoomBtn').addEventListener('click', closeZoom);
   $('#zoomOverlay').addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
 
+  // ===== Mano (abanico con más separación) =====
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
     el.className='card';
@@ -71,6 +76,7 @@
   }
   function renderHand(){ handEl.innerHTML=''; const n=state.pHand.length; state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n))); }
 
+  // ===== Board =====
   function renderBoard(){
     for(let i=0;i<SLOTS;i++){
       const ps=slotsPlayer[i], es=slotsEnemy[i]; ps.innerHTML=''; es.innerHTML='';
@@ -79,10 +85,11 @@
       if(e){ const d=document.createElement('div'); d.className='placed enemy'; d.innerHTML=`${artHTML(e.art)}${tokenCost(e.cost)}${tokenPts(e.pts)}<div class="name">${e.name||''}</div>`; es.appendChild(d); }
     }
   }
+
   function updateHUD(){ roundNoEl.textContent=state.round; pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins; pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore; }
   function setBanner(t){ phaseBanner.textContent=t; }
 
-  // Drag & drop
+  // ===== Drag & drop =====
   let ghost=null;
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
@@ -106,7 +113,7 @@
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
   function laneUnder(x,y){ for(let i=0;i<SLOTS;i++){ const r=slotsPlayer[i].getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return i; } return -1; }
 
-  // Reglas
+  // ===== Reglas =====
   const canAfford = c => state.pCoins>=c.cost;
   const playerOccupancy = ()=> state.center.filter(c=>!!c.p).length;
   const enemyOccupancy  = ()=> state.center.filter(c=>!!c.e).length;
@@ -124,7 +131,7 @@
     renderHand(); renderBoard(); updateHUD();
   }
 
-  // IA rival
+  // ===== IA rival =====
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins) && enemyOccupancy()<SLOTS;
@@ -147,12 +154,12 @@
     loop();
   }
 
+  // ===== Puntuación =====
   function floatScore(label,who){
     const d=document.createElement('div'); d.className=`score-float ${who}`; d.textContent=label;
     document.querySelector('.board').appendChild(d); setTimeout(()=>d.remove(),1100);
   }
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
-
   function scoreTurn(){
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
     if(p>0) floatScore(`+${p}`,'you'); if(e>0) floatScore(`+${e}`,'enemy');
@@ -166,6 +173,7 @@
   }
   function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
 
+  // ===== New game =====
   function newGame(){
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
@@ -174,23 +182,14 @@
     state.eDeck=makeDeckRandom(30); state.eHand=[]; drawToHand();
     state.pCoins+=1;
     renderBoard(); renderHand(); updateHUD();
-    phaseBanner.textContent='Arrastra cartas a tus huecos (2×3 por lado)';
+    setBanner('Arrastra cartas a tus huecos (2×3 por lado)');
   }
-
-  // Compact helper: recalcular en resize si el navegador no soporta 100dvh
-  function adjust100dvhFallback(){
-    // Si 100dvh no está bien soportado, esto asegura altura exacta:
-    document.documentElement.style.setProperty('--win-h', window.innerHeight + 'px');
-  }
-  window.addEventListener('resize', adjust100dvhFallback, {passive:true});
-  adjust100dvhFallback();
 
   // Events
   $('#startBtn').addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
   $('#againBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
   $('#menuBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
   resetBtn.addEventListener('click', ()=> newGame());
-
   passBtn.addEventListener('click', ()=>{
     if(state.turn!=='player'||state.resolving) return;
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
