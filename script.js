@@ -12,12 +12,13 @@
   const roundNoEl = $('#roundNo');
   const pCoinsEl = $('#pCoins'), eCoinsEl = $('#eCoins');
   const pScoreEl = $('#pScore'), eScoreEl = $('#eScore');
-  const phaseBanner = $('#phaseBanner');
 
   const startOverlay = $('#startOverlay');
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
 
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
+
+  const turnToast = $('#turnToast');
 
   const startBtn = $('#startBtn');
   const againBtn = $('#againBtn');
@@ -101,12 +102,21 @@
     }
   }
 
+  // ---------- HUD ----------
   function updateHUD(){
     roundNoEl.textContent=state.round;
     pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins;
     pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore;
   }
-  function setBanner(t){ phaseBanner.textContent=t; }
+
+  // ---------- Turn Toast ----------
+  let toastTimer=null;
+  function showTurnToast(text, ms=1200){
+    turnToast.setAttribute('data-text', text);
+    turnToast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> turnToast.classList.remove('show'), ms);
+  }
 
   // ---------- Drag & drop ----------
   let ghost=null;
@@ -155,6 +165,7 @@
   // ---------- IA rival ----------
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
+    showTurnToast('TURNO RIVAL');
 
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins) && enemyOccupancy()<SLOTS;
     const tryPlayOnce=()=>{
@@ -176,7 +187,7 @@
     loop();
   }
 
-  // ---------- Puntuación ----------
+  // ---------- Puntuación / cambio de ronda ----------
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
   function scoreTurn(){
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
@@ -184,7 +195,10 @@
 
     state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
     drawToHand();
-    setBanner('Nueva ronda: juega cartas mientras tengas monedas');
+    roundNoEl.textContent = state.round;
+
+    // Aviso de inicio de turno del jugador (sin mensajes largos)
+    setTimeout(()=> showTurnToast('TU TURNO'), 250);
   }
   function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
 
@@ -201,7 +215,7 @@
     state.pCoins+=1;
 
     renderBoard(); renderHand(); updateHUD();
-    setBanner('Arrastra cartas a tus huecos (3 por lado)');
+    showTurnToast('TU TURNO');
   }
 
   // ---------- Eventos ----------
