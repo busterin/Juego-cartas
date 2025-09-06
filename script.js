@@ -22,7 +22,7 @@
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap'); const closeZoomBtn = $('#closeZoomBtn');
 
   // ---------- State ----------
-  const SLOTS = 5;          // ⬅️ hasta 5 cartas por lado
+  const SLOTS = 6;          // ⬅️ hasta 6 cartas por lado
   const HAND_SIZE = 5;
   const TARGET_SCORE = 30;   // fin opcional
 
@@ -32,7 +32,7 @@
     pScore: 0, eScore: 0,
     pDeck: [], eDeck: [],
     pHand: [], eHand: [],
-    // cada índice representa la columna central [0..4]
+    // cada índice representa la columna central [0..5]
     center: Array.from({length: SLOTS}, () => ({ p:null, e:null })), // {cost, pts, name, art}
     turn: 'player', // 'player' | 'enemy'
     playerPassed: false,
@@ -48,7 +48,7 @@
     const pts  = rand(cost+1, cost+5); // puntos algo mayores que el coste
     return { name:'', cost, pts, art:'' };
   }
-  function makeDeckRandom(n=28){
+  function makeDeckRandom(n=30){
     const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard());
     for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; }
     return d;
@@ -59,8 +59,8 @@
   }
 
   // ---------- UI ----------
-  const badgeCost = v => `<div class="badge b-cost">${v}</div>`;
-  const badgePts  = v => `<div class="badge b-pts">${v}</div>`;
+  const tokenCost = v => `<div class="token t-cost">${v}</div>`;
+  const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
   const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
   function createHandCardEl(card, index){
@@ -73,7 +73,7 @@
     el.dataset.art  = card.art  || '';
     el.innerHTML = `
       ${artHTML(el.dataset.art)}
-      ${badgeCost(card.cost)} ${badgePts(card.pts)}
+      ${tokenCost(card.cost)} ${tokenPts(card.pts)}
       <div class="label">${card.name || 'Carta'}</div>
     `;
     // Zoom al tocar
@@ -99,13 +99,13 @@
       if(p){
         const div = document.createElement('div');
         div.className = 'placed';
-        div.innerHTML = `${artHTML(p.art)} ${badgeCost(p.cost)} ${badgePts(p.pts)} <div class="name">${p.name||''}</div>`;
+        div.innerHTML = `${artHTML(p.art)} ${tokenCost(p.cost)} ${tokenPts(p.pts)} <div class="name">${p.name||''}</div>`;
         ps.appendChild(div);
       }
       if(e){
         const div = document.createElement('div');
         div.className = 'placed enemy';
-        div.innerHTML = `${artHTML(e.art)} ${badgeCost(e.cost)} ${badgePts(e.pts)} <div class="name">${e.name||''}</div>`;
+        div.innerHTML = `${artHTML(e.art)} ${tokenCost(e.cost)} ${tokenPts(e.pts)} <div class="name">${e.name||''}</div>`;
         es.appendChild(div);
       }
     }
@@ -135,8 +135,8 @@
     zoomWrap.innerHTML = `
       <div class="zoom-card">
         <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
-        <div class="zoom-badge cost">${card.cost}</div>
-        <div class="zoom-badge pts">${card.pts}</div>
+        <div class="zoom-token cost">${card.cost}</div>
+        <div class="zoom-token pts">${card.pts}</div>
         <div class="name">${card.name||'Carta'}</div>
       </div>
       <p class="zoom-text">Arrastra desde la mano para jugarla. Tocar solo abre esta vista.</p>
@@ -155,12 +155,12 @@
     const el = e.currentTarget; dragging = el;
     el.setPointerCapture(e.pointerId);
 
-    // ghost con arte (sin deformar)
+    // ghost con arte
     ghost = document.createElement('div');
     ghost.className='ghost';
     ghost.innerHTML = `
       ${artHTML(el.dataset.art)}
-      ${badgeCost(el.dataset.cost)} ${badgePts(el.dataset.pts)}
+      ${tokenCost(el.dataset.cost)} ${tokenPts(el.dataset.pts)}
       <div class="label">${el.dataset.name||'Carta'}</div>
     `;
     document.body.appendChild(ghost);
@@ -198,7 +198,7 @@
     return -1;
   }
 
-  // ---------- Rules: colocar (máx. 5, sin destruir al rival) ----------
+  // ---------- Colocar (máx. 6, sin destruir al rival) ----------
   const canAfford = (card) => state.pCoins >= card.cost;
   const playerOccupancy = () => state.center.filter(c => !!c.p).length;
   const enemyOccupancy  = () => state.center.filter(c => !!c.e).length;
@@ -208,10 +208,9 @@
     const card = state.pHand[handIndex];
     if(!canAfford(card)){ toast('No tienes monedas suficientes'); return; }
 
-    // Si el hueco ya tiene tu carta, reemplazas; si está vacío y ya tienes 5, no puedes
     const slot = state.center[slotIndex];
     if(!slot.p && playerOccupancy() >= SLOTS){
-      toast('Ya tienes 5 cartas en juego'); return;
+      toast('Ya tienes 6 cartas en juego'); return;
     }
 
     // paga coste
@@ -251,7 +250,7 @@
       });
       const card = state.eHand[bestIdx];
 
-      // elegir slot: prioriza vacíos; si lleno (5), permite reemplazar el peor propio si mejora
+      // elegir slot: vacío si hay; si lleno (6), reemplaza el peor propio si mejora
       let target = -1, worstIdx=-1, worstPts=Infinity;
       for(let i=0;i<SLOTS;i++){
         if(!state.center[i].e){ target=i; break; }
@@ -278,7 +277,7 @@
     const loop = ()=>{
       if(!tryPlayOnce()){
         state.enemyPassed = true;
-        // Pausa clara para ver sus cartas antes de puntuar
+        // Pausa para ver sus cartas antes de puntuar
         setTimeout(endEnemyPhase, 700);
         return;
       }
@@ -292,7 +291,7 @@
     checkBothPassedThenScore();
   }
 
-  // ---------- Turn flow / scoring ----------
+  // ---------- Flujo de turnos / puntuación (persistente) ----------
   const bothHavePassed = () => state.playerPassed && state.enemyPassed;
 
   function floatScore(label, who){
@@ -304,7 +303,7 @@
   }
 
   function scoreTurn(){
-    // sumar puntos de cartas que siguen en mesa (persisten)
+    // sumar puntos de todas las cartas que siguen en mesa (persisten)
     let pTurn=0, eTurn=0;
     state.center.forEach(c=>{
       if(c.p) pTurn += c.p.pts;
@@ -318,11 +317,12 @@
     setTimeout(()=>{
       state.pScore += pTurn; state.eScore += eTurn;
       updateHUD();
+
       // siguiente ronda/turno: vuelve al jugador y gana +1 moneda al iniciar su turno
       state.round += 1;
       state.playerPassed = false; state.enemyPassed = false;
       state.turn = 'player';
-      state.pCoins += 1;    // +1 moneda por inicio de turno del jugador
+      state.pCoins += 1;    // +1 por inicio de turno del jugador
 
       // robar hasta 5
       while(state.pHand.length<HAND_SIZE && state.pDeck.length) state.pHand.push(state.pDeck.pop());
@@ -353,17 +353,17 @@
     state.center = Array.from({length: SLOTS}, () => ({ p:null, e:null }));
 
     // mazos y manos (Spiderman garantizado en tu mano)
-    state.pDeck = makeDeckRandom(28);
+    state.pDeck = makeDeckRandom(30);
     state.pHand = [{...SPIDEY}]; drawToHand();
 
-    state.eDeck = makeDeckRandom(28);
+    state.eDeck = makeDeckRandom(30);
     state.eHand = []; drawToHand();
 
     // Al comenzar tu primer turno: +1 moneda
     state.pCoins += 1;
 
     renderBoard(); renderHand(); updateHUD();
-    setBanner('Arrastra cartas a tus huecos (máx. 5)');
+    setBanner('Arrastra cartas a tus huecos (máx. 6)');
   }
 
   // ---------- Events ----------
@@ -378,8 +378,6 @@
     // turno rival
     state.turn = 'enemy';
     setBanner('Turno rival…');
-
-    // El jugador ya gastó; ahora le toca a la IA
     enemyTurn();
   });
 
