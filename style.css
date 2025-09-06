@@ -14,7 +14,7 @@
   --card-h: calc(var(--card-w) * 1.42);
 
   /* Tablero centrado */
-  --board-h: clamp(260px, 42vh, 380px);   /* Altura TOTAL del bloque tablero */
+  --board-h: clamp(500px, 84vh, 700px);   /* Altura TOTAL del bloque tablero */
   --lanes-gap: 6px;                       /* separación entre slots */
   --slot-ratio: 2/3;                      /* más “baja”, estilo Snap */
   --slot-inset: 3px;                      /* padding interno de la carta */
