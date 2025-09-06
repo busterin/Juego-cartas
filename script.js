@@ -1,10 +1,10 @@
 (() => {
-  // Helpers
+  // ---------- Helpers ----------
   const $  = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
   const rand = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
 
-  // Elements
+  // ---------- Elements ----------
   const handEl = $('#hand');
   const slotsPlayer = $$('.slot[data-side="player"]');
   const slotsEnemy  = $$('.slot[data-side="enemy"]');
@@ -21,7 +21,9 @@
 
   const passBtn = $('#passBtn'); const resetBtn = $('#resetBtn');
 
-  // State
+  const tooltipEl = $('#tooltip');
+
+  // ---------- State ----------
   const SLOTS = 6, HAND_SIZE = 5;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
@@ -30,15 +32,15 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // Cards
+  // ---------- Cards ----------
   const SPIDEY = { name:'Spiderman', cost:3, pts:6, art:'assets/Spiderman.png' };
 
-  // UI helpers
+  // ---------- UI helpers ----------
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
   const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
-  // Zoom
+  // ===== Zoom =====
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
@@ -55,66 +57,96 @@
   closeZoomBtn.addEventListener('click', closeZoom);
   $('#zoomOverlay').addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
 
-  // Decks
+  // ===== Tooltips (opcional: hover / long-press para ver el coste) =====
+  let lpTimer = null;
+  function showTooltipFor(el, text){
+    tooltipEl.textContent = text;
+    const r = el.getBoundingClientRect();
+    tooltipEl.style.left = (r.left + r.width/2) + 'px';
+    tooltipEl.style.top  = (r.top) + 'px';
+    tooltipEl.hidden = false;
+  }
+  function hideTooltip(){ tooltipEl.hidden = true; tooltipEl.textContent = ''; }
+  function enableTooltip(el, text){
+    // Desktop hover
+    el.addEventListener('mouseenter', ()=> showTooltipFor(el, text));
+    el.addEventListener('mouseleave', hideTooltip);
+    // Touch long-press (~500ms)
+    el.addEventListener('touchstart', (e)=>{
+      hideTooltip();
+      lpTimer = setTimeout(()=>{ showTooltipFor(el, text); }, 500);
+    }, {passive:true});
+    ['touchend','touchcancel'].forEach(ev=> el.addEventListener(ev, ()=>{
+      clearTimeout(lpTimer); lpTimer=null; hideTooltip();
+    }, {passive:true}));
+  }
+
+  // ===== Decks & hand =====
   function makeRandomCard(){ const cost=rand(1,4), pts=rand(cost+1,cost+5); return {name:'',cost,pts,art:''}; }
   function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; } return d; }
   function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
 
-  // Hand
+  // ===== Hand (abanico) =====
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
     el.className='card';
     el.dataset.index=i; el.dataset.cost=card.cost; el.dataset.pts=card.pts;
     el.dataset.name=card.name||''; el.dataset.art=card.art||'';
     el.innerHTML=`${artHTML(card.art)}${tokenCost(card.cost)}${tokenPts(card.pts)}<div class="label">${card.name||'Carta'}</div>`;
+
+    // distribución
     const margin=8;
     const leftPct = (n===1)?50: margin + i*((100-margin*2)/(n-1));
     const mid=(n-1)/2, angle=(i-mid)*10, extra=(i-mid)*14;
     el.style.setProperty('--x',`calc(${leftPct}% - 50%)`);
     el.style.setProperty('--rot',`${angle}deg`);
     el.style.setProperty('--off',`${extra}px`);
+
     el.addEventListener('click', ()=> openZoom({name:el.dataset.name||'Carta', cost:+el.dataset.cost, pts:+el.dataset.pts, art:el.dataset.art||''}));
     attachDragHandlers(el);
     return el;
   }
   function renderHand(){ handEl.innerHTML=''; const n=state.pHand.length; state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n))); }
 
-  // Board (colocar solo PUNTOS en el centro, y permitir zoom al pulsar)
+  // ===== Board placed cards (misma estructura para ambos lados) =====
+  function makePlaced(card, side /* 'player'|'enemy' */){
+    const div = document.createElement('div');
+    div.className = `placed ${side}`;
+    // En mesa: SOLO puntos
+    div.innerHTML = `
+      ${artHTML(card.art)}
+      <div class="token t-pts">${card.pts}</div>
+      <div class="label">${card.name || ''}</div>
+    `;
+    // Zoom al click/tap
+    div.addEventListener('click', () => openZoom(card));
+    // Tooltip de coste (opcional) en hover/long-press
+    enableTooltip(div, `Coste: ${card.cost}`);
+    return div;
+  }
+
   function renderBoard(){
     for(let i=0;i<SLOTS;i++){
       const ps=slotsPlayer[i], es=slotsEnemy[i];
       ps.innerHTML=''; es.innerHTML='';
       const p=state.center[i].p, e=state.center[i].e;
 
-      if(p){
-        const div=document.createElement('div');
-        div.className='placed';
-        div.innerHTML = `${artHTML(p.art)} ${tokenPts(p.pts)} <div class="name">${p.name||''}</div>`;
-        // Abrir zoom al pulsar
-        div.addEventListener('click', ()=> openZoom(p));
-        ps.appendChild(div);
-      }
-      if(e){
-        const div=document.createElement('div');
-        div.className='placed enemy';
-        div.innerHTML = `${artHTML(e.art)} ${tokenPts(e.pts)} <div class="name">${e.name||''}</div>`;
-        div.addEventListener('click', ()=> openZoom(e));
-        es.appendChild(div);
-      }
+      if(p) ps.appendChild( makePlaced(p,'player') );
+      if(e) es.appendChild( makePlaced(e,'enemy') );
     }
   }
 
-  // HUD
+  // ===== HUD =====
   function updateHUD(){
-    $('#roundNo').textContent = state.round;
-    $('#pCoins').textContent = state.pCoins;
-    $('#eCoins').textContent = state.eCoins;
-    $('#pScore').textContent = state.pScore;
-    $('#eScore').textContent = state.eScore;
+    roundNoEl.textContent = state.round;
+    pCoinsEl.textContent = state.pCoins;
+    eCoinsEl.textContent = state.eCoins;
+    pScoreEl.textContent = state.pScore;
+    eScoreEl.textContent = state.eScore;
   }
   function setBanner(t){ phaseBanner.textContent=t; }
 
-  // Drag & drop
+  // ===== Drag & drop =====
   let ghost=null;
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
@@ -139,7 +171,7 @@
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
   function laneUnder(x,y){ for(let i=0;i<SLOTS;i++){ const r=slotsPlayer[i].getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return i; } return -1; }
 
-  // Reglas de colocación (persisten entre turnos)
+  // ===== Reglas de colocación =====
   const canAfford = c => state.pCoins>=c.cost;
   const playerOccupancy = ()=> state.center.filter(c=>!!c.p).length;
   const enemyOccupancy  = ()=> state.center.filter(c=>!!c.e).length;
@@ -148,20 +180,21 @@
     if(handIndex<0||handIndex>=state.pHand.length) return;
     const card=state.pHand[handIndex];
     if(!canAfford(card)) return;
-
     const slot=state.center[slotIndex];
     if(!slot.p && playerOccupancy()>=SLOTS) return;
 
+    // paga y coloca (persistente)
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
 
+    // roba reposición
     state.pHand.splice(handIndex,1);
     if(state.pDeck.length) state.pHand.push(state.pDeck.pop());
 
     renderHand(); renderBoard(); updateHUD();
   }
 
-  // IA rival
+  // ===== IA rival =====
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins) && enemyOccupancy()<SLOTS;
@@ -192,7 +225,7 @@
     loop();
   }
 
-  // Puntuación
+  // ===== Puntuación =====
   function floatScore(label,who){
     const d=document.createElement('div'); d.className=`score-float ${who}`; d.textContent=label;
     document.querySelector('.board').appendChild(d); setTimeout(()=>d.remove(),1100);
@@ -211,28 +244,32 @@
   }
   function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
 
-  // New game
+  // ===== New game =====
   function newGame(){
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
 
+    // mazos y mano (Spidey asegurado)
     state.pDeck=makeDeckRandom(30);
     state.pHand=[{...SPIDEY}]; drawToHand();
 
     state.eDeck=makeDeckRandom(30);
     state.eHand=[]; drawToHand();
 
+    // +1 moneda al primer turno del jugador
     state.pCoins+=1;
+
     renderBoard(); renderHand(); updateHUD();
     setBanner('Arrastra cartas a tus huecos (2×3 por lado)');
   }
 
-  // Events
+  // ===== Events =====
   $('#startBtn').addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
   $('#againBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
   $('#menuBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
   resetBtn.addEventListener('click', ()=> newGame());
+
   passBtn.addEventListener('click', ()=>{
     if(state.turn!=='player'||state.resolving) return;
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
