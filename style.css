@@ -91,57 +91,44 @@ body{
   font-size:.84rem;
 }
 
-/* ===== TABLERO — Full height dentro de su 1fr ===== */
+/* ===== TABLERO (arreglado: dos filas que llenan toda la altura) ===== */
 .board{
-  display:grid; place-items:center; min-height:0; /* evita overflow */
-}
-.board > .row{
-  /* Dos filas apiladas ocupando TODO el alto disponible por igual */
-  width:100%;
-}
-.board{
-  grid-template-rows: 1fr  auto 1fr; /* enemigo / hint / jugador */
-  align-content:stretch;
-}
-.center-hint{
-  text-align:center; color:#aecdff; font-weight:700; font-size:.85rem; line-height:1.1;
-  padding-block:2px;
+  display: grid;
+  grid-template-rows: 1fr auto 1fr; /* enemigo / hint / jugador */
+  align-content: stretch;
+  min-height: 0;
+  place-items: stretch;
 }
 
-/* Cada fila contiene un grid 3×2 que llena su altura */
-.lanes-6x2{
-  display:grid;
+.row{                     /* cada fila tiene altura real */
+  display: grid;
+  grid-template-rows: 1fr;
+  min-height: 0;
+}
+
+.lanes-6x2{              /* el grid 3×2 llena la fila */
+  display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-auto-rows: 1fr;   /* cada fila de slots mide lo mismo en ALTO */
+  grid-auto-rows: 1fr;   /* 2 filas iguales en ALTO */
   gap: var(--lanes-gap);
-  height: 100%;          /* <- CLAVE: llena la altura de la fila */
-  min-height:0;
+  height: 100%;
+  min-height: 0;
 }
 
-/* Rival y Jugador iguales; cada fila (enemigo/jugador) ocupa toda su 1fr */
-.row.row-enemy, .row.row-player{
-  display:grid;
-  grid-template-rows: 1fr; /* la rejilla interna ocupará el 100% */
-  min-height:0;
-}
-.row-enemy .lanes-6x2,
-.row-player .lanes-6x2{ height:100%; }
-
-/* Slots a ancho/alto completo, sin aspect-ratio fijo */
-.slot{
+.slot{                   /* cada slot ocupa toda su celda */
+  width: 100%;
+  height: 100%;
+  /* (quitamos aspect-ratio para que realmente llene) */
   border:2px dashed rgba(105,240,255,.35);
   border-radius:var(--slot-br);
   position:relative;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
-  display:block; /* full box */
-  overflow:hidden;
-  min-height:0;
+  overflow: hidden;
 }
 .slot.player{ border-color: rgba(105,240,255,.35); }
 .slot.enemy { border-color: rgba(255,108,132,.35); }
 
-/* Carta colocada llena el slot con margen (inset) */
-.placed{
+.placed{                 /* la carta rellena el slot con margen */
   position:absolute; inset:var(--slot-inset);
   border-radius:calc(var(--slot-br) - 2px);
   overflow:hidden;
@@ -149,8 +136,13 @@ body{
   box-shadow: 0 6px 24px rgba(0,0,0,.5);
   background:#0f1633;
 }
-.placed .art, .placed .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.placed .art, .placed .art img{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+}
 
+/* Sugerencia: compacta un pelín banner/mano para ganar alto si hace falta */
+.banner{ padding:3px 8px; font-size:.84rem; }
+.hand-zone{ height: calc(var(--card-h) + 10px); }
 /* ===== Mano ===== */
 .hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; }
 .hand{ position:relative; width:100%; height:100%; }
@@ -165,7 +157,6 @@ body{
 .hand .card:hover{
   transform: translateX(calc(var(--x) + var(--off, 0px))) translateY(-6px) rotate(0deg) scale(1.06);
   z-index:10;
-}
 
 /* ===== Cartas base / ghost ===== */
 .card, .ghost{ border-radius:12px; border:1px solid rgba(255,255,255,.18); overflow:hidden; background:#0f1633; user-select:none; touch-action:none; }
