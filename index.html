@@ -8,21 +8,24 @@
 </head>
 <body>
   <main id="game" aria-label="Cartas de coste y puntos">
+    <!-- HUD: izquierda jugador, centro ronda+reset, derecha enemigo -->
     <header class="hud">
-      <h1 class="logo">Coste & Puntos</h1>
-      <div class="score" aria-live="polite">
-        <span class="pill">Ronda <strong id="roundNo">1</strong></span>
-        <span class="pill">Tus monedas 💰 <strong id="pCoins">3</strong></span>
-        <span class="pill">Puntos 👤 <strong id="pScore">0</strong></span>
-        <span>•</span>
-        <span class="pill">Monedas 🤖 <strong id="eCoins">3</strong></span>
-        <span class="pill">Puntos 🤖 <strong id="eScore">0</strong></span>
+      <div class="score side player">
+        <span class="pill"><strong id="pCoins">3</strong></span>
+        <span class="pill"><strong id="pScore">0</strong></span>
       </div>
-      <button id="resetBtn" class="btn" aria-label="Reiniciar">↺</button>
+      <div class="center-info">
+        <span class="pill">Ronda <strong id="roundNo">1</strong></span>
+        <button id="resetBtn" class="btn" aria-label="Reiniciar">↺</button>
+      </div>
+      <div class="score side enemy">
+        <span class="pill"><strong id="eCoins">3</strong></span>
+        <span class="pill"><strong id="eScore">0</strong></span>
+      </div>
     </header>
 
     <div class="turnbar">
-      <span class="who you" id="turnTag">TU FASE</span>
+      <span class="muted">Tu fase: juega todas las cartas que puedas</span>
       <div class="row-btns">
         <button id="passBtn" class="btn">Pasar turno</button>
       </div>
@@ -41,7 +44,7 @@
         </div>
       </div>
 
-      <div class="center-hint">Coloca cartas en tus 3 líneas (puedes reemplazar)</div>
+      <div class="center-hint">Coloca cartas en tus 3 líneas (puedes reemplazar las tuyas)</div>
 
       <div class="row row-player">
         <div class="lanes">
@@ -63,10 +66,12 @@
   <!-- Overlays -->
   <div id="startOverlay" class="overlay visible" role="dialog">
     <div class="panel">
-      <h2>Nuevo modo: Coste 💰 y Puntos ⭐</h2>
+      <h2>Modo: Coste y Puntos</h2>
       <p class="muted">
-        Juega todas las cartas que puedas con tus monedas. Al colocar frente al rival, el mayor ⭐ destruye al menor (igual = ambos fuera).
-        Cuando ambos pasan, sumas los ⭐ de las cartas que queden a tus <b>puntos totales</b>. Nueva ronda: +1 moneda base y robar hasta 5.
+        Coloca cartas pagando su <b>coste</b> con tus monedas. Puedes jugar varias por turno.
+        No se destruyen al colocar (más adelante añadiremos efectos).
+        Al terminar ambos, se suman los <b>puntos</b> de las cartas que queden.
+        Cada <b>turno</b> ganas <b>+1</b> moneda.
       </p>
       <button id="startBtn" class="btn">Jugar ▶</button>
     </div>
