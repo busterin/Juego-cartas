@@ -9,7 +9,7 @@
   --game-max:760px;
 
   /* Tamaños de cartas (mano y zoom) */
-  --card-w: clamp(78px, 18vw, 122px);
+  --card-w: clamp(76px, 17vw, 116px);
   --card-h: calc(var(--card-w) * 1.42);
 
   /* Animaciones */
@@ -33,11 +33,12 @@ body{
   min-height:100svh;
   max-width:var(--game-max);
   margin-inline:auto;
-  padding:8px 8px calc(78px + env(safe-area-inset-bottom));
+  padding:6px 8px calc(74px + env(safe-area-inset-bottom));
   display:flex; flex-direction:column; gap:var(--space);
+  overflow:hidden; /* evita scroll de la página: todo cabe dentro */
 }
 
-/* ===== HUD con retratos + número de ronda ===== */
+/* ===== HUD con retratos + número ===== */
 .top-hud{
   display:grid;
   grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
@@ -52,7 +53,7 @@ body{
 }
 .portrait.enemy{ justify-self:end; }
 .frame.hex{
-  --sz: 58px; /* más compacto para que quepa siempre */
+  --sz: 56px; /* compacto para NO forzar scroll */
   width:var(--sz); height:calc(var(--sz) * 1.1);
   clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   position:relative; background:#223; border:2px solid rgba(255,255,255,.25); border-radius:8px;
@@ -67,11 +68,10 @@ body{
 }
 .meters{ display:flex; gap:6px; flex-wrap:wrap; }
 
-/* Centro: SOLO número */
-.round-display{ display:flex; align-items:center; gap:8px; justify-content:center; }
+.round-display{ display:flex; align-items:center; justify-content:center; }
 .round-no{
-  width:52px; height:52px; border-radius:50%; display:grid; place-items:center;
-  font-weight:900; font-size:1.08rem; color:#061018;
+  width:48px; height:48px; border-radius:50%; display:grid; place-items:center;
+  font-weight:900; font-size:1.02rem; color:#061018;
   background: radial-gradient(60% 60% at 50% 40%, #baf3ff 0, #6be2ff 55%, #3b8cff 100%);
   text-shadow:0 1px 2px rgba(255,255,255,.35);
   box-shadow: 0 0 16px rgba(107,226,255,.5), inset 0 4px 15px rgba(255,255,255,.45), inset 0 -6px 20px rgba(0,0,0,.25);
@@ -87,33 +87,31 @@ body{
   box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.18), 0 3px 8px rgba(0,0,0,.35);
   font-size:.85rem;
 }
-.meter .value{ transform: translateY(1px) }
-.meter.coin{ background: radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); text-shadow: 0 1px 2px rgba(121,82,0,.55); }
-.meter.pts { background: radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); text-shadow: 0 1px 2px rgba(0,61,32,.55); }
 
 /* ===== Banner ===== */
 .banner{
   text-align:center; font-weight:800; color:#d7e6ff;
   border:1px solid var(--panel-br); background:var(--panel);
-  padding:6px 8px; border-radius:10px; box-shadow:var(--glow);
-  font-size:.9rem;
+  padding:4px 8px; border-radius:10px; box-shadow:var(--glow);
+  font-size:.88rem; margin-top:-2px;
 }
 
-/* ===== Board: 2 filas de 3 por lado + cartas MÁS GRANDES ===== */
-.board{ display:flex; flex-direction:column; gap:10px; position:relative; flex:1; }
-.center-hint{ text-align:center; color:#aecdff; font-weight:700; font-size:.92rem; padding:2px 0 6px; }
+/* ===== Board: 2×3 por lado, MÁS compacto para caber sin scroll ===== */
+.board{
+  display:flex; flex-direction:column; gap:8px; position:relative; flex:1;
+  min-height:0; /* clave para que el flex permita encoger */
+}
+.center-hint{ text-align:center; color:#aecdff; font-weight:700; font-size:.9rem; padding:2px 0 4px; }
 
-.lanes{ gap:10px; padding:0 4px; }
 .lanes-6x2{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-auto-rows: 1fr; /* misma altura en ambas filas */
-  gap:10px;
-  min-height: clamp(220px, 36vh, 360px); /* asegura altura */
+  gap:8px 10px;
+  /* altura total del grid reducida para pantallas pequeñas */
+  min-height: clamp(160px, 30vh, 260px);
 }
 .slot{
-  /* Más grandes y verticales: */
-  aspect-ratio: 3/4;
+  aspect-ratio: 3/4; /* vertical pero más pequeño */
   border:2px dashed rgba(105,240,255,.35);
   border-radius:14px; display:grid; place-items:center;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
@@ -122,18 +120,18 @@ body{
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
 .slot.highlight{ box-shadow: 0 0 0 3px rgba(105,240,255,.35); transform: scale(1.02); }
 
-/* cartas colocadas llenan bien el slot */
+/* cartas colocadas llenan el slot con pequeño padding */
 .placed{
-  position:absolute; inset:8px; border-radius:12px; overflow:hidden;
+  position:absolute; inset:6px; border-radius:12px; overflow:hidden;
   border:1px solid rgba(255,255,255,.25); box-shadow: 0 6px 24px rgba(0,0,0,.55);
   z-index:1; background:#0f1633;
 }
 .placed .art, .placed .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 
-/* ===== Mano en abanico (ajustada, sin recortes) ===== */
+/* ===== Mano en abanico (más separada) ===== */
 .hand-zone{
   position:relative;
-  height:calc(var(--card-h) + 10px);
+  height:calc(var(--card-h) + 18px); /* un poco más de altura para el hover */
   display:flex; justify-content:center;
   overflow:visible;
 }
@@ -145,10 +143,10 @@ body{
   transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
   box-shadow: 0 6px 18px rgba(0,0,0,.45);
   will-change: transform;
-  transform: translateX(var(--x)) rotate(var(--rot));
+  transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot));
 }
 .hand .card:hover{
-  transform: translateX(var(--x)) translateY(-8px) rotate(0deg) scale(1.06);
+  transform: translateX(calc(var(--x) + var(--off, 0px))) translateY(-8px) rotate(0deg) scale(1.06);
   z-index:10; filter: brightness(1.06);
 }
 
@@ -209,22 +207,27 @@ body{
 }
 .btn{
   border:1px solid var(--panel-br); background:var(--panel);
-  padding:10px 16px; border-radius:12px; color:var(--ink); cursor:pointer; box-shadow:var(--glow);
+  padding:10px 16px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow);
 }
 .btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
 
-/* Overlays / Paneles / Zoom */
+/* Overlays / Paneles */
 .overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100; }
 .overlay.visible{ opacity:1; pointer-events:auto; }
 .panel{ width:min(92%, 460px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); padding:16px; border-radius:16px; box-shadow:var(--glow); text-align:center; }
 .panel h2{ margin:8px 0 8px 0 }
 .muted{ color:var(--muted) }
 
-/* Zoom */
+/* Zoom: la imagen se ADAPTA (contain) */
 .zoom-panel{ width:min(92%, 520px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); border-radius:16px; box-shadow:var(--glow); padding:16px; text-align:center; }
 .zoom-title{ margin-top:0 }
-.zoom-card{ margin:10px auto 12px auto; width: clamp(220px, 70vw, 360px); aspect-ratio: 5/7; border-radius:14px; overflow:hidden; position:relative; border:1px solid rgba(255,255,255,.22); background:#0f1633; box-shadow: 0 8px 28px rgba(0,0,0,.6); }
-.zoom-card .art{ position:absolute; inset:0 }
+.zoom-card{ margin:10px auto 12px auto; width: clamp(220px, 70vw, 360px); aspect-ratio: 5/7; border-radius:14px; overflow:hidden; position:relative; border:1px solid rgba(255,255,255,.22); background:#0b0f1e; box-shadow: 0 8px 28px rgba(0,0,0,.6); }
+.zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; background:#0b0f1e; }
+.zoom-card .art img{
+  width:100%; height:100%;
+  object-fit:contain; /* <= adapción correcta */
+  object-position:center;
+}
 .zoom-card .zoom-token{
   position:absolute; top:10px; width:44px; height:44px; border-radius:50%;
   display:grid; place-items:center; font-weight:900; font-size:1.05rem; color:#101010;
@@ -234,10 +237,9 @@ body{
 .zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 .zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
 
-/* Responsive extra: si la pantalla es muy estrecha, ajusta aún más el HUD */
+/* Responsive extra */
 @media (max-width: 390px){
-  .frame.hex{ --sz: 52px; }
-  .info .name{ font-size:.78rem }
+  .frame.hex{ --sz: 50px; }
   .meter{ --sz: 24px; font-size:.8rem; }
-  .round-no{ width:48px; height:48px; font-size:1rem; }
+  .round-no{ width:44px; height:44px; font-size:.98rem; }
 }
