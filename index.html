@@ -8,37 +8,30 @@
 </head>
 <body>
   <main id="game" aria-label="Cartas de coste y puntos">
-    <!-- HUD superior: retratos y SOLO número de ronda en el centro -->
+    <!-- HUD superior -->
     <header class="top-hud">
-      <!-- Jugador -->
       <div class="portrait player">
-        <div class="frame hex">
-          <img src="assets/player.png" alt="Jugador" />
-        </div>
+        <div class="frame hex"><img src="assets/player.png" alt="Jugador" /></div>
         <div class="info">
           <div class="name">JUGADOR</div>
           <div class="meters">
-            <span class="meter coin" title="Monedas"><span class="value" id="pCoins">3</span></span>
-            <span class="meter pts"  title="Puntos"><span class="value" id="pScore">0</span></span>
+            <span class="meter coin"><span class="value" id="pCoins">3</span></span>
+            <span class="meter pts"><span class="value" id="pScore">0</span></span>
           </div>
         </div>
       </div>
 
-      <!-- Centro: SOLO número -->
       <div class="round-display">
         <div id="roundNo" class="round-no">1</div>
       </div>
 
-      <!-- Rival -->
       <div class="portrait enemy">
-        <div class="frame hex">
-          <img src="assets/enemy.png" alt="Rival" />
-        </div>
+        <div class="frame hex"><img src="assets/enemy.png" alt="Rival" /></div>
         <div class="info">
           <div class="name">RIVAL</div>
           <div class="meters">
-            <span class="meter coin" title="Monedas rival"><span class="value" id="eCoins">3</span></span>
-            <span class="meter pts"  title="Puntos rival"><span class="value" id="eScore">0</span></span>
+            <span class="meter coin"><span class="value" id="eCoins">3</span></span>
+            <span class="meter pts"><span class="value" id="eScore">0</span></span>
           </div>
         </div>
       </div>
@@ -46,7 +39,7 @@
 
     <div id="phaseBanner" class="banner">Arrastra cartas a tus huecos (2×3 por lado)</div>
 
-    <!-- Tablero: 6 huecos en 2 filas de 3 por lado -->
+    <!-- Tablero (2 filas de 3 por lado) -->
     <section class="board" aria-label="Tablero central">
       <div class="row row-enemy">
         <div class="lanes lanes-6x2 enemy">
@@ -73,12 +66,12 @@
       </div>
     </section>
 
-    <!-- Mano en abanico -->
+    <!-- Mano -->
     <section class="hand-zone">
       <div id="hand" class="hand" role="list"></div>
     </section>
 
-    <!-- Barra inferior con Pasar turno y Reiniciar -->
+    <!-- Barra inferior -->
     <footer class="bottom-bar">
       <button id="passBtn" class="btn primary">PASAR TURNO</button>
       <button id="resetBtn" class="btn">Reiniciar</button>
@@ -109,7 +102,7 @@
     </div>
   </div>
 
-  <!-- ZOOM carta -->
+  <!-- Zoom carta -->
   <div id="zoomOverlay" class="overlay" role="dialog" aria-modal="true">
     <div class="zoom-panel">
       <h2 class="zoom-title">Vista de carta</h2>
@@ -121,7 +114,6 @@
   </div>
 
   <div id="toasts" aria-live="polite" aria-atomic="true"></div>
-
   <script src="script.js"></script>
 </body>
 </html>
