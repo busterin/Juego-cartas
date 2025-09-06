@@ -45,7 +45,7 @@
   function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [d[i],d[j]]=[d[j],d[i]]; } return d; }
   function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
 
-  // ---------- Zoom (limpio; cierra tocando fuera) ----------
+  // ---------- Zoom (limpio y sin botón) ----------
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
@@ -57,7 +57,7 @@
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
   zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
 
-  // ---------- Mano (abanico simplificado) ----------
+  // ---------- Mano (abanico) ----------
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
     el.className='card';
@@ -65,7 +65,6 @@
     el.dataset.name=card.name||''; el.dataset.art=card.art||'';
     el.innerHTML=`${artHTML(card.art)}${tokenCost(card.cost)}${tokenPts(card.pts)}<div class="label">${card.name||'Carta'}</div>`;
 
-    // distribución en abanico
     const margin=8;
     const leftPct = (n===1)?50: margin + i*((100-margin*2)/(n-1));
     const mid=(n-1)/2, angle=(i-mid)*10, extra=(i-mid)*14;
@@ -79,7 +78,7 @@
   }
   function renderHand(){ handEl.innerHTML=''; const n=state.pHand.length; state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n))); }
 
-  // ---------- Tablero (clic para zoom; en mesa se muestran solo puntos) ----------
+  // ---------- Tablero (clic para zoom; en mesa solo puntos) ----------
   function renderBoard(){
     for(let i=0;i<SLOTS;i++){
       const ps=slotsPlayer[i], es=slotsEnemy[i]; ps.innerHTML=''; es.innerHTML='';
@@ -102,7 +101,11 @@
     }
   }
 
-  function updateHUD(){ roundNoEl.textContent=state.round; pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins; pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore; }
+  function updateHUD(){
+    roundNoEl.textContent=state.round;
+    pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins;
+    pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore;
+  }
   function setBanner(t){ phaseBanner.textContent=t; }
 
   // ---------- Drag & drop ----------
@@ -156,11 +159,10 @@
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins) && enemyOccupancy()<SLOTS;
     const tryPlayOnce=()=>{
       if(!canPlay()) return false;
-      // elige una carta jugable con mejor ratio pts/cost
       let best=-1,score=-1;
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
       const card=state.eHand[best];
-      // busca primer hueco libre
+
       let target=-1;
       for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1) return false;
@@ -175,7 +177,7 @@
   }
 
   // ---------- Puntuación ----------
-  function bothPassed(){ return state.playerPassed && state.enemyPassed; }
+  const bothPassed=()=> state.playerPassed && state.enemyPassed;
   function scoreTurn(){
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
     state.pScore+=p; state.eScore+=e; updateHUD();
@@ -207,19 +209,9 @@
     startOverlay.classList.remove('visible');
     newGame();
   });
-
-  againBtn.addEventListener('click', ()=>{
-    endOverlay.classList.remove('visible');
-    newGame();
-  });
-
-  menuBtn.addEventListener('click', ()=>{
-    endOverlay.classList.remove('visible');
-    startOverlay.classList.add('visible');
-  });
-
+  againBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
+  menuBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
   resetBtn.addEventListener('click', ()=> newGame());
-
   passBtn.addEventListener('click', ()=>{
     if(state.turn!=='player'||state.resolving) return;
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
