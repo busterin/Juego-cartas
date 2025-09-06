@@ -8,7 +8,7 @@
 </head>
 <body>
   <main id="game" aria-label="Cartas de coste y puntos">
-    <!-- HUD superior con retratos y número de ronda en el centro -->
+    <!-- HUD superior: retratos en esquinas y SOLO número de ronda en el centro -->
     <header class="top-hud">
       <!-- Jugador -->
       <div class="portrait player">
@@ -27,7 +27,6 @@
       <!-- Centro: SOLO número de ronda -->
       <div class="round-display">
         <div id="roundNo" class="round-no">1</div>
-        <button id="resetBtn" class="btn small" aria-label="Reiniciar">↺</button>
       </div>
 
       <!-- Rival -->
@@ -45,12 +44,12 @@
       </div>
     </header>
 
-    <div id="phaseBanner" class="banner">Arrastra cartas a tus huecos (máx. 6)</div>
+    <div id="phaseBanner" class="banner">Arrastra cartas a tus huecos (2×3 por lado)</div>
 
-    <!-- Tablero 6x2 -->
+    <!-- Tablero: 6 huecos en 2 filas de 3 por lado -->
     <section class="board" aria-label="Tablero central">
       <div class="row row-enemy">
-        <div class="lanes lanes-6">
+        <div class="lanes lanes-6x2 enemy">
           <div class="slot enemy" data-side="enemy" data-lane="0"></div>
           <div class="slot enemy" data-side="enemy" data-lane="1"></div>
           <div class="slot enemy" data-side="enemy" data-lane="2"></div>
@@ -63,7 +62,7 @@
       <div class="center-hint">Las cartas permanecen entre turnos. Puedes reemplazar tus propias cartas.</div>
 
       <div class="row row-player">
-        <div class="lanes lanes-6">
+        <div class="lanes lanes-6x2">
           <div class="slot" data-side="player" data-lane="0"></div>
           <div class="slot" data-side="player" data-lane="1"></div>
           <div class="slot" data-side="player" data-lane="2"></div>
@@ -79,9 +78,10 @@
       <div id="hand" class="hand" role="list"></div>
     </section>
 
-    <!-- Barra inferior con Pasar turno -->
+    <!-- Barra inferior con Pasar turno y Reiniciar -->
     <footer class="bottom-bar">
       <button id="passBtn" class="btn primary">PASAR TURNO</button>
+      <button id="resetBtn" class="btn">Reiniciar</button>
     </footer>
   </main>
 
