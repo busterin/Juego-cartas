@@ -122,7 +122,7 @@ body{
   background:#0f1633;
 }
 .placed .art, .placed .art img{
-  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; /* sin bordes negros */
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
 }
 
 /* ===== Mano (siempre abajo) ===== */
@@ -164,36 +164,42 @@ body{
 .t-cost{ left:6px; background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .t-pts { right:6px; background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 
-/* Nombre arriba, centrado (entre los tokens) */
-.name-top{
-  position:absolute;
-  top:6px; left:34px; right:34px;
-  text-align:center;
-  font-weight:900;
-  font-size:.7rem;
-  color:#fff;
-  text-shadow:0 1px 3px rgba(0,0,0,.6);
-  z-index:3;
-  background:rgba(0,0,0,.28);
-  border-radius:8px;
-  padding:2px 4px;
+/* ===== Nombre y descripción ===== */
+
+/* Ocultar texto y nombre en MINIATURAS (mano y tablero) */
+.card .name-top, .card .desc,
+.placed .name-top, .placed .desc { display:none !important; }
+
+/* Placa metálica SOLO en ZOOM */
+.zoom-card .name-top{
+  position:absolute; top:12px; left:58px; right:58px;
+  text-align:center; font-size:1rem; font-weight:900; color:#0e1420;
+  padding:8px 12px; border-radius:10px; z-index:3;
+  /* metal base */
+  background:
+    linear-gradient(135deg, #f4f7fb 0%, #cfd6e6 20%, #8a93a6 48%, #dfe5ef 60%, #7b8497 78%, #c7cfdd 100%);
+  border: 1px solid rgba(255,255,255,.65);
+  box-shadow:
+    inset 0 2px 6px rgba(255,255,255,.35),
+    inset 0 -2px 8px rgba(0,0,0,.25),
+    0 6px 16px rgba(0,0,0,.35);
+  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 2px 6px rgba(0,0,0,.35);
+}
+.zoom-card .name-top::after{
+  /* brillo diagonal */
+  content:""; position:absolute; inset:0;
+  background: linear-gradient(30deg, transparent 0 40%, rgba(255,255,255,.35) 45%, transparent 55% 100%);
+  border-radius:inherit; pointer-events:none;
 }
 
-/* Descripción abajo */
-.desc{
-  position:absolute;
-  left:6px; right:6px; bottom:6px;
-  z-index:3;
-  font-size:.55rem;
-  color:#e0e8ff;
-  text-align:center;
-  line-height:1.2;
-  background:rgba(0,0,0,.25);
-  border-radius:6px;
-  padding:2px 4px;
+/* Descripción SOLO en ZOOM */
+.zoom-card .desc{
+  position:absolute; bottom:12px; left:12px; right:12px;
+  font-size:.85rem; line-height:1.25; text-align:center; color:#eaf2ff;
+  background:rgba(0,0,0,.28); padding:8px 10px; border-radius:10px; z-index:3;
 }
 
-/* Sombra superior para legibilidad */
+/* Sombra general para legibilidad (miniatura y mesa) */
 .card::after, .ghost::after, .placed::after{
   content:""; position:absolute; inset:0;
   background: linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,0) 35%, rgba(0,0,0,.55) 75%);
@@ -228,7 +234,7 @@ body{
 .cover-bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cover-screen .btn.big{ position:absolute; bottom:10%; left:50%; transform:translateX(-50%); z-index:2; }
 
-/* Zoom (limpio y grande) */
+/* Zoom (contenedor) */
 .zoom-panel{
   width:min(94%, 560px);
   background: rgba(255,255,255,.06);
@@ -243,7 +249,9 @@ body{
   border:1px solid rgba(255,255,255,.22); background:#0b0f1e;
 }
 .zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
-.zoom-card .art img{ width:100%; height:100%; object-fit:cover; } /* sin bordes negros */
+.zoom-card .art img{ width:100%; height:100%; object-fit:cover; }
+
+/* Tokens en ZOOM (un poco más grandes) */
 .zoom-card .zoom-token{
   position:absolute; top:12px; width:44px; height:44px; border-radius:50%;
   display:grid; place-items:center; font-weight:900; color:#101010;
@@ -253,17 +261,6 @@ body{
 }
 .zoom-card .zoom-token.cost{ left:12px; background: radial-gradient(#ffeaa3, #e1a700); }
 .zoom-card .zoom-token.pts{ right:12px; background: radial-gradient(#b6ffd1, #20b86a); }
-.zoom-card .name-top{
-  position:absolute; top:12px; left:58px; right:58px;
-  transform:none; text-align:center;
-  font-size:1rem; font-weight:900; color:#fff;
-  background:rgba(0,0,0,.35); padding:6px 10px; border-radius:10px; z-index:3;
-}
-.zoom-card .desc{
-  position:absolute; bottom:12px; left:12px; right:12px;
-  font-size:.85rem; line-height:1.25; text-align:center; color:#eaf2ff;
-  background:rgba(0,0,0,.28); padding:8px 10px; border-radius:10px; z-index:3;
-}
 
 /* Toast central de turno */
 .turn-toast{
@@ -293,6 +290,4 @@ body{
     --lanes-gap: 8px; --slot-inset:5px;
     --slotH: clamp(120px, 20vh, 180px);
   }
-  .name-top{ top:5px; font-size:.66rem; }
-  .desc{ font-size:.5rem; }
 }
