@@ -6,8 +6,10 @@
 
   // ---------- Elements ----------
   const handEl = $('#hand');
-  const slotsPlayer = $$('.slot[data-side="player"]');
-  const slotsEnemy  = $$('.slot[data-side="enemy"]');
+
+  // Slots (funciones para recapturarlos siempre frescos)
+  const getSlotsPlayer = () => Array.from(document.querySelectorAll('.slot[data-side="player"]'));
+  const getSlotsEnemy  = () => Array.from(document.querySelectorAll('.slot[data-side="enemy"]'));
 
   const roundNoEl = $('#roundNo');
   const pCoinsEl = $('#pCoins'), eCoinsEl = $('#eCoins');
@@ -57,7 +59,7 @@
   closeZoomBtn.addEventListener('click', closeZoom);
   $('#zoomOverlay').addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
 
-  // ===== Tooltips (opcional: hover / long-press para ver el coste) =====
+  // ===== Tooltip coste (hover/long-press) =====
   let lpTimer = null;
   function showTooltipFor(el, text){
     tooltipEl.textContent = text;
@@ -68,17 +70,12 @@
   }
   function hideTooltip(){ tooltipEl.hidden = true; tooltipEl.textContent = ''; }
   function enableTooltip(el, text){
-    // Desktop hover
     el.addEventListener('mouseenter', ()=> showTooltipFor(el, text));
     el.addEventListener('mouseleave', hideTooltip);
-    // Touch long-press (~500ms)
-    el.addEventListener('touchstart', (e)=>{
-      hideTooltip();
-      lpTimer = setTimeout(()=>{ showTooltipFor(el, text); }, 500);
+    el.addEventListener('touchstart', ()=>{
+      hideTooltip(); lpTimer = setTimeout(()=> showTooltipFor(el, text), 500);
     }, {passive:true});
-    ['touchend','touchcancel'].forEach(ev=> el.addEventListener(ev, ()=>{
-      clearTimeout(lpTimer); lpTimer=null; hideTooltip();
-    }, {passive:true}));
+    ['touchend','touchcancel'].forEach(ev=> el.addEventListener(ev, ()=>{ clearTimeout(lpTimer); lpTimer=null; hideTooltip(); }, {passive:true}));
   }
 
   // ===== Decks & hand =====
@@ -95,7 +92,7 @@
     el.innerHTML=`${artHTML(card.art)}${tokenCost(card.cost)}${tokenPts(card.pts)}<div class="label">${card.name||'Carta'}</div>`;
 
     // distribución
-    const margin=8;
+    const margin=9;
     const leftPct = (n===1)?50: margin + i*((100-margin*2)/(n-1));
     const mid=(n-1)/2, angle=(i-mid)*10, extra=(i-mid)*14;
     el.style.setProperty('--x',`calc(${leftPct}% - 50%)`);
@@ -108,7 +105,7 @@
   }
   function renderHand(){ handEl.innerHTML=''; const n=state.pHand.length; state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n))); }
 
-  // ===== Board placed cards (misma estructura para ambos lados) =====
+  // ===== Board placed cards (misma estructura ambos lados) =====
   function makePlaced(card, side /* 'player'|'enemy' */){
     const div = document.createElement('div');
     div.className = `placed ${side}`;
@@ -118,19 +115,18 @@
       <div class="token t-pts">${card.pts}</div>
       <div class="label">${card.name || ''}</div>
     `;
-    // Zoom al click/tap
     div.addEventListener('click', () => openZoom(card));
-    // Tooltip de coste (opcional) en hover/long-press
-    enableTooltip(div, `Coste: ${card.cost}`);
+    enableTooltip(div, `Coste: ${card.cost}`); // opcional
     return div;
   }
 
   function renderBoard(){
+    const slotsP = getSlotsPlayer();
+    const slotsE = getSlotsEnemy();
     for(let i=0;i<SLOTS;i++){
-      const ps=slotsPlayer[i], es=slotsEnemy[i];
+      const ps=slotsP[i], es=slotsE[i];
       ps.innerHTML=''; es.innerHTML='';
       const p=state.center[i].p, e=state.center[i].e;
-
       if(p) ps.appendChild( makePlaced(p,'player') );
       if(e) es.appendChild( makePlaced(e,'enemy') );
     }
@@ -169,7 +165,14 @@
     e.preventDefault();
   }
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
-  function laneUnder(x,y){ for(let i=0;i<SLOTS;i++){ const r=slotsPlayer[i].getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return i; } return -1; }
+  function laneUnder(x,y){
+    const list = getSlotsPlayer();
+    for(let i=0;i<list.length;i++){
+      const r=list[i].getBoundingClientRect();
+      if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return i;
+    }
+    return -1;
+  }
 
   // ===== Reglas de colocación =====
   const canAfford = c => state.pCoins>=c.cost;
@@ -183,11 +186,9 @@
     const slot=state.center[slotIndex];
     if(!slot.p && playerOccupancy()>=SLOTS) return;
 
-    // paga y coloca (persistente)
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
 
-    // roba reposición
     state.pHand.splice(handIndex,1);
     if(state.pDeck.length) state.pHand.push(state.pDeck.pop());
 
@@ -274,4 +275,7 @@
     if(state.turn!=='player'||state.resolving) return;
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
   });
+
+  // recalc slots on resize/orientation
+  window.addEventListener('resize', ()=>{ /* referencias se piden on-demand */ }, {passive:true});
 })();
