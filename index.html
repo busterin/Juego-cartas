@@ -73,17 +73,13 @@
   </main>
 
   <!-- Overlays -->
-  <div id="startOverlay" class="overlay visible" role="dialog">
-    <div class="panel">
-      <h2>Modo: Coste y Puntos</h2>
-      <p class="muted">
-        Coloca cartas pagando su <b>coste</b>. Las cartas <b>permanecen</b> entre turnos (salvo efectos).
-        Al terminar ambos, se recolectan los <b>puntos</b> de todas las cartas en mesa.
-        Cada turno, al empezar tu fase, ganas <b>+1</b> moneda.
-      </p>
-      <button id="startBtn" class="btn">Jugar ▶</button>
-    </div>
+ <!-- Portada -->
+<div id="startOverlay" class="overlay visible" role="dialog">
+  <div class="cover-screen">
+    <img src="assets/Portadacartas.PNG" alt="Portada del juego" class="cover-bg" />
+    <button id="startBtn" class="btn big">JUGAR</button>
   </div>
+</div>
 
   <div id="endOverlay" class="overlay" role="dialog" aria-live="polite">
     <div class="panel">
