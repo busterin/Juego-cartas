@@ -1,12 +1,22 @@
 :root{
-  --bg1:#0b0f1e; --bg2:#151b36; --ink:#eaf2ff;
+  /* Tema */
+  --bg1:#0b0f1e; --bg2:#151b36; --ink:#eaf2ff; --muted:#a5b3cc;
   --panel:rgba(255,255,255,.06); --panel-br:rgba(255,255,255,.14);
-  --game-max:760px; --gap:10px;
-  --hex: 56px; --round-sz: 48px; --meter-sz: 26px;
+  --glow:0 10px 30px rgba(0,0,0,.45), inset 0 0 40px rgba(255,255,255,.035);
+
+  /* Layout base */
+  --game-max:760px;
+  --gap:10px;
+
+  /* HUD y mano */
+  --hex:56px; --round-sz:48px; --meter-sz:26px;
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
-  --lanes-gap: 10px; --slot-inset: 6px; --slot-br: 14px;
-  --bottom-pad: 10px;
+
+  /* Tablero 1×3 */
+  --lanes-gap:10px; --slot-inset:6px; --slot-br:14px;
+
+  --bottom-pad:10px;
 }
 
 *{ box-sizing:border-box }
@@ -14,60 +24,158 @@ html,body{ height:100%; margin:0; }
 body{
   color:var(--ink);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  background: linear-gradient(180deg, var(--bg1), var(--bg2));
+  background:
+    radial-gradient(1200px 800px at 20% 0%, #1a2458 0, transparent 60%),
+    radial-gradient(900px 600px at 80% 100%, #141e46 0, transparent 60%),
+    linear-gradient(180deg, var(--bg1), var(--bg2));
 }
+
+/* ===== Grid principal sin scroll ===== */
 #game{
-  height: 100dvh; max-width: var(--game-max); margin-inline:auto;
+  height: 100dvh;
+  max-width: var(--game-max);
+  margin-inline:auto;
   display:grid;
-  grid-template-rows:auto auto minmax(0,1fr) auto auto;
+  grid-template-rows:
+    auto           /* HUD */
+    auto           /* banner */
+    minmax(0,1fr)  /* tablero */
+    auto           /* mano */
+    auto;          /* footer */
   gap: var(--gap);
-  padding:6px 8px calc(var(--bottom-pad) + env(safe-area-inset-bottom));
+  padding: 6px 8px calc(var(--bottom-pad) + env(safe-area-inset-bottom));
   overflow:hidden;
 }
 
 /* ===== HUD ===== */
-.top-hud{ display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:6px; }
-.portrait{ display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; }
-.frame.hex{ width:var(--hex); height:calc(var(--hex)*1.1); overflow:hidden; border-radius:8px; }
+.top-hud{
+  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center; gap:6px; padding-inline:2px;
+}
+.portrait{ display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; min-width:0; }
+.portrait.enemy{ justify-self:end; }
+.frame.hex{
+  width:var(--hex); height:calc(var(--hex)*1.1);
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background:#223; border:2px solid rgba(255,255,255,.25); border-radius:8px;
+  box-shadow:0 6px 18px rgba(0,0,0,.5), inset 0 0 18px rgba(255,255,255,.08);
+  overflow:hidden;
+}
 .frame.hex img{ width:100%; height:100%; object-fit:cover; }
-.round-display{ display:flex; justify-content:center; align-items:center; }
-.round-no{ width:var(--round-sz); height:var(--round-sz); border-radius:50%; display:grid; place-items:center; background:#6be2ff; color:#061018; font-weight:900; }
+.info{ display:flex; flex-direction:column; gap:3px; min-width:0;}
+.info .name{ font-weight:900; font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.meters{ display:flex; gap:6px; flex-wrap:wrap; }
+.round-display{ display:flex; align-items:center; justify-content:center; }
+.round-no{
+  width:var(--round-sz); height:var(--round-sz); border-radius:50%; display:grid; place-items:center;
+  font-weight:900; font-size:calc(var(--round-sz)*.22 + .7rem); color:#061018;
+  background: radial-gradient(60% 60% at 50% 40%, #baf3ff 0, #6be2ff 55%, #3b8cff 100%);
+  box-shadow:0 0 16px rgba(107,226,255,.5), inset 0 4px 15px rgba(255,255,255,.45), inset 0 -6px 20px rgba(0,0,0,.25);
+  border:1px solid rgba(255,255,255,.5);
+}
 
 /* ===== Banner ===== */
-.banner{ text-align:center; font-weight:800; }
+.banner{
+  text-align:center; font-weight:800; color:#d7e6ff;
+  border:1px solid var(--panel-br); background:var(--panel);
+  padding:4px 8px; border-radius:10px; box-shadow:var(--glow);
+  font-size:.86rem;
+}
 
-/* ===== Tablero: 1 línea por lado ===== */
-.board{ display:grid; grid-template-rows:1fr 1fr; gap:var(--gap); min-height:0; }
+/* ===== Tablero 1×3 por lado ===== */
+.board{
+  display:grid;
+  grid-template-rows: 1fr 1fr;   /* enemigo / jugador */
+  gap: var(--gap);
+  min-height:0;
+  z-index:0;
+}
 .row{ display:grid; grid-template-rows:1fr; min-height:0; }
-.lanes-3x1{ display:grid; grid-template-columns:repeat(3,1fr); gap:var(--lanes-gap); height:100%; min-height:0; }
-.slot{ border:2px dashed rgba(255,255,255,.3); border-radius:var(--slot-br); position:relative; overflow:hidden; }
-.placed{ position:absolute; inset:var(--slot-inset); border-radius:10px; overflow:hidden; background:#0f1633; }
+.lanes-3x1{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--lanes-gap);
+  height:100%; min-height:0;
+}
+.slot{
+  width:100%; height:100%;
+  border:2px dashed rgba(105,240,255,.35);
+  border-radius:var(--slot-br);
+  position:relative; overflow:hidden;
+  background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
+}
+.slot.enemy{ border-color: rgba(255,108,132,.35); }
+
+.placed{
+  position:absolute; inset:var(--slot-inset);
+  border-radius:10px; overflow:hidden;
+  border:1px solid rgba(255,255,255,.25);
+  box-shadow:0 6px 24px rgba(0,0,0,.5);
+  background:#0f1633;
+}
 .placed .art, .placed .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 
 /* ===== Mano ===== */
 .hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; position:relative; z-index:2; }
 .hand{ position:relative; width:100%; height:100%; }
-.hand .card{ position:absolute; bottom:0; left:50%; width:var(--card-w); height:var(--card-h); }
+.hand .card{
+  position:absolute; bottom:0; left:50%;
+  width:var(--card-w); height:var(--card-h);
+  transform-origin: bottom center;
+  transition: transform .18s ease, filter .18s ease;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45);
+  transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot));
+}
+.hand .card:hover{
+  transform: translateX(calc(var(--x) + var(--off, 0px))) translateY(-6px) rotate(0deg) scale(1.06);
+  z-index:10;
+}
 
-/* ===== Botones ===== */
-.bottom-bar{ display:flex; justify-content:center; gap:10px; padding:8px; }
-.btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; }
-.btn.primary{ background:#3b8cff; font-weight:900; }
+/* ===== Cartas ===== */
+.card, .ghost{ border-radius:12px; border:1px solid rgba(255,255,255,.18); overflow:hidden; background:#0f1633; user-select:none; touch-action:none; }
+.card .art, .ghost .art{ position:absolute; inset:0; }
+.card .art img, .ghost .art img{ width:100%; height:100%; object-fit:cover; }
+.card::after, .ghost::after{ content:""; position:absolute; inset:0; background: linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.5) 60%, rgba(0,0,0,.72)); pointer-events:none; }
+.token, .ghost .token{ position:absolute; top:5px; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:.9rem; font-weight:900; z-index:2; color:#101010; box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.4); }
+.t-cost{ left:6px; background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
+.t-pts { right:6px; background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
+.label{ position:absolute; left:6px; right:6px; bottom:6px; z-index:2; color:#eaf2ff; font-size:.7rem; font-weight:900; text-align:center; background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:4px 6px; }
+
+/* Ghost drag */
+.ghost{ position:fixed; z-index:9999; pointer-events:none; width:var(--card-w); height:var(--card-h); transform: translate(-50%, -50%) scale(1.06); border:1px solid rgba(255,255,255,.35); border-radius:12px; }
+
+/* Footer */
+.bottom-bar{
+  display:flex; justify-content:center; gap:10px; flex-wrap:wrap;
+  padding:8px 8px var(--bottom-pad);
+  background: linear-gradient(180deg, rgba(5,8,18,0), rgba(5,8,18,.55));
+  position: relative; z-index: 2;
+}
+.btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
+.btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
 .btn.big{ font-size:1.4rem; padding:14px 28px; border-radius:14px; background:#3b8cff; color:#fff; font-weight:900; }
 
 /* ===== Overlays ===== */
-.overlay{ position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.7); opacity:0; pointer-events:none; transition:.2s; z-index:100; }
+.overlay{ position:fixed; inset:0; display:grid; place-items:center; background: rgba(0,0,0,.7); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100; }
 .overlay.visible{ opacity:1; pointer-events:auto; }
 
-/* Portada (full screen y adaptativa) */
+/* Portada (no interfiere con el layout) */
 .cover-screen{ position:relative; width:100%; height:100dvh; }
 .cover-bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .cover-screen .btn.big{ position:absolute; bottom:10%; left:50%; transform:translateX(-50%); z-index:2; }
 
-/* Zoom carta (limpio) */
-.zoom-panel{ width:min(94%, 560px); }
+/* Zoom (limpio y grande) */
+.zoom-panel{ width:min(94%, 560px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); border-radius:16px; box-shadow:var(--glow); padding:12px; }
 .zoom-card{ margin:auto; width: clamp(240px, 72vw, 460px); aspect-ratio:5/7; border-radius:14px; overflow:hidden; position:relative; border:1px solid rgba(255,255,255,.22); background:#0b0f1e; }
+.zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
 .zoom-card .art img{ width:100%; height:100%; object-fit:contain; }
+.zoom-title, .row-btns{ display:none!important; }
 
-/* Ocultar contenedor toasts si no se usa */
+/* Ocultar contenedores auxiliares */
 #toasts{ display:none; }
+
+/* ===== Compactos por ALTURA ===== */
+@media (max-height: 640px){
+  :root{ --hex:48px; --round-sz:40px; --meter-sz:22px; --card-w: clamp(62px, 14vw, 96px); --lanes-gap: 8px; --slot-inset:5px; }
+  .banner{ font-size:.8rem; padding:3px 8px; }
+}
