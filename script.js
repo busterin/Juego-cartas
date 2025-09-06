@@ -28,7 +28,7 @@
 
   const state = {
     round: 1,
-    pCoins: 3, eCoins: 3,           // ⬅️ monedas actuales (empiezas con 3)
+    pCoins: 3, eCoins: 3,           // empiezas con 3
     pScore: 0, eScore: 0,
     pDeck: [], eDeck: [],
     pHand: [], eHand: [],
@@ -58,8 +58,8 @@
   }
 
   // ---------- UI ----------
-  const badgeCost = v => `<div class="badge b-cost" title="Coste">💰${v}</div>`;
-  const badgePts  = v => `<div class="badge b-pts"  title="Puntos">⭐${v}</div>`;
+  const badgeCost = v => `<div class="badge b-cost">${v}</div>`;
+  const badgePts  = v => `<div class="badge b-pts">${v}</div>`;
   const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
   function createHandCardEl(card, index){
@@ -129,13 +129,13 @@
   function setBanner(text){ phaseBanner.textContent = text; }
   function highlightPlayerSlots(on){ $$('.slot[data-side="player"]').forEach(s=>s.classList.toggle('highlight', !!on)); }
 
-  // ---------- Zoom ----------
+  // ---------- Zoom (números sin iconos también) ----------
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
         <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
-        <div class="zoom-badge cost">💰 ${card.cost}</div>
-        <div class="zoom-badge pts">⭐ ${card.pts}</div>
+        <div class="zoom-badge cost">${card.cost}</div>
+        <div class="zoom-badge pts">${card.pts}</div>
         <div class="name">${card.name||'Carta'}</div>
       </div>
       <p class="zoom-text">Arrastra desde la mano para jugarla. Tocar solo abre esta vista.</p>
@@ -147,13 +147,12 @@
   zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
 
   // ---------- Drag ----------
-  let ghost=null, dragging=null, startRect=null;
+  let ghost=null, dragging=null;
   function attachDragHandlers(cardEl){ cardEl.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
     if(state.turn!=='player' || state.resolving) return;
     const el = e.currentTarget; dragging = el;
     el.setPointerCapture(e.pointerId);
-    startRect = el.getBoundingClientRect();
 
     // ghost con arte (sin deformar)
     ghost = document.createElement('div');
@@ -209,7 +208,7 @@
     // paga coste
     state.pCoins -= card.cost; updateHUD();
 
-    // NO destruimos al rival: solo colocas (y puedes reemplazar tu propia carta)
+    // NO destruimos al rival: solo colocas/reemplazas tu propia carta
     state.lanes[laneIndex].p = {...card};
 
     // quitar de la mano + robar 1 si hay
@@ -224,7 +223,7 @@
     state.resolving = true;
     state.enemyPassed = false;
 
-    // ⬆️ Al empezar su turno: +1 moneda
+    // +1 moneda al empezar SU turno
     state.eCoins += 1; updateHUD();
 
     const playable = () => state.eHand.some(c => c.cost <= state.eCoins);
@@ -241,7 +240,7 @@
       });
       const card = state.eHand[bestIdx];
 
-      // carril preferido: hueco propio, si no, el que tenga menos puntos propios (para reemplazar)
+      // carril preferido: hueco propio, si no, reemplazar si mejora
       let laneChoice = 0, laneScore=-1;
       for(let i=0;i<LANES;i++){
         const E = state.lanes[i].e;
@@ -250,7 +249,7 @@
         if(sc>laneScore){ laneScore=sc; laneChoice=i; }
       }
 
-      // pagar y jugar (reemplazo de su propia carta permitido)
+      // pagar y jugar
       state.eCoins -= card.cost;
       state.lanes[laneChoice].e = {...card};
 
@@ -302,13 +301,12 @@
       if(l.e) eRound += l.e.pts;
     });
 
-    // Mostrar floats llamativos
-    if(pRound>0) floatScore(`+${pRound} ⭐`, 'you');
-    if(eRound>0) floatScore(`+${eRound} ⭐`, 'enemy');
+    // Floats vistosos
+    if(pRound>0) floatScore(`+${pRound}`, 'you');
+    if(eRound>0) floatScore(`+${eRound}`, 'enemy');
 
-    // Pequeña pausa para leer los +puntos
+    // Pausa para leer +puntos
     setTimeout(async ()=>{
-      // Animar desaparición de cartas
       await animateVanishBoard();
 
       state.pScore += pRound; state.eScore += eRound;
@@ -324,17 +322,15 @@
         renderBoard(); updateHUD(); return;
       }
 
-      // nueva ronda
+      // nueva ronda → jugador empieza y gana +1 moneda por comenzar SU turno
       state.round += 1;
       state.playerPassed = false; state.enemyPassed = false;
+      state.turn = 'player';
+      state.pCoins += 1;                 // +1 por turno del jugador
 
       // robar hasta 5
       while(state.pHand.length<HAND_SIZE && state.pDeck.length) state.pHand.push(state.pDeck.pop());
       while(state.eHand.length<HAND_SIZE && state.eDeck.length) state.eHand.push(state.eDeck.pop());
-
-      // turno vuelve a jugador y gana +1 moneda al inicio de su turno
-      state.turn = 'player';
-      state.pCoins += 1;
 
       renderBoard(); renderHand(); updateHUD();
       setBanner('Nueva ronda: arrastra cartas mientras tengas monedas');
@@ -361,6 +357,9 @@
     state.eDeck = makeDeckRandom(28);
     state.eHand = []; drawToHand();
 
+    // Al comenzar tu primer turno: +1 moneda
+    state.pCoins += 1;
+
     renderBoard(); renderHand(); updateHUD();
     setBanner('Arrastra cartas mientras tengas monedas');
   }
@@ -374,8 +373,7 @@
   passBtn.addEventListener('click', ()=>{
     if(state.turn!=='player' || state.resolving) return;
     state.playerPassed = true;
-
-    // Al empezar turno del rival: cambiamos turno y sumamos su +1 en enemyTurn()
+    // turno rival
     state.turn = 'enemy';
     setBanner('Turno rival…');
     enemyTurn();
