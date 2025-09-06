@@ -1,13 +1,10 @@
 (() => {
-  // ---------- Helpers ----------
   const $  = s => document.querySelector(s);
-  const $$ = s => Array.from(document.querySelectorAll(s));
   const rand = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
 
-  // ---------- Elements ----------
   const handEl = $('#hand');
 
-  // Slots (funciones para recapturarlos siempre frescos)
+  // Obtener SIEMPRE los slots actuales (no cacheados)
   const getSlotsPlayer = () => Array.from(document.querySelectorAll('.slot[data-side="player"]'));
   const getSlotsEnemy  = () => Array.from(document.querySelectorAll('.slot[data-side="enemy"]'));
 
@@ -17,15 +14,13 @@
   const phaseBanner = $('#phaseBanner');
 
   const startOverlay = $('#startOverlay');
-  const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
+  const endOverlay   = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
 
-  const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap'); const closeZoomBtn = $('#closeZoomBtn');
+  const zoomOverlay  = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap'); const closeZoomBtn = $('#closeZoomBtn');
 
   const passBtn = $('#passBtn'); const resetBtn = $('#resetBtn');
-
   const tooltipEl = $('#tooltip');
 
-  // ---------- State ----------
   const SLOTS = 6, HAND_SIZE = 5;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
@@ -34,13 +29,11 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cards ----------
   const SPIDEY = { name:'Spiderman', cost:3, pts:6, art:'assets/Spiderman.png' };
 
-  // ---------- UI helpers ----------
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
-  const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
+  const artHTML   = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
   // ===== Zoom =====
   function openZoom(card){
@@ -83,7 +76,7 @@
   function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; } return d; }
   function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
 
-  // ===== Hand (abanico) =====
+  // ===== Mano (abanico) =====
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
     el.className='card';
@@ -91,7 +84,6 @@
     el.dataset.name=card.name||''; el.dataset.art=card.art||'';
     el.innerHTML=`${artHTML(card.art)}${tokenCost(card.cost)}${tokenPts(card.pts)}<div class="label">${card.name||'Carta'}</div>`;
 
-    // distribución
     const margin=9;
     const leftPct = (n===1)?50: margin + i*((100-margin*2)/(n-1));
     const mid=(n-1)/2, angle=(i-mid)*10, extra=(i-mid)*14;
@@ -105,18 +97,13 @@
   }
   function renderHand(){ handEl.innerHTML=''; const n=state.pHand.length; state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n))); }
 
-  // ===== Board placed cards (misma estructura ambos lados) =====
-  function makePlaced(card, side /* 'player'|'enemy' */){
+  // ===== Board (misma estructura ambos lados; en mesa solo PUNTOS) =====
+  function makePlaced(card, side){
     const div = document.createElement('div');
     div.className = `placed ${side}`;
-    // En mesa: SOLO puntos
-    div.innerHTML = `
-      ${artHTML(card.art)}
-      <div class="token t-pts">${card.pts}</div>
-      <div class="label">${card.name || ''}</div>
-    `;
+    div.innerHTML = `${artHTML(card.art)}<div class="token t-pts">${card.pts}</div><div class="label">${card.name || ''}</div>`;
     div.addEventListener('click', () => openZoom(card));
-    enableTooltip(div, `Coste: ${card.cost}`); // opcional
+    enableTooltip(div, `Coste: ${card.cost}`);
     return div;
   }
 
@@ -174,7 +161,7 @@
     return -1;
   }
 
-  // ===== Reglas de colocación =====
+  // ===== Reglas =====
   const canAfford = c => state.pCoins>=c.cost;
   const playerOccupancy = ()=> state.center.filter(c=>!!c.p).length;
   const enemyOccupancy  = ()=> state.center.filter(c=>!!c.e).length;
@@ -251,14 +238,12 @@
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
 
-    // mazos y mano (Spidey asegurado)
     state.pDeck=makeDeckRandom(30);
     state.pHand=[{...SPIDEY}]; drawToHand();
 
     state.eDeck=makeDeckRandom(30);
     state.eHand=[]; drawToHand();
 
-    // +1 moneda al primer turno del jugador
     state.pCoins+=1;
 
     renderBoard(); renderHand(); updateHUD();
@@ -275,7 +260,4 @@
     if(state.turn!=='player'||state.resolving) return;
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
   });
-
-  // recalc slots on resize/orientation
-  window.addEventListener('resize', ()=>{ /* referencias se piden on-demand */ }, {passive:true});
 })();
