@@ -74,12 +74,12 @@
     el.dataset.name=card.name||''; el.dataset.art=card.art||'';
     el.innerHTML=`${artHTML(card.art)}${tokenCost(card.cost)}${tokenPts(card.pts)}<div class="label">${card.name||'Carta'}</div>`;
 
-    const margin=8;
-    const leftPct = (n===1)?50: margin + i*((100-margin*2)/(n-1));
-    const mid=(n-1)/2, angle=(i-mid)*10, extra=(i-mid)*14;
-    el.style.setProperty('--x',`calc(${leftPct}% - 50%)`);
-    el.style.setProperty('--rot',`${angle}deg`);
-    el.style.setProperty('--off',`${extra}px`);
+    const mid=(n-1)/2;
+const angle=(i-mid)*12;   // antes 10
+const extra=(i-mid)*22;   // antes 14
+el.style.setProperty('--x',`calc(${leftPct}% - 50%)`);
+el.style.setProperty('--rot',`${angle}deg`);
+el.style.setProperty('--off',`${extra}px`);
 
     el.addEventListener('click', ()=> openZoom({name:el.dataset.name||'Carta', cost:+el.dataset.cost, pts:+el.dataset.pts, art:el.dataset.art||''}));
     attachDragHandlers(el);
