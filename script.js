@@ -180,14 +180,12 @@
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins) && enemyOccupancy()<SLOTS;
     const tryPlayOnce=()=>{
       if(!canPlay()) return false;
-      // elige una carta jugable con mejor ratio pts/cost
       let best=-1,score=-1;
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
       const card=state.eHand[best];
 
-      // primer hueco libre
       let target=-1;
-      for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
+      for(let i=0;i	SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1) return false;
 
       state.eCoins-=card.cost; state.center[target].e={...card};
@@ -199,16 +197,34 @@
     loop();
   }
 
+  // ---------- Fin de partida ----------
+  function endGame(){
+    state.resolving = true;
+    let title = 'Empate';
+    if(state.pScore > state.eScore) title = '¡Victoria!';
+    else if(state.eScore > state.pScore) title = 'Derrota';
+    endTitle.textContent = title;
+    endLine.textContent = `Puntos — Tú: ${state.pScore} · Rival: ${state.eScore}`;
+    endOverlay.classList.add('visible');
+  }
+
   // ---------- Puntuación / cambio de ronda ----------
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
   function scoreTurn(){
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
     state.pScore+=p; state.eScore+=e; updateHUD();
 
-    state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
+    // Si acabamos de terminar la RONDA 8, finalizamos aquí mismo
+    if(state.round === 8){
+      setTimeout(endGame, 300);
+      return;
+    }
+
+    // Siguiente ronda
+    state.round+=1;
+    state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
     drawToHand();
     roundNoEl.textContent = state.round;
-
     setTimeout(()=> showTurnToast('TU TURNO'), 250);
   }
   function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
