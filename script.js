@@ -17,7 +17,6 @@
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
 
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
-
   const turnToast = $('#turnToast');
 
   const startBtn = $('#startBtn');
@@ -46,12 +45,14 @@
   function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [d[i],d[j]]=[d[j],d[i]]; } return d; }
   function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
 
-  // ---------- Zoom (limpio y sin botón) ----------
+  // ---------- Zoom (ahora muestra Coste y Puntos) ----------
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
         <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
-        <div class="name" style="position:absolute;left:12px;right:12px;bottom:14px;text-align:center;font-weight:900;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:10px 12px;color:#eaf2ff;">${card.name||'Carta'}</div>
+        <div class="zoom-token cost">${card.cost}</div>
+        <div class="zoom-token pts">${card.pts}</div>
+        <div class="name">${card.name||'Carta'}</div>
       </div>`;
     zoomOverlay.classList.add('visible');
   }
@@ -112,10 +113,12 @@
   // ---------- Turn Toast ----------
   let toastTimer=null;
   function showTurnToast(text, ms=1200){
-    turnToast.setAttribute('data-text', text);
-    turnToast.classList.add('show');
+    const el = document.getElementById('turnToast');
+    if(!el) return;
+    el.setAttribute('data-text', text);
+    el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=> turnToast.classList.remove('show'), ms);
+    toastTimer = setTimeout(()=> el.classList.remove('show'), ms);
   }
 
   // ---------- Drag & drop ----------
@@ -197,7 +200,6 @@
     drawToHand();
     roundNoEl.textContent = state.round;
 
-    // Aviso de inicio de turno del jugador (sin mensajes largos)
     setTimeout(()=> showTurnToast('TU TURNO'), 250);
   }
   function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
