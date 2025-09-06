@@ -9,15 +9,13 @@
   --gap:10px;
 
   /* HUD y mano */
-  --hex: 56px; --round-sz: 48px; --meter-sz: 26px;
+  --hex: 54px; --round-sz: 46px; --meter-sz: 24px;
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
 
-  /* Tablero centrado */
-  --board-h: clamp(500px, 84vh, 700px);   /* Altura TOTAL del bloque tablero */
-  --lanes-gap: 6px;                       /* separación entre slots */
-  --slot-ratio: 2/3;                      /* más “baja”, estilo Snap */
-  --slot-inset: 3px;                      /* padding interno de la carta */
+  /* Tablero flexible a tope */
+  --lanes-gap: 8px;        /* separación entre slots */
+  --slot-inset: 5px;       /* padding interno de la carta */
   --slot-br: 12px;
 
   --bottom-pad: 10px;
@@ -35,20 +33,22 @@ body{
     linear-gradient(180deg, var(--bg1), var(--bg2));
 }
 #game{
-  height: 100dvh;
+  height: 100dvh; /* usa TODA la pantalla segura */
   max-width: var(--game-max);
   margin-inline:auto;
   display: grid;
-  grid-template-rows: auto auto /* HUD+banner */
-                      1fr       /* zona flexible para CENTRAR el tablero */
-                      auto      /* mano */
-                      auto;     /* footer */
+  grid-template-rows:
+    auto        /* HUD */
+    auto        /* banner */
+    1fr         /* TABLERO ocupa todo lo que queda */
+    auto        /* mano */
+    auto;       /* footer */
   gap: var(--gap);
   padding: 6px 8px calc(var(--bottom-pad) + env(safe-area-inset-bottom));
   overflow:hidden;
 }
 
-/* ===== HUD ===== */
+/* ===== HUD (ligeramente compactado) ===== */
 .top-hud{
   display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
   align-items:center; gap:6px; padding-inline:2px;
@@ -56,20 +56,20 @@ body{
 .portrait{ display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; min-width:0; }
 .portrait.enemy{ justify-self:end; }
 .frame.hex{
-  width:var(--hex); height:calc(var(--hex)*1.1);
+  width:var(--hex); height:calc(var(--hex)*1.06);
   clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   background:#223; border:2px solid rgba(255,255,255,.25); border-radius:8px;
   box-shadow:0 6px 18px rgba(0,0,0,.5), inset 0 0 18px rgba(255,255,255,.08);
   overflow:hidden;
 }
 .frame.hex img{ width:100%; height:100%; object-fit:cover; }
-.info{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.info{ display:flex; flex-direction:column; gap:2px; min-width:0; }
 .info .name{ font-weight:900; font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .meters{ display:flex; gap:6px; flex-wrap:wrap; }
 .round-display{ display:flex; align-items:center; justify-content:center; }
 .round-no{
   width:var(--round-sz); height:var(--round-sz); border-radius:50%; display:grid; place-items:center;
-  font-weight:900; font-size:calc(var(--round-sz)*.22 + .7rem); color:#061018;
+  font-weight:900; font-size:calc(var(--round-sz)*.22 + .68rem); color:#061018;
   background: radial-gradient(60% 60% at 50% 40%, #baf3ff 0, #6be2ff 55%, #3b8cff 100%);
   box-shadow:0 0 16px rgba(107,226,255,.5), inset 0 4px 15px rgba(255,255,255,.45), inset 0 -6px 20px rgba(0,0,0,.25);
   border:1px solid rgba(255,255,255,.5);
@@ -78,7 +78,7 @@ body{
   width:var(--meter-sz); height:var(--meter-sz); border-radius:50%;
   display:grid; place-items:center; font-weight:900; color:#101010;
   box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.18), 0 3px 8px rgba(0,0,0,.35);
-  font-size:.85rem;
+  font-size:.82rem;
 }
 .meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .meter.pts { background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
@@ -87,41 +87,66 @@ body{
 .banner{
   text-align:center; font-weight:800; color:#d7e6ff;
   border:1px solid var(--panel-br); background:var(--panel);
-  padding:4px 8px; border-radius:10px; box-shadow:var(--glow);
-  font-size:.86rem;
+  padding:3px 8px; border-radius:10px; box-shadow:var(--glow);
+  font-size:.84rem;
 }
 
-/* ===== TABLERO CENTRADO ===== */
-.board{ display:grid; place-items:center; min-height:0; }
-.board-inner{ /* (no se usa en esta versión, pero se deja por si la reintroduces) */ }
-.center-hint{
-  text-align:center; color:#aecdff; font-weight:700; font-size:.86rem;
+/* ===== TABLERO — Full height dentro de su 1fr ===== */
+.board{
+  display:grid; place-items:center; min-height:0; /* evita overflow */
 }
+.board > .row{
+  /* Dos filas apiladas ocupando TODO el alto disponible por igual */
+  width:100%;
+}
+.board{
+  grid-template-rows: 1fr  auto 1fr; /* enemigo / hint / jugador */
+  align-content:stretch;
+}
+.center-hint{
+  text-align:center; color:#aecdff; font-weight:700; font-size:.85rem; line-height:1.1;
+  padding-block:2px;
+}
+
+/* Cada fila contiene un grid 3×2 que llena su altura */
 .lanes-6x2{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 1fr;   /* cada fila de slots mide lo mismo en ALTO */
   gap: var(--lanes-gap);
+  height: 100%;          /* <- CLAVE: llena la altura de la fila */
+  min-height:0;
+}
+
+/* Rival y Jugador iguales; cada fila (enemigo/jugador) ocupa toda su 1fr */
+.row.row-enemy, .row.row-player{
+  display:grid;
+  grid-template-rows: 1fr; /* la rejilla interna ocupará el 100% */
+  min-height:0;
 }
 .row-enemy .lanes-6x2,
-.row-player .lanes-6x2{
-  height: calc((var(--board-h) - 20px - 1.2em) / 2); /* resta hint + gaps */
-  min-height: 0;
-}
+.row-player .lanes-6x2{ height:100%; }
+
+/* Slots a ancho/alto completo, sin aspect-ratio fijo */
 .slot{
-  aspect-ratio: var(--slot-ratio);
   border:2px dashed rgba(105,240,255,.35);
   border-radius:var(--slot-br);
-  display:grid; place-items:center; position:relative;
+  position:relative;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
+  display:block; /* full box */
+  overflow:hidden;
+  min-height:0;
 }
-/* 💡 Añadimos color explícito para cada lado */
 .slot.player{ border-color: rgba(105,240,255,.35); }
 .slot.enemy { border-color: rgba(255,108,132,.35); }
 
+/* Carta colocada llena el slot con margen (inset) */
 .placed{
   position:absolute; inset:var(--slot-inset);
-  border-radius:calc(var(--slot-br) - 2px); overflow:hidden;
-  border:1px solid rgba(255,255,255,.25); box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  border-radius:calc(var(--slot-br) - 2px);
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.25);
+  box-shadow: 0 6px 24px rgba(0,0,0,.5);
   background:#0f1633;
 }
 .placed .art, .placed .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
@@ -165,40 +190,17 @@ body{
 .btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
 .btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
 
-/* Overlays / Zoom */
-.overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100; }
-.overlay.visible{ opacity:1; pointer-events:auto; }
-.panel{ width:min(92%, 460px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); padding:16px; border-radius:16px; box-shadow:var(--glow); text-align:center; }
-.zoom-panel{ width:min(92%, 520px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); border-radius:16px; box-shadow:var(--glow); padding:16px; text-align:center; }
-.zoom-card{ margin:10px auto 12px auto; width: clamp(190px, 58vw, 340px); aspect-ratio: 5/7; border-radius:14px; overflow:hidden; position:relative; border:1px solid rgba(255,255,255,.22); background:#0b0f1e; }
-.zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
-.zoom-card .art img{ width:100%; height:100%; object-fit:contain; }
-.zoom-card .zoom-token{ position:absolute; top:10px; width:40px; height:40px; border-radius:50%; display:grid; place-items:center; font-weight:900; color:#101010; box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42); }
-.zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
-.zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
-.zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
-
-/* ===== Modos compactos por ALTURA ===== */
+/* ===== Compactos por ALTURA ===== */
 @media (max-height: 720px){
-  :root{
-    --hex: 52px; --round-sz: 44px; --meter-sz: 24px;
-    --board-h: clamp(200px, 34vh, 300px);
-    --card-w: clamp(68px, 15vw, 102px);
-  }
+  :root{ --hex: 52px; --round-sz: 44px; --meter-sz: 22px; --card-w: clamp(68px, 15vw, 102px); }
   .center-hint{ font-size:.8rem }
 }
 @media (max-height: 640px){
-  :root{
-    --hex: 48px; --round-sz: 40px; --meter-sz: 22px;
-    --board-h: clamp(180px, 30vh, 260px);
-    --card-w: clamp(62px, 14vw, 96px);
-    --lanes-gap: 7px; --slot-inset: 4px; --slot-ratio: 2/3;
-  }
+  :root{ --hex: 48px; --round-sz: 40px; --meter-sz: 20px; --card-w: clamp(62px, 14vw, 96px); --lanes-gap:7px; --slot-inset:4px; }
   .center-hint{ display:none }
   .hand-zone{ height: calc(var(--card-h) + 8px) }
   .btn{ padding:8px 12px }
 }
 @media (max-height: 560px){
-  :root{ --board-h: clamp(160px, 28vh, 220px); }
   .btn{ padding:7px 10px; border-radius:10px; }
 }
