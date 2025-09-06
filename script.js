@@ -21,7 +21,7 @@
   const passBtn = $('#passBtn'); const resetBtn = $('#resetBtn');
 
   // ---------- State ----------
-  const SLOTS = 6, HAND_SIZE = 5, TARGET_SCORE = 30;
+  const SLOTS = 4, HAND_SIZE = 5;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
     pDeck: [], eDeck: [], pHand: [], eHand: [],
@@ -37,14 +37,14 @@
   const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
   function makeRandomCard(){ const cost=rand(1,4), pts=rand(cost+1,cost+5); return {name:'',cost,pts,art:''}; }
-  function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=Math.random()* (i+1) | 0; [d[i],d[j]]=[d[j],d[i]]; } return d; }
+  function makeDeckRandom(n=30){ const d=[]; for(let i=0;i<n;i++) d.push(makeRandomCard()); for(let i=d.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [d[i],d[j]]=[d[j],d[i]]; } return d; }
   function drawToHand(){ while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop()); while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop()); }
 
   // ===== ZOOM =====
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
-        <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">` : ''}</div>
+        <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
         <div class="zoom-token cost">${card.cost}</div>
         <div class="zoom-token pts">${card.pts}</div>
         <div class="name">${card.name||'Carta'}</div>
@@ -168,7 +168,7 @@
       state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
       while(state.pHand.length<HAND_SIZE&&state.pDeck.length) state.pHand.push(state.pDeck.pop());
       while(state.eHand.length<HAND_SIZE&&state.eDeck.length) state.eHand.push(state.eDeck.pop());
-      phaseBanner.textContent='Nueva ronda: juega cartas mientras tengas monedas';
+      setBanner('Nueva ronda: juega cartas mientras tengas monedas');
     },400);
   }
   function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
@@ -178,11 +178,17 @@
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
-    state.pDeck=makeDeckRandom(30); state.pHand=[{...SPIDEY}]; drawToHand();
-    state.eDeck=makeDeckRandom(30); state.eHand=[]; drawToHand();
+
+    state.pDeck=makeDeckRandom(30);
+    state.pHand=[{...SPIDEY}]; drawToHand();
+
+    state.eDeck=makeDeckRandom(30);
+    state.eHand=[]; drawToHand();
+
     state.pCoins+=1;
+
     renderBoard(); renderHand(); updateHUD();
-    setBanner('Arrastra cartas a tus huecos (2×3 por lado)');
+    setBanner('Arrastra cartas a tus huecos (4 por lado)');
   }
 
   // Events
