@@ -17,7 +17,6 @@
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
 
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
-  const turnToast = $('#turnToast');
 
   const startBtn = $('#startBtn');
   const againBtn = $('#againBtn');
@@ -66,7 +65,7 @@
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
   zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
 
-  // ---------- Mano (abanico) ----------
+  // ---------- Mano (abanico más abierto) ----------
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
     el.className='card';
@@ -74,25 +73,29 @@
     el.dataset.name=card.name||''; el.dataset.art=card.art||'';
     el.innerHTML=`${artHTML(card.art)}${tokenCost(card.cost)}${tokenPts(card.pts)}<div class="label">${card.name||'Carta'}</div>`;
 
+    const margin=8;
+    const leftPct = (n===1)?50: margin + i*((100-margin*2)/(n-1));
     const mid=(n-1)/2;
-const angle=(i-mid)*12;   // antes 10
-const extra=(i-mid)*22;   // antes 14
-el.style.setProperty('--x',`calc(${leftPct}% - 50%)`);
-el.style.setProperty('--rot',`${angle}deg`);
-el.style.setProperty('--off',`${extra}px`);
+    const angle=(i-mid)*12;   // antes 10 → más rotación
+    const extra=(i-mid)*22;   // antes 14 → más separación
+    el.style.setProperty('--x',`calc(${leftPct}% - 50%)`);
+    el.style.setProperty('--rot',`${angle}deg`);
+    el.style.setProperty('--off',`${extra}px`);
 
-    el.addEventListener('click', ()=> openZoom({name:el.dataset.name||'Carta', cost:+el.dataset.cost, pts:+el.dataset.pts, art:el.dataset.art||''}));
+    el.addEventListener('click', ()=> openZoom({
+      name:el.dataset.name||'Carta',
+      cost:+el.dataset.cost, pts:+el.dataset.pts, art:el.dataset.art||''
+    }));
     attachDragHandlers(el);
     return el;
   }
   function renderHand(){ handEl.innerHTML=''; const n=state.pHand.length; state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n))); }
 
-  // ---------- Tablero (clic para zoom; en mesa solo puntos) ----------
+  // ---------- Tablero ----------
   function renderBoard(){
     for(let i=0;i<SLOTS;i++){
       const ps=slotsPlayer[i], es=slotsEnemy[i]; ps.innerHTML=''; es.innerHTML='';
       const p=state.center[i].p, e=state.center[i].e;
-
       if(p){
         const d=document.createElement('div');
         d.className='placed';
@@ -185,8 +188,7 @@ el.style.setProperty('--off',`${extra}px`);
       const card=state.eHand[best];
 
       let target=-1;
-      // ⬇⬇⬇ CORREGIDO: el bucle tenía un error de sintaxis
-      for(let i=0; i<SLOTS; i++){ if(!state.center[i].e){ target=i; break; } }
+      for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1) return false;
 
       state.eCoins-=card.cost; state.center[target].e={...card};
@@ -215,13 +217,11 @@ el.style.setProperty('--off',`${extra}px`);
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
     state.pScore+=p; state.eScore+=e; updateHUD();
 
-    // Si acabamos de terminar la RONDA 8, finalizamos aquí mismo
     if(state.round === 8){
       setTimeout(endGame, 300);
       return;
     }
 
-    // Siguiente ronda
     state.round+=1;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
     drawToHand();
@@ -236,14 +236,12 @@ el.style.setProperty('--off',`${extra}px`);
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
 
-    // Usamos SIEMPRE las mismas 5 cartas (stats ya fijados al cargar)
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.eDeck = [...CARDS].sort(()=> Math.random()-0.5);
 
     state.pHand=[]; state.eHand=[];
     drawToHand();
 
-    // +1 moneda al inicio de tu primera fase
     state.pCoins+=1;
 
     renderBoard(); renderHand(); updateHUD();
