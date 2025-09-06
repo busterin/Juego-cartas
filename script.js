@@ -79,7 +79,7 @@
   $('#closeZoomBtn').addEventListener('click', closeZoom);
   $('#zoomOverlay').addEventListener('click', e=>{ if(!e.target.closest('.zoom-panel')) closeZoom(); });
 
-  // ===== Hand (abanico dinámico) =====
+  // ===== Hand (abanico dinámico, ajustado al ancho visible) =====
   function createHandCardEl(card, index, total){
     const el = document.createElement('div');
     el.className = 'card';
@@ -95,14 +95,18 @@
       <div class="label">${card.name || 'Carta'}</div>
     `;
 
-    // Posición en abanico calculada
-    // distribuye X en porcentajes y rota en torno al centro
-    const leftPct = ((index + 1) / (total + 1)) * 100; // 0..100
+    // Posición en abanico: distribuimos entre márgenes 10%..90% (para que NUNCA se salga)
+    const margin = 10; // %
+    let leftPct;
+    if (total === 1) leftPct = 50;
+    else leftPct = margin + (index)*( (100 - margin*2) / (total-1) );
+
     const mid = (total - 1) / 2;
     const angle = (index - mid) * 8; // grados
-    el.style.left = `${leftPct}%`;
-    el.style.setProperty('--tx', `calc(${leftPct}% - 50%)`);
-    el.style.transform = `translateX(calc(${leftPct}% - 50%)) rotate(${angle}deg)`;
+
+    // Pasamos a variables CSS para hover consistente
+    el.style.setProperty('--x', `calc(${leftPct}% - 50%)`);
+    el.style.setProperty('--rot', `${angle}deg`);
 
     // Zoom al tocar
     el.addEventListener('click', ()=> openZoom({name:el.dataset.name||'Carta', cost:+el.dataset.cost, pts:+el.dataset.pts, art:el.dataset.art||''}));
@@ -305,7 +309,7 @@
     const div = document.createElement('div');
     div.className = `score-float ${who}`;
     div.textContent = label;
-    $('.board').appendChild(div);
+    document.querySelector('.board').appendChild(div);
     setTimeout(()=> div.remove(), 1200);
   }
 
@@ -354,7 +358,8 @@
 
     // mazos y manos (Spiderman garantizado en tu mano)
     state.pDeck = makeDeckRandom(30);
-    state.pHand = [{...SPIDEY}]; drawToHand();
+    state.pHand = [{ name:'Spiderman', cost:3, pts:6, art:'assets/Spiderman.png' }];
+    drawToHand();
 
     state.eDeck = makeDeckRandom(30);
     state.eHand = []; drawToHand();
@@ -367,9 +372,9 @@
   }
 
   // ===== Events =====
-  $('#startBtn').addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
-  $('#againBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
-  $('#menuBtn').addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
+  $('#startBtn')?.addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
+  $('#againBtn')?.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
+  $('#menuBtn')?.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
   $('#resetBtn').addEventListener('click', ()=> newGame());
 
   passBtn.addEventListener('click', ()=>{
