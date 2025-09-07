@@ -191,6 +191,43 @@ body{
 }
 .turn-toast.show{ opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
+/* ======== SPLASH (PORTADA) ======== */
+.splash{
+  position: fixed; inset: 0; z-index: 999;
+  display: grid; place-items: center;
+  overflow: hidden;
+}
+.splash::before{
+  content:""; position:absolute; inset:0;
+  background-image: url("assets/Portadacartas.PNG");
+  background-size: cover; background-position: center; background-repeat:no-repeat;
+  transform: scale(1.02); /* un pelín de zoom para evitar bandas */
+}
+.splash::after{
+  /* viñeta y neblina para textear encima */
+  content:""; position:absolute; inset:0;
+  background:
+    radial-gradient(60% 60% at 50% 40%, rgba(0,0,0,.1), rgba(0,0,0,.45)),
+    linear-gradient(180deg, rgba(6,10,24,.1), rgba(6,10,24,.6));
+}
+.splash-inner{
+  position: relative; z-index: 2; text-align:center;
+  width: min(92%, 520px); padding: 16px;
+}
+.splash-title{
+  margin: 0 0 18px 0;
+  font-size: clamp(2rem, 7.5vw, 3rem);
+  letter-spacing: 2px;
+  text-shadow: 0 6px 24px rgba(0,0,0,.6);
+}
+.splash-btn{
+  font-size: 1.05rem; padding: 12px 22px; border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(0,0,0,.45);
+}
+
+/* Ocultar (fade out) */
+.splash.hide{ opacity:0; pointer-events:none; transition: opacity .25s ease; }
+
 /* Compactos */
 @media (max-height: 720px){
   :root{ --hex: 52px; --round-sz: 44px; --meter-sz: 24px; --card-w: clamp(68px, 15vw, 102px); }
