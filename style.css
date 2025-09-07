@@ -361,3 +361,28 @@ body{
   :root{ --card-h: calc(var(--card-w) * 1.32); }
   .hand-zone{ height: calc(var(--card-h) + 16px); }
 }
+/* ==== Tokens en MINIATURAS: que floten por encima sin tapar la ilustración ==== */
+/* Permitimos que los tokens sobresalgan del borde */
+.card,
+.placed{
+  overflow: visible;            /* antes se cortaban al salir */
+}
+
+/* La ilustración sigue recortada con esquinas redondeadas */
+.card .art,
+.placed .art{
+  border-radius: inherit;       /* respeta el radio del contenedor */
+  overflow: hidden;             /* la imagen no se sale */
+}
+
+/* Subimos los tokens SOLO en miniaturas (mano y mesa), no en el zoom */
+.hand .card .token,
+.placed .token{
+  top: -10px;                   /* se elevan un poco por fuera */
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.55));  /* legibilidad sobre el fondo */
+  transform: translateY(0);     /* por si había animaciones previas */
+  z-index: 4;                   /* por encima de la imagen */
+}
+
+/* Si quieres que “asomen” aún más, prueba -14px: */
+/* .hand .card .token, .placed .token { top: -14px; } */
