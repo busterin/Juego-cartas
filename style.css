@@ -208,3 +208,8 @@ body{
   :root{ --board-h: clamp(160px, 28vh, 220px); }
   .btn{ padding:7px 10px; border-radius:10px; }
 }
+/* --- Fix arrastre: mano siempre por encima del tablero --- */
+.board{ z-index: 1; }
+.hand-zone{ z-index: 30; pointer-events: auto; }
+.hand{ z-index: 31; }
+.hand .card{ z-index: 32; touch-action: none; } /* ya lo tenías, lo reforzamos */
