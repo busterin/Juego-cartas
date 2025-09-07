@@ -19,8 +19,11 @@
   const passBtn = $('#passBtn');
   const resetBtn = $('#resetBtn');
 
+  const drawOverlay = $('#drawOverlay');
+  const drawCardEl  = $('#drawCard');
+
   // ---------- Estado ----------
-  const SLOTS = 3, HAND_SIZE = 4; // <= ahora 4 cartas en mano
+  const SLOTS = 3, HAND_SIZE = 4;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
     pDeck: [], eDeck: [], pHand: [], eHand: [],
@@ -41,11 +44,6 @@
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
   const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
-  function drawToHand(){
-    while(state.pHand.length<HAND_SIZE && state.pDeck.length) state.pHand.push(state.pDeck.pop());
-    while(state.eHand.length<Math.min(HAND_SIZE,5) && state.eDeck.length) state.eHand.push(state.eDeck.pop());
-  }
-
   // ---------- Zoom ----------
   function openZoom(card){
     zoomWrap.innerHTML = `
@@ -60,6 +58,60 @@
   }
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
   zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
+
+  // ---------- Espera imágenes ----------
+  function whenImagesReady(root, cb){
+    const imgs = Array.from(root.querySelectorAll('img'));
+    if (imgs.length === 0){ cb(); return; }
+    let remaining = imgs.length;
+    const done = () => { remaining--; if (remaining <= 0) cb(); };
+    imgs.forEach(img=>{
+      if (img.complete) { done(); }
+      else {
+        img.addEventListener('load', done, {once:true});
+        img.addEventListener('error', done, {once:true});
+      }
+    });
+  }
+
+  // ---------- Layout Mano ----------
+  function layoutHand(){
+    const n = handEl.children.length;
+    if (!n) return;
+
+    const contW = handEl.clientWidth || handEl.getBoundingClientRect().width || window.innerWidth;
+    const first = handEl.children[0];
+    const cardW = first ? first.getBoundingClientRect().width : 0;
+    if (!contW || !cardW) return;
+
+    const EDGE = 8;
+    const startCenter = EDGE + cardW/2;
+    const endCenter   = Math.max(startCenter, contW - EDGE - cardW/2);
+
+    let centers = [];
+    if (n === 1){
+      centers = [ (startCenter + endCenter) / 2 ];
+    } else {
+      const step = (endCenter - startCenter) / (n - 1);
+      for (let i = 0; i < n; i++) centers.push(startCenter + i*step);
+    }
+
+    const mid = (n - 1) / 2;
+    [...handEl.children].forEach((el, i) => {
+      const cx = centers[i];
+      const tx = Math.round(cx - contW/2);
+      el.style.setProperty('--x', `${tx}px`);
+      el.style.setProperty('--off', `0px`);
+      el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`);
+      el.style.zIndex = 10 + i;
+    });
+  }
+  function layoutHandSafe(){
+    layoutHand();
+    requestAnimationFrame(layoutHand);
+    setTimeout(layoutHand, 50);
+    whenImagesReady(handEl, layoutHand);
+  }
 
   // ---------- Mano ----------
   function createHandCardEl(card,i,n){
@@ -77,69 +129,92 @@
     attachDragHandlers(el);
     return el;
   }
-
-  // Espera a que todas las imágenes dentro de "root" estén listas y luego llama cb()
-  function whenImagesReady(root, cb){
-    const imgs = Array.from(root.querySelectorAll('img'));
-    if (imgs.length === 0){ cb(); return; }
-    let remaining = imgs.length;
-    const done = () => { remaining--; if (remaining <= 0) cb(); };
-    imgs.forEach(img=>{
-      if (img.complete) { done(); }
-      else {
-        img.addEventListener('load', done, {once:true});
-        img.addEventListener('error', done, {once:true});
-      }
-    });
-  }
-
-  // Distribuye la mano dentro del ancho del contenedor, sin solapes y sin salirse
-  function layoutHand(){
-    const n = handEl.children.length;
-    if (!n) return;
-
-    const contW = handEl.clientWidth || handEl.getBoundingClientRect().width || window.innerWidth;
-    const first = handEl.children[0];
-    const cardW = first ? first.getBoundingClientRect().width : 0;
-    if (!contW || !cardW) return;
-
-    const EDGE = 8; // margen a izquierda y derecha
-    const startCenter = EDGE + cardW/2;
-    const endCenter   = Math.max(startCenter, contW - EDGE - cardW/2);
-
-    // Centros equiespaciados
-    let centers = [];
-    if (n === 1){
-      centers = [ (startCenter + endCenter) / 2 ];
-    } else {
-      const step = (endCenter - startCenter) / (n - 1);
-      for (let i = 0; i < n; i++) centers.push(startCenter + i*step);
-    }
-
-    const mid = (n - 1) / 2;
-    [...handEl.children].forEach((el, i) => {
-      const cx = centers[i];
-      const tx = Math.round(cx - contW/2); // offset desde el centro del contenedor
-      el.style.setProperty('--x', `${tx}px`);
-      el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`);
-      el.style.zIndex = 10 + i;
-    });
-  }
-
-  // Reintentos seguros para evitar solapes por imágenes aún sin medir (OPCIONAL aplicado)
-  function layoutHandSafe(){
-    layoutHand();                     // 1) ahora
-    requestAnimationFrame(layoutHand);// 2) próximo frame
-    setTimeout(layoutHand, 50);       // 3) pequeño delay
-    whenImagesReady(handEl, layoutHand); // 4) cuando carguen imágenes
-  }
-
   function renderHand(){
     handEl.innerHTML='';
     const n = state.pHand.length;
     state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n)));
-    layoutHandSafe(); // uso robusto
+    layoutHandSafe();
+  }
+
+  // ---------- Animación de Robo ----------
+  function showDraw(card, cb){
+    drawCardEl.innerHTML = `
+      <div class="art"><img src="${card.art}" alt=""></div>
+      <div class="token t-cost">${card.cost}</div>
+      <div class="token t-pts">${card.pts}</div>
+      <div class="name">${card.name}</div>
+    `;
+    drawOverlay.classList.add('visible');
+    setTimeout(()=>{
+      drawOverlay.classList.remove('visible');
+      if(cb) setTimeout(cb, 250);
+    }, 800);
+  }
+
+  function flyCardToHand(card, onDone){
+    // Asegura que la carta existe ya en la mano (última posición) para medir destino
+    const idx = state.pHand.length - 1;
+    const targetEl = handEl.children[idx];
+    if(!targetEl){ if(onDone) onDone(); return; }
+    const r = targetEl.getBoundingClientRect();
+    const targetX = r.left + r.width/2;
+    const targetY = r.top  + r.height/2;
+
+    // Oculta la real mientras vuela el clon
+    targetEl.style.opacity = '0';
+
+    const fly = document.createElement('div');
+    fly.className = 'fly-card';
+    fly.innerHTML = `<div class="art"><img src="${card.art}" alt=""></div>`;
+    document.body.appendChild(fly);
+
+    const startX = window.innerWidth/2;
+    const startY = window.innerHeight/2;
+
+    // Tamaño final relativo: escalar desde ancho fly a ancho target
+    const flyW = parseFloat(getComputedStyle(fly).width);
+    const scale = r.width / flyW;
+
+    // Posición inicial ya está centrada; animamos a destino
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        fly.style.transform = `translate(${targetX - startX}px, ${targetY - startY}px) scale(${scale})`;
+      });
+    });
+
+    setTimeout(()=>{
+      fly.remove();
+      targetEl.style.opacity = '';
+      layoutHandSafe();
+      if(onDone) onDone();
+    }, 480);
+  }
+
+  // Dibuja 1 carta con animación completa: centro → a mano
+  function drawOneAnimated(cb){
+    if(!state.pDeck.length){ if(cb) cb(); return; }
+    const card = state.pDeck.pop();
+    showDraw(card, ()=>{
+      // añade a mano y renderiza para medir destino
+      state.pHand.push(card);
+      renderHand();
+      // vuela desde centro a su hueco (última carta)
+      flyCardToHand(card, cb);
+    });
+  }
+
+  // Rellena la mano hasta HAND_SIZE con animación (jugador)
+  function topUpPlayerAnimated(done){
+    const step = () => {
+      if(state.pHand.length >= HAND_SIZE || !state.pDeck.length){ if(done) done(); return; }
+      drawOneAnimated(step);
+    };
+    step();
+  }
+
+  // Enemigo roba sin animación
+  function topUpEnemyInstant(){
+    while(state.eHand.length<Math.min(HAND_SIZE,5) && state.eDeck.length) state.eHand.push(state.eDeck.pop());
   }
 
   // ---------- Tablero ----------
@@ -197,7 +272,7 @@
       if(lane !== -1) tryPlayFromHandToSlot(+src.dataset.index, lane);
 
       if (ghost) { ghost.remove(); ghost = null; }
-      layoutHandSafe(); // opcional/robusto: recolocar mano después del drag
+      layoutHandSafe();
     };
 
     window.addEventListener('pointermove', move, {passive:false});
@@ -224,9 +299,12 @@
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
     state.pHand.splice(handIndex,1);
-    if(state.pDeck.length) state.pHand.push(state.pDeck.pop());
     renderHand(); renderBoard(); updateHUD();
-    layoutHandSafe(); // opcional/robusto
+
+    // Roba 1 animada si hay cartas en mazo
+    if(state.pDeck.length){
+      drawOneAnimated(()=>{ renderHand(); updateHUD(); });
+    }
   }
 
   // ---------- IA rival ----------
@@ -265,10 +343,15 @@
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
     state.pScore+=p; state.eScore+=e; updateHUD();
     if(state.round === 8){ setTimeout(endGame, 300); return; }
+
     state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
-    drawToHand(); roundNoEl.textContent = state.round;
-    renderHand(); layoutHandSafe(); // opcional/robusto al empezar ronda
-    setTimeout(()=> showTurnToast('TU TURNO'), 250);
+
+    // Relleno manos: enemigo instantáneo, jugador animado
+    topUpEnemyInstant();
+    topUpPlayerAnimated(()=>{
+      renderHand(); layoutHandSafe(); updateHUD();
+      setTimeout(()=> showTurnToast('TU TURNO'), 200);
+    });
   }
   function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
 
@@ -280,10 +363,14 @@
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.eDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.pHand=[]; state.eHand=[];
-    drawToHand(); state.pCoins+=1;
     renderBoard(); renderHand(); updateHUD();
-    layoutHandSafe(); // opcional/robusto tras newGame
-    showTurnToast('TU TURNO');
+
+    // Relleno inicial: IA instantánea, jugador con animación
+    topUpEnemyInstant();
+    topUpPlayerAnimated(()=>{
+      renderHand(); layoutHandSafe(); updateHUD();
+      showTurnToast('TU TURNO');
+    });
   }
 
   // ---------- Toast de turno ----------
@@ -305,8 +392,8 @@
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
   });
 
-  window.addEventListener('resize', layoutHandSafe);          // opcional aplicado
-  window.addEventListener('orientationchange', layoutHandSafe); // opcional aplicado
+  window.addEventListener('resize', layoutHandSafe);
+  window.addEventListener('orientationchange', layoutHandSafe);
 
   // Arranque con portada
   window.addEventListener('DOMContentLoaded', ()=>{
@@ -314,8 +401,8 @@
     const startBtn = document.getElementById('startBtn');
     if(startBtn){
       startBtn.addEventListener('click', ()=>{
-        startOv.classList.remove('visible'); // oculta portada
-        newGame();                            // inicia el juego
+        startOv.classList.remove('visible');
+        newGame();
       });
     }else{
       newGame();
