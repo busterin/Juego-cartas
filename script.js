@@ -83,7 +83,7 @@
     return el;
   }
 
-  // ===== Distribución: centrada respecto al TABLERO, sin sobresalir =====
+  // ===== Distribución: centrada al tablero, ajustando gap para que quepa =====
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
@@ -98,41 +98,40 @@
       return;
     }
 
-    // 1) Medimos el tablero y calculamos su centro relativo al contenedor de la mano
+    // Centro del tablero relativo a la mano
     const boardEl = document.querySelector('.board');
     const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
     const targetCenter = (boardRect.left - contRect.left) + boardRect.width/2;
 
-    // 2) Mantener la separación actual (o permitir solape moderado si hace falta)
-    const EDGE = 8;                     // margen de seguridad a los lados
-    const BASE_GAP = 14;                // separación deseada entre cartas
-    const MAX_OVERLAP = -Math.round(cardW * 0.40); // solape máx. permitido
+    const EDGE = 6;                      // margen lateral asegurado
+    const BASE_GAP = 14;                 // separación deseada
+    const MIN_GAP  = -Math.round(cardW * 0.55); // solape permitido hasta 55%
 
-    // Gap que cabe dentro de la mano respetando EDGE
-    const maxTotal = contW - EDGE*2;
+    const maxTotal = contW - EDGE*2;     // ancho máximo utilizable
+
+    // Gap inicial y reducción si no cabe
     let gap = BASE_GAP;
-    const totalWithBase = n*cardW + (n-1)*gap;
-    if (totalWithBase > maxTotal){
-      gap = (maxTotal - n*cardW) / (n-1); // puede ser negativo
+    let totalW = n*cardW + (n-1)*gap;
+    if (totalW > maxTotal){
+      gap = (maxTotal - n*cardW) / (n-1);   // puede ser negativo (solape)
+      gap = Math.max(gap, MIN_GAP);         // nunca menos que solape máximo
+      totalW = n*cardW + (n-1)*gap;
     }
-    gap = Math.min(gap, BASE_GAP);
-    gap = Math.max(gap, MAX_OVERLAP);
 
-    // 3) Centrar el bloque en el centro del TABLERO
-    const totalW = n*cardW + (n-1)*gap;
-    let startX = targetCenter - totalW/2;          // borde izquierdo del bloque
+    // Colocar el bloque centrado exactamente al centro del tablero
+    let startX = targetCenter - totalW/2;
 
-    // 4) Clamp: que no se salga del contenedor de mano
-    startX = Math.max(EDGE, Math.min(startX, contW - EDGE - totalW));
+    // Micro-clamp para evitar subpíxeles fuera (sin romper el centrado)
+    if (startX < EDGE) startX = EDGE;
+    if (startX + totalW > contW - EDGE) startX = contW - EDGE - totalW;
 
-    // 5) Posicionar cada carta (transform: translateX)
     const mid = (n - 1) / 2;
     [...handEl.children].forEach((el, i) => {
       const centerX = startX + i*(cardW + gap) + cardW/2;
       const tx = Math.round(centerX - contW/2);
       el.style.setProperty('--x', `${tx}px`);
       el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 2.5}deg`); // abanico plano
+      el.style.setProperty('--rot', `${(i - mid) * 2}deg`); // abanico más plano
       el.style.zIndex = 10 + i;
     });
   }
