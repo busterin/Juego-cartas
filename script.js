@@ -29,13 +29,13 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cartas fijas (stats aleatorios una vez por carga) ----------
+  // ---------- Cartas fijas ----------
   const CARDS = [
-    { name:'Spiderman', art:'assets/Spiderman.png',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
-    { name:'Leonardo',  art:'assets/Leonardo.PNG',   cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
-    { name:'Shepard',   art:'assets/Shepard.JPG',    cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
-    { name:'Geralt',    art:'assets/Geralt.JPG',     cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
-    { name:'Jill',      art:'assets/Jill.JPG',       cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." }
+    { name:'Guerrera', art:'assets/Guerrera.PNG',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
+    { name:'Maga',     art:'assets/Maga.PNG',      cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
+    { name:'Arquero',  art:'assets/Arquero.PNG',   cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
+    { name:'Sanadora', art:'assets/Sanadora.PNG',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
+    { name:'Bardo',    art:'assets/Bardo.PNG',     cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." }
   ];
 
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
@@ -79,11 +79,9 @@
     return el;
   }
 
-  // Distribución de la mano centrada al tablero (con solape controlado)
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
-
     const contRect = handEl.getBoundingClientRect();
     const contW = contRect.width;
     const first = handEl.children[0];
@@ -99,7 +97,6 @@
     const MIN_GAP  = -Math.round(cardW * 0.65);
 
     const maxTotal = contW - EDGE*2;
-
     let gap = BASE_GAP;
     let totalW = n*cardW + (n-1)*gap;
     if (totalW > maxTotal){
@@ -166,11 +163,9 @@
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
     if(state.turn!=='player'||state.resolving) return;
-
     const src = e.currentTarget;
     src.setPointerCapture(e.pointerId);
     e.preventDefault();
-
     ghost = document.createElement('div');
     ghost.className = 'ghost';
     ghost.innerHTML = `${artHTML(src.dataset.art)}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="name-top">${src.dataset.name||''}</div><div class="desc">${src.dataset.text||''}</div>`;
@@ -189,12 +184,10 @@
 
       if (ghost) { ghost.remove(); ghost = null; }
     };
-
     window.addEventListener('pointermove', move, {passive:false});
     window.addEventListener('pointerup', finish, {passive:false, capture:true});
     window.addEventListener('pointercancel', finish, {passive:false, capture:true});
   }
-
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
   function laneUnder(x,y){
     for(let i=0;i<3;i++){
@@ -251,7 +244,7 @@
     endOverlay.classList.add('visible');
   }
 
-  // ---------- Puntuación / rondas ----------
+  // ---------- Puntuación ----------
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
   function scoreTurn(){
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
@@ -275,7 +268,7 @@
     showTurnToast('TU TURNO');
   }
 
-  // ---------- Toast de turno ----------
+  // ---------- Toast turno ----------
   let toastTimer=null;
   function showTurnToast(text, ms=1200){
     const el = document.getElementById('turnToast');
@@ -297,7 +290,7 @@
   window.addEventListener('resize', layoutHand);
   window.addEventListener('orientationchange', layoutHand);
 
-    // Arrancar
+  // Arrancar
   window.addEventListener('DOMContentLoaded', ()=>{
     const startOv = document.getElementById('startOverlay');
     const startBtn = document.getElementById('startBtn');
@@ -307,7 +300,7 @@
         newGame();
       });
     } else {
-      newGame(); // fallback si no hay portada
+      newGame();
     }
   });
 })();
