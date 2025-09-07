@@ -75,43 +75,53 @@
     return el;
   }
 
-  function layoutHand(){
-    const n = handEl.children.length; if (!n) return;
-    const contRect = handEl.getBoundingClientRect();
-    const contW = contRect.width;
-    const first = handEl.children[0];
-    const cardW = first ? first.getBoundingClientRect().width : 0;
-    if (!contW || !cardW){ requestAnimationFrame(layoutHand); return; }
+  // Distribución de la mano: centrada al tablero y con más separación
+function layoutHand(){
+  const n = handEl.children.length;
+  if (!n) return;
 
-    const boardEl = document.querySelector('.board');
-    const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
-    const targetCenter = (boardRect.left - contRect.left) + boardRect.width/2;
+  const contRect = handEl.getBoundingClientRect();
+  const contW = contRect.width;
+  const first = handEl.children[0];
+  const cardW = first ? first.getBoundingClientRect().width : 0;
+  if (!contW || !cardW){ requestAnimationFrame(layoutHand); return; }
 
-    const EDGE = 6, BASE_GAP = 14, MIN_GAP = -Math.round(cardW * 0.65);
-    const maxTotal = contW - EDGE*2;
+  // Centro de la zona de juego (tablero)
+  const boardEl = document.querySelector('.board');
+  const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
+  const targetCenter = (boardRect.left - contRect.left) + boardRect.width / 2;
 
-    let gap = BASE_GAP;
-    let totalW = n*cardW + (n-1)*gap;
-    if (totalW > maxTotal){
-      gap = (maxTotal - n*cardW) / (n-1);
-      if (gap < MIN_GAP) gap = MIN_GAP;
-      totalW = n*cardW + (n-1)*gap;
-    }
+  // Más separación por defecto y menos solape máximo
+  const EDGE = 6;                 // margen duro a izquierda/derecha de la mano
+  const BASE_GAP = 22;            // antes 14 → ahora más separación
+  const MIN_GAP  = -Math.round(cardW * 0.50); // antes -0.65 → menos solape
 
-    let startX = targetCenter - totalW/2;
-    if (startX < EDGE) startX = EDGE;
-    if (startX + totalW > contW - EDGE) startX = contW - EDGE - totalW;
+  const maxTotal = contW - EDGE * 2;          // ancho útil dentro del contenedor
 
-    const mid = (n - 1) / 2;
-    [...handEl.children].forEach((el, i) => {
-      const centerX = startX + i*(cardW + gap) + cardW/2;
-      const tx = Math.round(centerX - contW/2);
-      el.style.setProperty('--x', `${tx}px`);
-      el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 1.8}deg`);
-      el.style.zIndex = 10 + i;
-    });
+  // Calcula la separación real necesaria para que quepan
+  let gap = BASE_GAP;
+  let totalW = n * cardW + (n - 1) * gap;
+  if (totalW > maxTotal){
+    gap = (maxTotal - n * cardW) / (n - 1);
+    if (gap < MIN_GAP) gap = MIN_GAP;
+    totalW = n * cardW + (n - 1) * gap;
   }
+
+  // Centra respecto al tablero, con “clamp” suave a los bordes de la mano
+  let startX = targetCenter - totalW / 2;
+  if (startX < EDGE) startX = EDGE;
+  if (startX + totalW > contW - EDGE) startX = contW - EDGE - totalW;
+
+  const mid = (n - 1) / 2;
+  [...handEl.children].forEach((el, i) => {
+    const centerX = startX + i * (cardW + gap) + cardW / 2;
+    const tx = Math.round(centerX - contW / 2);
+    el.style.setProperty('--x', `${tx}px`);
+    el.style.setProperty('--off', `0px`);
+    el.style.setProperty('--rot', `${(i - mid) * 1.6}deg`); // abanico más suave
+    el.style.zIndex = 10 + i;
+  });
+}
 
   function renderHand(){
     handEl.innerHTML='';
