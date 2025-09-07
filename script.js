@@ -20,6 +20,10 @@
   const passBtn = $('#passBtn');
   const resetBtn = $('#resetBtn');
 
+  // ---------- SPLASH ----------
+  const splash = $('#splash');
+  const splashPlay = $('#splashPlay');
+
   // ---------- Estado ----------
   const SLOTS = 3, HAND_SIZE = 5;
   const state = {
@@ -29,7 +33,7 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cartas fijas (stats aleatorios una vez por carga) ----------
+  // ---------- Cartas fijas ----------
   const CARDS = [
     { name:'Spiderman', art:'assets/Spiderman.png',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
     { name:'Leonardo',  art:'assets/Leonardo.PNG',   cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
@@ -79,7 +83,6 @@
     return el;
   }
 
-  // Distribución de la mano centrada al tablero (con solape controlado)
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
@@ -164,8 +167,6 @@
   // ---------- Drag & drop ----------
   let ghost=null;
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
-
-  // Evita scroll del navegador durante el arrastre (móvil)
   function onDown(e){
     if(state.turn!=='player'||state.resolving) return;
 
@@ -198,7 +199,6 @@
   }
 
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
-
   function laneUnder(x,y){
     for(let i=0;i<3;i++){
       const el = document.querySelector(`.slot[data-side="player"][data-lane="${i}"]`);
@@ -300,6 +300,17 @@
   window.addEventListener('resize', layoutHand);
   window.addEventListener('orientationchange', layoutHand);
 
-  // Arrancar
-  window.addEventListener('DOMContentLoaded', newGame);
+  // Iniciar: si hay portada, esperamos a que pulsen JUGAR
+  window.addEventListener('DOMContentLoaded', () => {
+    if (splashPlay) {
+      splashPlay.addEventListener('click', () => {
+        splash.classList.add('hide');
+        // lanzamos la partida justo después del fade
+        setTimeout(()=> { newGame(); }, 250);
+      });
+    } else {
+      // fallback por si se elimina la portada
+      newGame();
+    }
+  });
 })();
