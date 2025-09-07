@@ -20,10 +20,6 @@
   const passBtn = $('#passBtn');
   const resetBtn = $('#resetBtn');
 
-  // ---------- SPLASH ----------
-  const splash = $('#splash');
-  const splashPlay = $('#splashPlay');
-
   // ---------- Estado ----------
   const SLOTS = 3, HAND_SIZE = 5;
   const state = {
@@ -33,7 +29,7 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cartas fijas ----------
+  // ---------- Cartas fijas (stats aleatorios una vez por carga) ----------
   const CARDS = [
     { name:'Spiderman', art:'assets/Spiderman.png',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
     { name:'Leonardo',  art:'assets/Leonardo.PNG',   cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
@@ -83,6 +79,7 @@
     return el;
   }
 
+  // Distribución de la mano centrada al tablero (con solape controlado)
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
@@ -300,17 +297,6 @@
   window.addEventListener('resize', layoutHand);
   window.addEventListener('orientationchange', layoutHand);
 
-  // Iniciar: si hay portada, esperamos a que pulsen JUGAR
-  window.addEventListener('DOMContentLoaded', () => {
-    if (splashPlay) {
-      splashPlay.addEventListener('click', () => {
-        splash.classList.add('hide');
-        // lanzamos la partida justo después del fade
-        setTimeout(()=> { newGame(); }, 250);
-      });
-    } else {
-      // fallback por si se elimina la portada
-      newGame();
-    }
-  });
+  // Arrancar
+  window.addEventListener('DOMContentLoaded', newGame);
 })();
