@@ -17,7 +17,7 @@
   const passBtn = $('#passBtn');
   const resetBtn = $('#resetBtn');
 
-  const SLOTS = 3, HAND_SIZE = 5;
+  const SLOTS = 3, HAND_SIZE = 4;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
     pDeck: [], eDeck: [], pHand: [], eHand: [],
