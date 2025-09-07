@@ -76,36 +76,53 @@
 
   // ---------- Layout Mano ----------
   function layoutHand(){
-    const n = handEl.children.length;
-    if (!n) return;
+  const n = handEl.children.length;
+  if (!n) return;
 
-    const contW = handEl.clientWidth || handEl.getBoundingClientRect().width || window.innerWidth;
-    const first = handEl.children[0];
-    const cardW = first ? first.getBoundingClientRect().width : 0;
-    if (!contW || !cardW) return;
+  const contRect = handEl.getBoundingClientRect();
+  const contW = handEl.clientWidth || contRect.width || window.innerWidth;
+  const first = handEl.children[0];
+  const cardW = first ? first.getBoundingClientRect().width : 0;
+  if (!contW || !cardW) return;
 
-    const EDGE = 8;
-    const startCenter = EDGE + cardW/2;
-    const endCenter   = Math.max(startCenter, contW - EDGE - cardW/2);
+  const EDGE = 8;
 
-    let centers = [];
-    if (n === 1){
-      centers = [ (startCenter + endCenter) / 2 ];
-    } else {
-      const step = (endCenter - startCenter) / (n - 1);
-      for (let i = 0; i < n; i++) centers.push(startCenter + i*step);
-    }
-
-    const mid = (n - 1) / 2;
-    [...handEl.children].forEach((el, i) => {
-      const cx = centers[i];
-      const tx = Math.round(cx - contW/2);
-      el.style.setProperty('--x', `${tx}px`);
-      el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`);
-      el.style.zIndex = 10 + i;
-    });
+  // === NUEVO: alinear 1ª carta con el oso ===
+  const bearEl = document.querySelector('.portrait.player .frame.hex');
+  let startCenter;
+  if (bearEl){
+    const bearLeftInHand = bearEl.getBoundingClientRect().left - contRect.left;
+    // Queremos que el borde IZQUIERDO de la 1ª carta coincida con el emoji del oso:
+    // centro = (borde_izq) + (ancho_carta/2)
+    startCenter = bearLeftInHand + cardW / 2;
+  } else {
+    // Fallback por si no existe el ancla (raro)
+    startCenter = EDGE + cardW / 2;
   }
+  // Clamp para que no se salga a la izquierda
+  startCenter = Math.max(EDGE + cardW/2, startCenter);
+
+  // El resto NO cambia: calculamos el centro máximo permitido y distribuimos
+  const endCenter = Math.max(startCenter, contW - EDGE - cardW/2);
+
+  let centers = [];
+  if (n === 1){
+    centers = [ (startCenter + endCenter) / 2 ];
+  } else {
+    const step = (endCenter - startCenter) / (n - 1);
+    for (let i = 0; i < n; i++) centers.push(startCenter + i*step);
+  }
+
+  const mid = (n - 1) / 2;
+  [...handEl.children].forEach((el, i) => {
+    const cx = centers[i];
+    const tx = Math.round(cx - contW/2);
+    el.style.setProperty('--x', `${tx}px`);
+    el.style.setProperty('--off', `0px`);
+    el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`);
+    el.style.zIndex = 10 + i;
+  });
+}
   function layoutHandSafe(){
     layoutHand();
     requestAnimationFrame(layoutHand);
