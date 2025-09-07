@@ -33,7 +33,7 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cartas fijas ----------
+  // ---------- Cartas fijas (stats aleatorios solo al cargar) ----------
   const CARDS = [
     { name:'Spiderman', art:'assets/Spiderman.png',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
     { name:'Leonardo',  art:'assets/Leonardo.PNG',   cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
@@ -66,43 +66,42 @@
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
   zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
 
-  // ---------- Mano ----------
-  // ---------- Mano (abanico amplio ocupando todo el ancho) ----------
-function createHandCardEl(card,i,n){
-  const el=document.createElement('div');
-  el.className='card';
-  el.dataset.index=i; el.dataset.cost=card.cost; el.dataset.pts=card.pts;
-  el.dataset.name=card.name||''; el.dataset.art=card.art||''; el.dataset.text=card.text||'';
-  el.innerHTML=`
-    ${artHTML(card.art)}
-    ${tokenCost(card.cost)}${tokenPts(card.pts)}
-    <div class="name-top">${card.name||''}</div>
-    <div class="desc">${card.text||''}</div>
-  `;
+  // ---------- Mano (abanico ancho y suave) ----------
+  function createHandCardEl(card,i,n){
+    const el=document.createElement('div');
+    el.className='card';
+    el.dataset.index=i; el.dataset.cost=card.cost; el.dataset.pts=card.pts;
+    el.dataset.name=card.name||''; el.dataset.art=card.art||''; el.dataset.text=card.text||'';
+    el.innerHTML=`
+      ${artHTML(card.art)}
+      ${tokenCost(card.cost)}${tokenPts(card.pts)}
+      <div class="name-top">${card.name||''}</div>
+      <div class="desc">${card.text||''}</div>
+    `;
 
-  // — Distribución a todo lo ancho —
-  // margen en porcentaje para que no “toquen” los bordes
-  const EDGE = 10; // % a cada lado
-  const leftPct = (n===1)
-    ? 50
-    : EDGE + i * ((100 - EDGE*2) / (n - 1));
+    // Ocupa todo el ancho con margen de seguridad en los bordes
+    const EDGE = 10; // %
+    const leftPct = (n===1) ? 50 : EDGE + i * ((100 - EDGE*2) / (n - 1));
 
-  // — Abanico más suave —
-  const mid = (n-1)/2;
-  const angle = (i - mid) * 6;   // antes ~10–12 -> ahora más suave
-  const extra = (i - mid) * 12;  // separación lateral leve para dar aire
+    // Abanico más suave (menos giro y menos desplazamiento)
+    const mid = (n-1)/2;
+    const angle = (i - mid) * 6;
+    const extra = (i - mid) * 12;
 
-  el.style.setProperty('--x', `calc(${leftPct}% - 50%)`);
-  el.style.setProperty('--rot', `${angle}deg`);
-  el.style.setProperty('--off', `${extra}px`);
-  el.style.zIndex = 10 + i; // superposición natural
+    el.style.setProperty('--x', `calc(${leftPct}% - 50%)`);
+    el.style.setProperty('--rot', `${angle}deg`);
+    el.style.setProperty('--off', `${extra}px`);
+    el.style.zIndex = 10 + i;
 
-  // Zoom con toque
-  el.addEventListener('click', ()=> openZoom(card));
-
-  attachDragHandlers(el);
-  return el;
-}
+    el.addEventListener('click', ()=> openZoom(card));
+    attachDragHandlers(el);
+    return el;
+  }
+  function renderHand(){
+    handEl.innerHTML='';
+    const n=state.pHand.length;
+    state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n)));
+  }
 
   // ---------- Tablero ----------
   function renderBoard(){
