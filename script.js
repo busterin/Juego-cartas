@@ -83,7 +83,7 @@
     return el;
   }
 
-  // ===== Distribución: centrada al tablero, ajustando gap para que quepa =====
+  // ===== Distribución: centrada al tablero, con solape "blindado" =====
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
@@ -103,35 +103,36 @@
     const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
     const targetCenter = (boardRect.left - contRect.left) + boardRect.width/2;
 
-    const EDGE = 6;                      // margen lateral asegurado
-    const BASE_GAP = 14;                 // separación deseada
-    const MIN_GAP  = -Math.round(cardW * 0.55); // solape permitido hasta 55%
+    const EDGE = 6;                       // margen lateral asegurado
+    const BASE_GAP = 14;                  // separación deseada
+    const MIN_GAP  = -Math.round(cardW * 0.65); // ← solape máx. 65% del ancho
 
-    const maxTotal = contW - EDGE*2;     // ancho máximo utilizable
+    const maxTotal = contW - EDGE*2;      // ancho útil
 
-    // Gap inicial y reducción si no cabe
+    // Gap inicial y reducción si no cabe (permitiendo solape hasta MIN_GAP)
     let gap = BASE_GAP;
     let totalW = n*cardW + (n-1)*gap;
     if (totalW > maxTotal){
       gap = (maxTotal - n*cardW) / (n-1);   // puede ser negativo (solape)
-      gap = Math.max(gap, MIN_GAP);         // nunca menos que solape máximo
+      if (gap < MIN_GAP) gap = MIN_GAP;     // blindaje: como mucho 65% solape
       totalW = n*cardW + (n-1)*gap;
     }
 
-    // Colocar el bloque centrado exactamente al centro del tablero
+    // Colocar bloque centrado EXACTO al tablero
     let startX = targetCenter - totalW/2;
 
-    // Micro-clamp para evitar subpíxeles fuera (sin romper el centrado)
+    // Clamp final para que nunca sobresalga del contenedor de mano
     if (startX < EDGE) startX = EDGE;
     if (startX + totalW > contW - EDGE) startX = contW - EDGE - totalW;
 
+    // Posicionar cada carta
     const mid = (n - 1) / 2;
     [...handEl.children].forEach((el, i) => {
       const centerX = startX + i*(cardW + gap) + cardW/2;
       const tx = Math.round(centerX - contW/2);
       el.style.setProperty('--x', `${tx}px`);
       el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 2}deg`); // abanico más plano
+      el.style.setProperty('--rot', `${(i - mid) * 1.8}deg`); // abanico muy plano
       el.style.zIndex = 10 + i;
     });
   }
@@ -283,6 +284,7 @@
   resetBtn.addEventListener('click', ()=> newGame());
   passBtn.addEventListener('click', ()=>{ if(state.turn!=='player'||state.resolving) return; state.playerPassed=true; state.turn='enemy'; enemyTurn(); });
 
-  // Recalcular distribución al redimensionar
+  // Recalcular distribución en cambios de tamaño/orientación
   window.addEventListener('resize', layoutHand);
+  window.addEventListener('orientationchange', layoutHand);
 })();
