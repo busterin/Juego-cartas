@@ -206,3 +206,25 @@ body{
 @media (max-height: 560px){
   :root{ --board-h: clamp(240px, 36vh, 420px); }
 }
+/* ==== PORTADA ==== */
+#startOverlay{
+  background: transparent;
+  padding: 0;
+}
+#startOverlay .cover{
+  position: absolute;
+  inset: 0;
+  background: url("assets/Portadacartas.PNG") center center / cover no-repeat;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12%;
+}
+#startOverlay .btn.start{
+  font-size: 1.2rem;
+  padding: 14px 22px;
+  border-radius: 14px;
+  font-weight: 900;
+  background: linear-gradient(180deg, rgba(108,80,255,.55), rgba(108,80,255,.25));
+  border: 2px solid rgba(255,255,255,.4);
+  box-shadow:0 6px 20px rgba(0,0,0,.55);
