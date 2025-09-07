@@ -9,42 +9,40 @@
   --gap:10px;
 
   /* HUD y mano */
-  --hex:56px; --round-sz:48px; --meter-sz:26px;
+  --hex: 56px; --round-sz: 48px; --meter-sz: 26px;
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
 
-  /* Tablero 1×3 */
-  --lanes-gap:10px; --slot-inset:6px; --slot-br:14px;
+  /* Tablero centrado */
+  --board-h: clamp(220px, 36vh, 320px);
+  --lanes-gap: 8px;
+  --slot-ratio: 2/3;
+  --slot-inset: 5px;
+  --slot-br: 12px;
 
-  /* Altura dedicada a CADA fila del tablero (evita solapes) */
-  --slotH: clamp(140px, 22vh, 200px);
-
-  --bottom-pad:10px;
+  --bottom-pad: 10px;
 }
 
+/* ===== Base y grid sin scroll ===== */
 *{ box-sizing:border-box }
-html,body{ height:100%; margin:0; }
+html,body{ height:100% }
 body{
-  color:var(--ink);
+  margin:0; color:var(--ink);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
   background:
     radial-gradient(1200px 800px at 20% 0%, #1a2458 0, transparent 60%),
     radial-gradient(900px 600px at 80% 100%, #141e46 0, transparent 60%),
     linear-gradient(180deg, var(--bg1), var(--bg2));
 }
-
-/* ===== Grid principal sin scroll ===== */
 #game{
   height: 100dvh;
   max-width: var(--game-max);
   margin-inline:auto;
-  display:grid;
-  grid-template-rows:
-    auto           /* HUD */
-    auto           /* banner oculto */
-    auto           /* tablero: altura propia */
-    auto           /* mano */
-    auto;          /* footer */
+  display: grid;
+  grid-template-rows: auto auto /* HUD+banner */
+                      1fr       /* tablero en el centro */
+                      auto      /* mano */
+                      auto;     /* footer */
   gap: var(--gap);
   padding: 6px 8px calc(var(--bottom-pad) + env(safe-area-inset-bottom));
   overflow:hidden;
@@ -58,15 +56,14 @@ body{
 .portrait{ display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; min-width:0; }
 .portrait.enemy{ justify-self:end; }
 
-/* SIN marco: solo los emojis */
+/* Avatar simple (emoji sin marco) */
 .frame.hex{
   width:var(--hex); height:var(--hex);
-  background:transparent; border:none; border-radius:0; clip-path:none; box-shadow:none;
-  display:grid; place-items:center; overflow:visible;
+  display:grid; place-items:center; font-size:calc(var(--hex)*.7);
 }
-.frame.hex .emoji{ font-size: calc(var(--hex)*0.9); line-height:1; }
+.frame.hex img{ display:none; } /* nos quedamos con los emojis del HTML */
 
-.info{ display:flex; flex-direction:column; gap:3px; min-width:0;}
+.info{ display:flex; flex-direction:column; gap:3px; min-width:0; }
 .info .name{ font-weight:900; font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .meters{ display:flex; gap:6px; flex-wrap:wrap; }
 .round-display{ display:flex; align-items:center; justify-content:center; }
@@ -86,53 +83,57 @@ body{
 .meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .meter.pts { background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 
-/* ===== Banner (oculto) ===== */
-.banner{ display:none; }
-
-/* ===== Tablero 1×3 por lado (sin solapes) ===== */
-.board{
-  display:grid;
-  grid-template-rows: var(--slotH) var(--slotH); /* enemigo / jugador */
-  gap: var(--gap);
-  z-index:0;
+/* ===== Banner ===== */
+.banner{
+  text-align:center; font-weight:800; color:#d7e6ff;
+  border:1px solid var(--panel-br); background:var(--panel);
+  padding:4px 8px; border-radius:10px; box-shadow:var(--glow);
+  font-size:.86rem;
 }
-.row{ height:100%; }
-.lanes-3x1{
-  height:100%;
+
+/* ===== TABLERO CENTRADO ===== */
+.board{ display:grid; place-items:center; min-height:0; }
+.center-hint{
+  text-align:center; color:#aecdff; font-weight:700; font-size:.86rem;
+}
+.lanes-6x2{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--lanes-gap);
-  align-content:stretch;
+}
+.row-enemy .lanes-6x2,
+.row-player .lanes-6x2{
+  height: calc((var(--board-h) - 20px - 1.2em) / 2);
+  min-height: 0;
 }
 .slot{
-  height:100%;
+  aspect-ratio: var(--slot-ratio);
   border:2px dashed rgba(105,240,255,.35);
   border-radius:var(--slot-br);
-  position:relative;
-  overflow:hidden;
+  display:grid; place-items:center; position:relative;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
 }
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
 
+/* Carta colocada dentro de un slot */
 .placed{
   position:absolute; inset:var(--slot-inset);
-  border-radius:10px; overflow:hidden;
+  border-radius:calc(var(--slot-br) - 2px);
   border:1px solid rgba(255,255,255,.25);
-  box-shadow:0 6px 24px rgba(0,0,0,.5);
+  box-shadow: 0 6px 24px rgba(0,0,0,.5);
   background:#0f1633;
+  /* IMPORTANTE: permitir que los tokens sobresalgan */
+  overflow: visible;
 }
-.placed .art, .placed .art img{
+.placed .art,
+.placed .art img{
   position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  border-radius:inherit;           /* la imagen sí recorta esquinas */
+  overflow:hidden;
 }
 
-/* ===== Mano (siempre abajo, visible y sin recortes) ===== */
-.hand-zone{
-  height: calc(var(--card-h) + 18px); /* +alto para el giro */
-  min-height:0;
-  position:relative;
-  z-index:5;            /* por encima del tablero */
-  overflow:visible;     /* no recortar cartas rotadas */
-}
+/* ===== Mano (separada y visible) ===== */
+.hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; position:relative; z-index:5; overflow:visible; }
 .hand{ position:relative; width:100%; height:100%; overflow:visible; }
 .hand .card{
   position:absolute; bottom:0; left:50%;
@@ -141,243 +142,98 @@ body{
   transition: transform .18s ease, filter .18s ease;
   box-shadow: 0 6px 18px rgba(0,0,0,.45);
   transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot));
+  /* IMPORTANTE: dejar que los tokens sobresalgan */
+  overflow: visible;
 }
 .hand .card:hover{
   transform: translateX(calc(var(--x) + var(--off, 0px))) translateY(-6px) rotate(0deg) scale(1.06);
   z-index:10;
 }
-
-/* ===== Cartas base / ghost ===== */
-.card, .ghost{
-  border-radius:12px; border:1px solid rgba(255,255,255,.18); overflow:hidden; background:#0f1633;
-  user-select:none; touch-action:none; position:relative;
-}
 .card .art, .ghost .art{ position:absolute; inset:0; }
-.card .art img, .ghost .art img{
-  width:100%; height:100%; object-fit:cover; /* sin bordes negros */
-}
+.card .art img, .ghost .art img{ width:100%; height:100%; object-fit:cover; border-radius:inherit; overflow:hidden; }
 
-/* Tokens (coste/pts) */
-.token, .ghost .token{
-  position:absolute; top:5px; width:28px; height:28px; border-radius:50%;
-  display:grid; place-items:center; font-size:.9rem; font-weight:900; z-index:3; color:#101010;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35),
-              0 0 0 1px rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.4);
-}
+/* ===== Tokens base (forma y color) ===== */
+.token{ position:absolute; top:5px; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:.9rem; font-weight:900; z-index:2; color:#101010; box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.4); }
 .t-cost{ left:6px; background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .t-pts { right:6px; background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 
-/* ===== Nombre/Descripción ===== */
-/* Ocultar texto y nombre en MINIATURAS (mano y tablero) */
-.card .name-top, .card .desc,
-.placed .name-top, .placed .desc { display:none !important; }
+/* ===== Etiquetas de nombre/desc ===== */
+.label{ position:absolute; left:6px; right:6px; bottom:6px; z-index:2; color:#eaf2ff; font-size:.7rem; font-weight:900; text-align:center; background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:4px 6px; }
+.name-top{ position:absolute; left:6px; right:6px; top:6px; text-align:center; font-weight:900; font-size:.75rem; color:#eaf2ff; background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:3px 6px; backdrop-filter: blur(1px); }
+.desc{ position:absolute; left:6px; right:6px; bottom:6px; font-size:.68rem; color:#d9e6ff; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.14); border-radius:10px; padding:4px 6px; }
 
-/* Placa metálica SOLO en ZOOM */
-.zoom-card .name-top{
-  position:absolute; top:12px; left:58px; right:58px;
-  text-align:center; font-size:1rem; font-weight:900; color:#0e1420;
-  padding:8px 12px; border-radius:10px; z-index:3;
-  background:
-    linear-gradient(135deg, #f4f7fb 0%, #cfd6e6 20%, #8a93a6 48%, #dfe5ef 60%, #7b8497 78%, #c7cfdd 100%);
-  border: 1px solid rgba(255,255,255,.65);
-  box-shadow:
-    inset 0 2px 6px rgba(255,255,255,.35),
-    inset 0 -2px 8px rgba(0,0,0,.25),
-    0 6px 16px rgba(0,0,0,.35);
-  text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 2px 6px rgba(0,0,0,.35);
-}
-.zoom-card .name-top::after{
-  content:""; position:absolute; inset:0;
-  background: linear-gradient(30deg, transparent 0 40%, rgba(255,255,255,.35) 45%, transparent 55% 100%);
-  border-radius:inherit; pointer-events:none;
-}
-/* Descripción SOLO en ZOOM */
-.zoom-card .desc{
-  position:absolute; bottom:12px; left:12px; right:12px;
-  font-size:.85rem; line-height:1.25; text-align:center; color:#eaf2ff;
-  background:rgba(0,0,0,.28); padding:8px 10px; border-radius:10px; z-index:3;
-}
+/* ===== Ghost drag ===== */
+.ghost{ position:fixed; z-index:9999; pointer-events:none; width:var(--card-w); height:var(--card-h); transform: translate(-50%, -50%) scale(1.06); border:1px solid rgba(255,255,255,.35); border-radius:12px; overflow:visible; }
+.ghost .art img{ border-radius:inherit; }
 
-/* Sombra general para legibilidad (miniatura y mesa) */
-.card::after, .ghost::after, .placed::after{
-  content:""; position:absolute; inset:0;
-  background: linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,0) 35%, rgba(0,0,0,.55) 75%);
-  pointer-events:none; z-index:2;
-}
-
-/* Ghost drag */
-.ghost{
-  position:fixed; z-index:9999; pointer-events:none;
-  width:var(--card-w); height:var(--card-h);
-  transform: translate(-50%, -50%) scale(1.06);
-  border:1px solid rgba(255,255,255,.35); border-radius:12px;
-}
+/* ===== Puntuación flotante ===== */
+.score-float{ position:absolute; z-index:50; padding:6px 10px; border-radius:12px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.2); font-weight:900; color:#eaf2ff; left:50%; transform:translateX(-50%); animation: scoreFloat 900ms ease-out both; }
+.score-float.you{ top:10%; } .score-float.enemy{ top:20%; }
+@keyframes scoreFloat{ 0%{ opacity:0; transform:translate(-50%, 8px) scale(.9) } 15%{ opacity:1; transform:translate(-50%, 0) scale(1) } 100%{ opacity:0; transform:translate(-50%, -14px) scale(.98) } }
 
 /* ===== Footer ===== */
-.bottom-bar{
-  display:flex; justify-content:center; gap:10px; flex-wrap:wrap;
-  padding:8px 8px var(--bottom-pad);
-  background: linear-gradient(180deg, rgba(5,8,18,0), rgba(5,8,18,.55));
-  position: relative; z-index: 2;
-}
+.bottom-bar{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; padding:8px 8px var(--bottom-pad); background: linear-gradient(180deg, rgba(5,8,18,0), rgba(5,8,18,.55)); }
 .btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
 .btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
-.btn.big{ font-size:1.4rem; padding:14px 28px; border-radius:14px; background:#3b8cff; color:#fff; font-weight:900; }
 
-/* ===== Overlays ===== */
-.overlay{ position:fixed; inset:0; display:grid; place-items:center; background: rgba(0,0,0,.7); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100; }
+/* ===== Overlays / Zoom ===== */
+.overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100; }
 .overlay.visible{ opacity:1; pointer-events:auto; }
-
-/* Portada (overlay independiente) */
-.cover-screen{ position:relative; width:100%; height:100dvh; }
-.cover-bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-.cover-screen .btn.big{ position:absolute; bottom:10%; left:50%; transform:translateX(-50%); z-index:2; }
-
-/* Zoom (contenedor) */
-.zoom-panel{
-  width:min(94%, 560px);
-  background: rgba(255,255,255,.06);
-  border:1px solid var(--panel-br);
-  border-radius:16px; box-shadow:var(--glow); padding:12px;
-}
-.zoom-card{
-  margin:auto;
-  width: clamp(240px, 72vw, 460px);
-  aspect-ratio:5/7;
-  border-radius:14px; overflow:hidden; position:relative;
-  border:1px solid rgba(255,255,255,.22); background:#0b0f1e;
-}
+.panel{ width:min(92%, 460px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); padding:16px; border-radius:16px; box-shadow:var(--glow); text-align:center; }
+.zoom-panel{ width:min(92%, 520px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); border-radius:16px; box-shadow:var(--glow); padding:16px; text-align:center; }
+.zoom-card{ margin:10px auto 12px auto; width: clamp(190px, 58vw, 360px); aspect-ratio: 5/7; border-radius:14px; overflow:hidden; position:relative; border:1px solid rgba(255,255,255,.22); background:#0b0f1e; }
 .zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
-.zoom-card .art img{ width:100%; height:100%; object-fit:cover; }
+.zoom-card .art img{ width:100%; height:100%; object-fit:contain; }
+.zoom-card .zoom-token{ position:absolute; top:10px; width:40px; height:40px; border-radius:50%; display:grid; place-items:center; font-weight:900; color:#101010; box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42); }
+.zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
+.zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
+.zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
+.zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:.85rem; }
 
-/* Tokens en ZOOM (un poco más grandes) */
-.zoom-card .zoom-token{
-  position:absolute; top:12px; width:44px; height:44px; border-radius:50%;
-  display:grid; place-items:center; font-weight:900; color:#101010;
-  box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35),
-              0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42);
-  font-size:1.05rem; z-index:3;
+/* ===== Ajustes de MINIATURAS: tokens fuera y en extremos ===== */
+/* (solo mano y cartas en mesa; el zoom NO se toca) */
+.hand .card,
+.placed{
+  overflow: visible;               /* tokens pueden sobresalir */
 }
-.zoom-card .zoom-token.cost{ left:12px; background: radial-gradient(#ffeaa3, #e1a700); }
-.zoom-card .zoom-token.pts{ right:12px; background: radial-gradient(#b6ffd1, #20b86a); }
-
-/* Toast central de turno */
-.turn-toast{
-  position:fixed; inset:0; display:grid; place-items:center;
-  pointer-events:none; z-index:90; /* por debajo de overlays */
-  opacity:0; transition: opacity .25s ease;
+.card .art,
+.placed .art{
+  border-radius: inherit;
+  overflow: hidden;                /* la ilustración recorta esquinas */
 }
-.turn-toast.show{ opacity:1; }
-.turn-toast::before{
-  content: attr(data-text);
-  padding:12px 18px; border-radius:14px;
-  background: rgba(0,0,0,.55);
-  border:1px solid rgba(255,255,255,.2);
-  color:#eaf2ff; font-weight:900; font-size:1.2rem;
-  text-shadow:0 2px 8px rgba(0,0,0,.5);
-  box-shadow:0 8px 30px rgba(0,0,0,.45), inset 0 0 40px rgba(255,255,255,.04);
-}
-
-/* Aux */
-#toasts{ display:none; }
-
-/* ===== Compactos por ALTURA ===== */
-@media (max-height: 640px){
-  :root{
-    --hex:48px; --round-sz:40px; --meter-sz:22px;
-    --card-w: clamp(62px, 14vw, 96px);
-    --lanes-gap: 8px; --slot-inset:5px;
-    --slotH: clamp(120px, 20vh, 180px);
-  }
-}
-/* ==== HAND LAYOUT – OVERRIDES COMPACTOS ==== */
-
-/* Espaciado coherente con el GAP usado en JS (layoutHand) */
-:root{
-  --hand-gap: 14px;                  /* separación fija entre cartas */
-  /* Ajuste del ancho de carta para que quepan 5 con los gaps */
-  /* 100vw - padding lateral (2*8px) - gaps (4*--hand-gap) dividido entre 5 */
-  --card-w: clamp(62px, calc((100vw - 16px - (4 * var(--hand-gap))) / 5), 120px);
-  --card-h: calc(var(--card-w) * 1.42);
-}
-
-/* Asegurar espacio inferior para la mano en el layout principal */
-#game{
-  padding-bottom: calc(10px + env(safe-area-inset-bottom));
-}
-
-/* Mano siempre visible, sin recortes y por encima del tablero */
-.hand-zone{
-  height: calc(var(--card-h) + 20px); /* un poco más de aire para la rotación */
-  min-height: 0;
-  position: relative;
-  z-index: 5;            /* por encima del tablero */
-  overflow: visible;     /* no recortar cartas rotadas */
-}
-
-.hand{
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-/* Las cartas se posicionan por transform usando --x que setea el JS */
-.hand .card{
-  position: absolute;
-  bottom: 0; left: 50%;
-  width: var(--card-w);
-  height: var(--card-h);
-  transform-origin: bottom center;
-  transition: transform .18s ease, filter .18s ease;
-  box-shadow: 0 6px 18px rgba(0,0,0,.45);
-  transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot));
-}
-
-/* Hover (en desktop) sin cambiar el ancho efectivo */
-.hand .card:hover{
-  transform: translateX(calc(var(--x) + var(--off, 0px))) translateY(-6px) rotate(0deg) scale(1.06);
-  z-index: 10;
-}
-
-/* Evitar que el tablero tape la mano */
-.board{ z-index: 0; }
-.bottom-bar{ z-index: 2; }
-
-/* ===== Responsive finos ===== */
-
-/* Móviles muy estrechos: cartas algo más pequeñas para evitar desbordes */
-@media (max-width: 360px){
-  :root{
-    --hand-gap: 12px;
-    --card-w: clamp(58px, calc((100vw - 16px - (4 * var(--hand-gap))) / 5), 108px);
-    --card-h: calc(var(--card-w) * 1.42);
-  }
-  .hand-zone{ height: calc(var(--card-h) + 18px); }
-}
-
-/* Landscape bajo de altura: baja la relación alto/ancho de la carta */
-@media (orientation: landscape) and (max-height: 480px){
-  :root{ --card-h: calc(var(--card-w) * 1.32); }
-  .hand-zone{ height: calc(var(--card-h) + 16px); }
-}
-/* ===== Tokens en miniaturas bien separados ===== */
 .hand .card .token,
-.placed .token {
-  position: absolute;
-  top: -14px;            /* se elevan más fuera de la carta */
-  z-index: 4;
+.placed .token{
+  position:absolute;
+  top:-14px;                       /* elevar para que no tapen la ilustración */
+  z-index:4;
   filter: drop-shadow(0 3px 8px rgba(0,0,0,.55));
 }
-
-/* Token de coste (izquierda) */
 .hand .card .t-cost,
-.placed .t-cost {
-  left: -6px;            /* un poco fuera por la izquierda */
-}
-
-/* Token de puntos (derecha) */
+.placed .t-cost{ left:-6px; }      /* coste a la izquierda (un poco fuera) */
 .hand .card .t-pts,
-.placed .t-pts {
-  right: -6px;           /* un poco fuera por la derecha */
+.placed .t-pts{ right:-6px; }      /* puntos a la derecha (un poco fuera) */
+
+/* ===== Modos compactos por ALTURA ===== */
+@media (max-height: 720px){
+  :root{
+    --hex: 52px; --round-sz: 44px; --meter-sz: 24px;
+    --board-h: clamp(200px, 34vh, 300px);
+    --card-w: clamp(68px, 15vw, 102px);
+  }
+  .center-hint{ font-size:.8rem }
+}
+@media (max-height: 640px){
+  :root{
+    --hex: 48px; --round-sz: 40px; --meter-sz: 22px;
+    --board-h: clamp(180px, 30vh, 260px);
+    --card-w: clamp(62px, 14vw, 96px);
+    --lanes-gap: 7px; --slot-inset: 4px; --slot-ratio: 2/3;
+  }
+  .center-hint{ display:none }
+  .hand-zone{ height: calc(var(--card-h) + 8px) }
+  .btn{ padding:8px 12px }
+}
+@media (max-height: 560px){
+  :root{ --board-h: clamp(160px, 28vh, 220px); }
+  .btn{ padding:7px 10px; border-radius:10px; }
 }
