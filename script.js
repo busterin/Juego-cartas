@@ -19,6 +19,11 @@
   const passBtn = $('#passBtn');
   const resetBtn = $('#resetBtn');
 
+  // Splash
+  const startOv  = $('#startOverlay');
+  const startBtn = $('#startBtn');
+
+  // Overlays de robo/animación
   const drawOverlay = $('#drawOverlay');
   const drawCardEl  = $('#drawCard');
 
@@ -43,6 +48,12 @@
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
   const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
+
+  // ---------- Limpieza de nodos temporales ----------
+  function purgeTransientNodes(){
+    document.querySelectorAll('.fly-card, .ghost').forEach(n=>n.remove());
+    if (drawOverlay) drawOverlay.classList.remove('visible');
+  }
 
   // ---------- Zoom ----------
   function openZoom(card){
@@ -74,73 +85,59 @@
     });
   }
 
-  // ---------- Layout Mano ----------
+  // ---------- Layout Mano (anclada a 🐻 y 😈) ----------
   function layoutHand(){
-  const n = handEl.children.length;
-  if (!n) return;
+    const n = handEl.children.length;
+    if (!n) return;
 
-  const contRect = handEl.getBoundingClientRect();
-  const contW = handEl.clientWidth || contRect.width || window.innerWidth;
-  const firstEl = handEl.children[0];
-  const cardW = firstEl ? firstEl.getBoundingClientRect().width : 0;
-  if (!contW || !cardW) return;
+    const contRect = handEl.getBoundingClientRect();
+    const contW = handEl.clientWidth || contRect.width || window.innerWidth;
+    const cardW = handEl.children[0]?.getBoundingClientRect().width || 0;
+    if (!contW || !cardW) return;
 
-  const EDGE = 8;
+    const EDGE = 8;
+    const bearEl  = document.querySelector('.portrait.player .frame.hex');
+    const demonEl = document.querySelector('.portrait.enemy  .frame.hex');
 
-  // Anclas visuales: oso (izquierda) y demonio (derecha)
-  const bearEl  = document.querySelector('.portrait.player .frame.hex');
-  const demonEl = document.querySelector('.portrait.enemy  .frame.hex');
+    // Centro 1ª carta (borde izq alineado a 🐻)
+    let startCenter = EDGE + cardW/2;
+    if (bearEl){
+      const bearLeftInHand = bearEl.getBoundingClientRect().left - contRect.left;
+      startCenter = Math.max(EDGE + cardW/2, bearLeftInHand + cardW/2);
+    }
 
-  // Centro para la 1ª carta (alineada al oso)
-  let startCenter;
-  if (bearEl){
-    const bearLeftInHand = bearEl.getBoundingClientRect().left - contRect.left;
-    // 1ª carta: alinear su BORDE IZQUIERDO con el icono del oso
-    startCenter = bearLeftInHand + cardW/2; // + offset si quieres: + 4
-  } else {
-    startCenter = EDGE + cardW/2;
+    // Centro última carta (borde dcho alineado a 😈)
+    let endCenter = contW - EDGE - cardW/2;
+    if (demonEl){
+      const demonRightInHand = demonEl.getBoundingClientRect().right - contRect.left;
+      endCenter = Math.min(contW - EDGE - cardW/2, demonRightInHand - cardW/2);
+    }
+
+    if (endCenter < startCenter) endCenter = startCenter;
+
+    // Distribución equiespaciada
+    const centers = [];
+    if (n === 1){
+      centers.push((startCenter + endCenter)/2);
+    } else {
+      const step = (endCenter - startCenter) / (n - 1);
+      for (let i=0;i<n;i++) centers.push(startCenter + i*step);
+    }
+
+    const mid = (n - 1) / 2;
+    [...handEl.children].forEach((el, i) => {
+      const cx = centers[i];
+      const tx = Math.round(cx - contW/2);
+      el.style.setProperty('--x', `${tx}px`);
+      el.style.setProperty('--off', `0px`);
+      el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`);
+      el.style.zIndex = 10 + i;
+    });
   }
-  // Clamp izquierdo
-  startCenter = Math.max(EDGE + cardW/2, startCenter);
-
-  // Centro para la última carta (alineada al demonio)
-  let endCenter;
-  if (demonEl){
-    const demonRightInHand = demonEl.getBoundingClientRect().right - contRect.left;
-    // Última carta: alinear su BORDE DERECHO con el icono del demonio
-    endCenter = demonRightInHand - cardW/2; // - offset si quieres: - 4
-  } else {
-    endCenter = contW - EDGE - cardW/2;
-  }
-  // Clamp derecho
-  endCenter = Math.min(contW - EDGE - cardW/2, endCenter);
-
-  // Si por tamaños extremos se cruzan, fuerza un mínimo
-  if (endCenter < startCenter) endCenter = startCenter;
-
-  // Distribuye equiespaciado entre ambos anclajes
-  let centers = [];
-  if (n === 1){
-    centers = [ (startCenter + endCenter) / 2 ];
-  } else {
-    const step = (endCenter - startCenter) / (n - 1);
-    for (let i = 0; i < n; i++) centers.push(startCenter + i * step);
-  }
-
-  const mid = (n - 1) / 2;
-  [...handEl.children].forEach((el, i) => {
-    const cx = centers[i];
-    const tx = Math.round(cx - contW/2);
-    el.style.setProperty('--x', `${tx}px`);
-    el.style.setProperty('--off', `0px`);
-    el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`);
-    el.style.zIndex = 10 + i;
-  });
-}
   function layoutHandSafe(){
     layoutHand();
     requestAnimationFrame(layoutHand);
-    setTimeout(layoutHand, 50);
+    setTimeout(layoutHand, 60);
     whenImagesReady(handEl, layoutHand);
   }
 
@@ -167,26 +164,32 @@
     layoutHandSafe();
   }
 
-  // ---------- Animación de Robo ----------
-  function showDraw(card, cb){
+  // ---------- Robo (vista grande + vuelo a mano) ----------
+  function showDrawLarge(card, cb){
+    // Reutilizamos el layout del zoom para que sea idéntico
     drawCardEl.innerHTML = `
-      <div class="art"><img src="${card.art}" alt=""></div>
-      <div class="token t-cost">${card.cost}</div>
-      <div class="token t-pts">${card.pts}</div>
-      <div class="name">${card.name}</div>
+      <div class="zoom-card">
+        <div class="art"><img src="${card.art}" alt="${card.name}"></div>
+        <div class="zoom-token cost">${card.cost}</div>
+        <div class="zoom-token pts">${card.pts}</div>
+        <div class="name">${card.name}</div>
+        <div class="desc">${card.text||''}</div>
+      </div>
     `;
     drawOverlay.classList.add('visible');
+    // Visible ~900ms
     setTimeout(()=>{
       drawOverlay.classList.remove('visible');
-      if(cb) setTimeout(cb, 250);
-    }, 800);
+      if(cb) setTimeout(cb, 250); // espera transición
+    }, 900);
   }
 
   function flyCardToHand(card, onDone){
-    // Asegura que la carta existe ya en la mano (última posición) para medir destino
+    // Asegura elemento destino existente
     const idx = state.pHand.length - 1;
     const targetEl = handEl.children[idx];
     if(!targetEl){ if(onDone) onDone(); return; }
+
     const r = targetEl.getBoundingClientRect();
     const targetX = r.left + r.width/2;
     const targetY = r.top  + r.height/2;
@@ -202,11 +205,9 @@
     const startX = window.innerWidth/2;
     const startY = window.innerHeight/2;
 
-    // Tamaño final relativo: escalar desde ancho fly a ancho target
     const flyW = parseFloat(getComputedStyle(fly).width);
     const scale = r.width / flyW;
 
-    // Posición inicial ya está centrada; animamos a destino
     requestAnimationFrame(()=>{
       requestAnimationFrame(()=>{
         fly.style.transform = `translate(${targetX - startX}px, ${targetY - startY}px) scale(${scale})`;
@@ -218,23 +219,22 @@
       targetEl.style.opacity = '';
       layoutHandSafe();
       if(onDone) onDone();
-    }, 480);
+    }, 500);
   }
 
-  // Dibuja 1 carta con animación completa: centro → a mano
-  function drawOneAnimated(cb){
-    if(!state.pDeck.length){ if(cb) cb(); return; }
+  function drawOneAnimated(done){
+    if(!state.pDeck.length){ if(done) done(); return; }
     const card = state.pDeck.pop();
-    showDraw(card, ()=>{
-      // añade a mano y renderiza para medir destino
+
+    showDrawLarge(card, ()=>{
+      // Añade a mano y renderiza para medir destino
       state.pHand.push(card);
       renderHand();
-      // vuela desde centro a su hueco (última carta)
-      flyCardToHand(card, cb);
+      // Vuela del centro a la carta real
+      requestAnimationFrame(()=> flyCardToHand(card, done));
     });
   }
 
-  // Rellena la mano hasta HAND_SIZE con animación (jugador)
   function topUpPlayerAnimated(done){
     const step = () => {
       if(state.pHand.length >= HAND_SIZE || !state.pDeck.length){ if(done) done(); return; }
@@ -388,6 +388,8 @@
 
   // ---------- Nueva partida ----------
   function newGame(){
+    purgeTransientNodes();
+
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.center=Array.from({length:3},()=>({p:null,e:null}));
@@ -396,7 +398,7 @@
     state.pHand=[]; state.eHand=[];
     renderBoard(); renderHand(); updateHUD();
 
-    // Relleno inicial: IA instantánea, jugador con animación
+    // Relleno inicial
     topUpEnemyInstant();
     topUpPlayerAnimated(()=>{
       renderHand(); layoutHandSafe(); updateHUD();
@@ -423,13 +425,11 @@
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
   });
 
-  window.addEventListener('resize', layoutHandSafe);
-  window.addEventListener('orientationchange', layoutHandSafe);
+  window.addEventListener('resize', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
+  window.addEventListener('orientationchange', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
 
   // Arranque con portada
   window.addEventListener('DOMContentLoaded', ()=>{
-    const startOv = document.getElementById('startOverlay');
-    const startBtn = document.getElementById('startBtn');
     if(startBtn){
       startBtn.addEventListener('click', ()=>{
         startOv.classList.remove('visible');
