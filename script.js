@@ -75,7 +75,7 @@
     return el;
   }
 
-  // Distribución de la mano: centrada al tablero y con más separación
+  // Mano: centrada al tablero con sesgo a la izquierda y sin salirse de pantalla
 function layoutHand(){
   const n = handEl.children.length;
   if (!n) return;
@@ -86,19 +86,22 @@ function layoutHand(){
   const cardW = first ? first.getBoundingClientRect().width : 0;
   if (!contW || !cardW){ requestAnimationFrame(layoutHand); return; }
 
-  // Centro de la zona de juego (tablero)
+  // Centro del tablero (zona de juego)
   const boardEl = document.querySelector('.board');
   const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
-  const targetCenter = (boardRect.left - contRect.left) + boardRect.width / 2;
+  let targetCenter = (boardRect.left - contRect.left) + boardRect.width / 2;
 
-  // Más separación por defecto y menos solape máximo
-  const EDGE = 6;                 // margen duro a izquierda/derecha de la mano
-  const BASE_GAP = 22;            // antes 14 → ahora más separación
-  const MIN_GAP  = -Math.round(cardW * 0.50); // antes -0.65 → menos solape
+  // Sesgo hacia la izquierda (6% del ancho de la mano, máx 28px)
+  const LEFT_BIAS = Math.min(28, contW * 0.06);
+  targetCenter -= LEFT_BIAS;
 
-  const maxTotal = contW - EDGE * 2;          // ancho útil dentro del contenedor
+  // Parámetros de separación/solape
+  const EDGE = 6;                      // margen duro en los extremos
+  const BASE_GAP = 22;                 // separación deseada
+  const MIN_GAP  = -Math.round(cardW * 0.50); // solape máximo permitido
 
-  // Calcula la separación real necesaria para que quepan
+  // Calcula separación real para que quepan
+  const maxTotal = contW - EDGE * 2;   // ancho útil dentro del contenedor
   let gap = BASE_GAP;
   let totalW = n * cardW + (n - 1) * gap;
   if (totalW > maxTotal){
@@ -107,18 +110,25 @@ function layoutHand(){
     totalW = n * cardW + (n - 1) * gap;
   }
 
-  // Centra respecto al tablero, con “clamp” suave a los bordes de la mano
+  // Punto de inicio, con clamp a bordes
   let startX = targetCenter - totalW / 2;
   if (startX < EDGE) startX = EDGE;
   if (startX + totalW > contW - EDGE) startX = contW - EDGE - totalW;
 
+  // Ajuste final: si aún hubiera overflow a la derecha, corrige hacia la izquierda
+  const overflowRight = (startX + totalW) - (contW - EDGE);
+  if (overflowRight > 0){
+    startX = Math.max(EDGE, startX - overflowRight);
+  }
+
+  // Posiciona las cartas (abanico suave)
   const mid = (n - 1) / 2;
   [...handEl.children].forEach((el, i) => {
     const centerX = startX + i * (cardW + gap) + cardW / 2;
     const tx = Math.round(centerX - contW / 2);
     el.style.setProperty('--x', `${tx}px`);
     el.style.setProperty('--off', `0px`);
-    el.style.setProperty('--rot', `${(i - mid) * 1.6}deg`); // abanico más suave
+    el.style.setProperty('--rot', `${(i - mid) * 1.4}deg`);
     el.style.zIndex = 10 + i;
   });
 }
