@@ -167,7 +167,7 @@ body{
 .btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
 .btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
 
-/* Overlays */
+/* Overlays base */
 .overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100; }
 .overlay.visible{ opacity:1; pointer-events:auto; }
 .panel{ width:min(92%, 460px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); padding:16px; border-radius:16px; box-shadow:var(--glow); text-align:center; }
@@ -191,20 +191,33 @@ body{
 .hand .card .t-cost, .placed .t-cost{ left:-6px; }
 .hand .card .t-pts, .placed .t-pts{ right:-6px; }
 
-/* ===== Portada ===== */
+/* ===== Portada — imagen completa sin recortes y fondo relleno ==== */
 #startOverlay{
+  /* quitamos el tinte oscuro de la overlay base */
   background: transparent;
   padding:0;
 }
-#startOverlay::before{
+/* Capa 1: relleno difuminado que SIEMPRE cubre toda la pantalla */
+#startOverlay::after{
   content:"";
   position:absolute;
   inset:0;
   background:url("assets/Portadacartas.PNG") center center / cover no-repeat;
+  filter: blur(14px) brightness(.75);
+  transform: scale(1.06);   /* evita bordes del blur */
+  z-index:-2;
+}
+/* Capa 2: imagen principal sin zoom (contain), centrada y sin recortes */
+#startOverlay::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:url("assets/Portadacartas.PNG") center center / contain no-repeat;
   z-index:-1;
 }
+/* Panel con botón encima (ligero velo para legibilidad) */
 #startOverlay .panel{
-  background: rgba(0,0,0,.35);
+  background: rgba(0,0,0,.30);
   border:1px solid rgba(255,255,255,.25);
   box-shadow:0 10px 40px rgba(0,0,0,.5);
   width:min(92%, 520px);
