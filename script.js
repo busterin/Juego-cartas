@@ -75,60 +75,42 @@
     return el;
   }
 
-  // Mano anclada a la fila del jugador (rail = ancho de los 3 slots)
+  // Distribuye la mano dentro del ancho del contenedor, sin solapes y sin salirse
 function layoutHand(){
   const n = handEl.children.length;
   if (!n) return;
 
-  // Medidas básicas
-  const contRect = handEl.getBoundingClientRect();
-  const contW = contRect.width;
-
+  const contW = handEl.clientWidth;
   const first = handEl.children[0];
   const cardW = first ? first.getBoundingClientRect().width : 0;
   if (!contW || !cardW){ requestAnimationFrame(layoutHand); return; }
 
-  // 1) Localiza el rail: el grupo de slots del jugador
-  const railEl = document.querySelector('.row-player .lanes') || document.querySelector('.board') || handEl;
-  const railRect = railEl.getBoundingClientRect();
+  const EDGE = 8; // margen a izquierda y derecha
+  // Centro mínimo y máximo para que la carta no se salga
+  let startCenter = EDGE + cardW / 2;
+  let endCenter   = contW - EDGE - cardW / 2;
 
-  // Coordenadas del rail dentro del contenedor de la mano
-  const EDGE = 6; // margen duro dentro del contenedor de la mano
-  let railL = Math.max(EDGE, railRect.left - contRect.left);
-  let railR = Math.min(contW - EDGE, railRect.right - contRect.left);
-  let railW = Math.max(0, railR - railL);
+  // Si el espacio útil es negativo, clamp
+  if (endCenter < startCenter) endCenter = startCenter;
 
-  // 2) Calcula el paso entre cartas:
-  //    - ideal: ocupar de extremo a extremo sin solape
-  //    - si no cabe, permite solape mínimo controlado
-  const BASE_GAP = 22;                         // separación objetivo
-  let step = n > 1 ? (railW - cardW) / (n - 1) : 0;
-  const MIN_STEP = Math.max(4, cardW * 0.40);  // solape máx ≈ 60%
+  // Calcula centros equiespaciados
+  let centers = [];
+  if (n === 1){
+    centers = [ (startCenter + endCenter) / 2 ];
+  } else {
+    const step = (endCenter - startCenter) / (n - 1);
+    for (let i = 0; i < n; i++) centers.push(startCenter + i * step);
+  }
 
-  if (step > BASE_GAP) step = BASE_GAP;        // no separarlas "de más"
-  if (step < MIN_STEP) step = MIN_STEP;        // quepa con solape controlado
-
-  // 3) Centra el bloque total dentro del rail y clamp a bordes de la mano
-  const totalW = cardW + step * (n - 1);
-  let startLeft = railL + (railW - totalW) / 2;
-
-  if (startLeft < EDGE) startLeft = EDGE;
-  if (startLeft + totalW > contW - EDGE) startLeft = Math.max(EDGE, contW - EDGE - totalW);
-
-  // 4) Posiciona las cartas. Como tu CSS usa left:50% + translateX(--x),
-  //    calculamos el offset al centro del contenedor de la mano.
   const mid = (n - 1) / 2;
-  for (let i = 0; i < n; i++){
-    const el = handEl.children[i];
-    const left = startLeft + i * step;         // borde izquierdo de la carta i
-    const cx   = left + cardW / 2;             // centro de esa carta
-    const tx   = Math.round(cx - contW / 2);   // offset desde el centro del contenedor
-
+  [...handEl.children].forEach((el, i) => {
+    const cx = centers[i];
+    const tx = Math.round(cx - contW / 2); // offset respecto al centro del contenedor
     el.style.setProperty('--x', `${tx}px`);
     el.style.setProperty('--off', `0px`);
     el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`); // abanico suave
     el.style.zIndex = 10 + i;
-  }
+  });
 }
 
   function renderHand(){
