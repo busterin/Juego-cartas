@@ -83,7 +83,7 @@
     return el;
   }
 
-  // ===== Distribución centrada con solape controlado =====
+  // ===== Distribución: encaja siempre dentro, con solape si hace falta =====
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
@@ -97,24 +97,32 @@
       return;
     }
 
-    const BASE_GAP = 14;                   // separación deseada
-    const MAX_OVERLAP = -Math.round(cardW * 0.25); // solape máximo permitido
+    const EDGE = 8;               // margen lateral fijo (px)
+    const BASE_GAP = 14;          // separación deseada (px)
+    const MAX_OVERLAP = -Math.round(cardW * 0.40); // permite solape hasta el 40%
 
-    const freeSpace = contW - n*cardW;
-    let gap = (freeSpace - BASE_GAP) / (n - 1) + BASE_GAP;
-    gap = Math.min(BASE_GAP, gap);   // no más ancho que el base
-    gap = Math.max(MAX_OVERLAP, gap);// permite solape si hace falta
+    // Máximo ancho disponible para el bloque (respetando EDGE a ambos lados)
+    const maxTotal = contW - EDGE*2;
 
-    const totalW = n*cardW + (n-1)*gap;
-    const LEFT_BIAS = Math.min(20, Math.max(0, (totalW - contW) / 4 + 10));
-    const startX = (contW - totalW) / 2 - LEFT_BIAS;
+    // Calcula un gap que quepa SIEMPRE dentro del ancho disponible
+    let gap = BASE_GAP;
+    const totalWithBase = n*cardW + (n-1)*gap;
+
+    if (totalWithBase > maxTotal){
+      gap = (maxTotal - n*cardW) / (n-1); // puede ser negativo => solape
+    }
+    gap = Math.min(gap, BASE_GAP);   // nunca más grande que el base
+    gap = Math.max(gap, MAX_OVERLAP);// pero permite solape controlado
+
+    const totalW = n*cardW + (n-1)*gap;     // ancho final del bloque
+    const startX = (contW - totalW) / 2;    // centrado exacto (ya cabe dentro)
 
     const mid = (n - 1) / 2;
     [...handEl.children].forEach((el, i) => {
       const tx = Math.round(startX + i*(cardW + gap) + cardW/2 - contW/2);
       el.style.setProperty('--x', `${tx}px`);
       el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 3.5}deg`);
+      el.style.setProperty('--rot', `${(i - mid) * 2.5}deg`); // abanico más plano
       el.style.zIndex = 10 + i;
     });
   }
