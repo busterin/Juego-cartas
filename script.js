@@ -2,7 +2,6 @@
   // ---------- Utils ----------
   const $  = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
-  const rand = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
 
   // ---------- DOM ----------
   const handEl = $('#hand');
@@ -29,13 +28,14 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cartas fijas ----------
+  // ---------- Cartas fijas (valores CONSTANTES) ----------
+  // Ajusta estos números si quieres otros fijos
   const CARDS = [
-    { name:'Guerrera', art:'assets/Guerrera.PNG',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
-    { name:'Maga',     art:'assets/Maga.PNG',      cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
-    { name:'Arquero',  art:'assets/Arquero.PNG',   cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
-    { name:'Sanadora', art:'assets/Sanadora.PNG',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
-    { name:'Bardo',    art:'assets/Bardo.PNG',     cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." }
+    { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:5, text:"Lidera la carga con fuerza indomable." },
+    { name:'Maga',     art:'assets/Maga.PNG',      cost:2, pts:4, text:"Canaliza energías arcanas a tu favor." },
+    { name:'Arquero',  art:'assets/Arquero.PNG',   cost:1, pts:3, text:"Dispara con precisión quirúrgica." },
+    { name:'Sanadora', art:'assets/Sanadora.PNG',  cost:2, pts:2, text:"Restaura y protege a los tuyos." },
+    { name:'Bardo',    art:'assets/Bardo.PNG',     cost:1, pts:2, text:"Inspira y desarma con melodías." }
   ];
 
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
@@ -79,9 +79,11 @@
     return el;
   }
 
+  // Distribución de la mano centrada al tablero (con solape controlado)
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
+
     const contRect = handEl.getBoundingClientRect();
     const contW = contRect.width;
     const first = handEl.children[0];
@@ -97,6 +99,7 @@
     const MIN_GAP  = -Math.round(cardW * 0.65);
 
     const maxTotal = contW - EDGE*2;
+
     let gap = BASE_GAP;
     let totalW = n*cardW + (n-1)*gap;
     if (totalW > maxTotal){
@@ -137,6 +140,7 @@
       if(p){
         const d=document.createElement('div');
         d.className='placed';
+        // En tablero mostramos SOLO puntos (coste oculto)
         d.innerHTML = `${artHTML(p.art)}${tokenPts(p.pts)}<div class="name-top">${p.name}</div><div class="desc">${p.text}</div>`;
         d.addEventListener('click', ()=> openZoom(p));
         ps.appendChild(d);
@@ -163,9 +167,11 @@
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
     if(state.turn!=='player'||state.resolving) return;
+
     const src = e.currentTarget;
     src.setPointerCapture(e.pointerId);
     e.preventDefault();
+
     ghost = document.createElement('div');
     ghost.className = 'ghost';
     ghost.innerHTML = `${artHTML(src.dataset.art)}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="name-top">${src.dataset.name||''}</div><div class="desc">${src.dataset.text||''}</div>`;
@@ -184,10 +190,12 @@
 
       if (ghost) { ghost.remove(); ghost = null; }
     };
+
     window.addEventListener('pointermove', move, {passive:false});
     window.addEventListener('pointerup', finish, {passive:false, capture:true});
     window.addEventListener('pointercancel', finish, {passive:false, capture:true});
   }
+
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
   function laneUnder(x,y){
     for(let i=0;i<3;i++){
@@ -244,7 +252,7 @@
     endOverlay.classList.add('visible');
   }
 
-  // ---------- Puntuación ----------
+  // ---------- Puntuación / rondas ----------
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
   function scoreTurn(){
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
@@ -260,6 +268,7 @@
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.center=Array.from({length:3},()=>({p:null,e:null}));
+    // barajas con las 5 cartas fijas
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.eDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.pHand=[]; state.eHand=[];
@@ -268,7 +277,7 @@
     showTurnToast('TU TURNO');
   }
 
-  // ---------- Toast turno ----------
+  // ---------- Toast de turno ----------
   let toastTimer=null;
   function showTurnToast(text, ms=1200){
     const el = document.getElementById('turnToast');
