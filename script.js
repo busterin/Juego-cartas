@@ -1,7 +1,9 @@
 (() => {
+  // ---------- Utils ----------
   const $  = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
 
+  // ---------- DOM ----------
   const handEl = $('#hand');
   const slotsPlayer = $$('.slot[data-side="player"]');
   const slotsEnemy  = $$('.slot[data-side="enemy"]');
@@ -17,7 +19,8 @@
   const passBtn = $('#passBtn');
   const resetBtn = $('#resetBtn');
 
-  const SLOTS = 3, HAND_SIZE = 4;
+  // ---------- Estado ----------
+  const SLOTS = 3, HAND_SIZE = 4; // <= ahora 4 cartas en mano
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
     pDeck: [], eDeck: [], pHand: [], eHand: [],
@@ -25,7 +28,7 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // Cartas FIJAS
+  // ---------- Cartas fijas ----------
   const CARDS = [
     { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:5, text:"Lidera la carga con fuerza indomable." },
     { name:'Maga',     art:'assets/Maga.PNG',      cost:2, pts:4, text:"Canaliza energías arcanas a tu favor." },
@@ -40,10 +43,10 @@
 
   function drawToHand(){
     while(state.pHand.length<HAND_SIZE && state.pDeck.length) state.pHand.push(state.pDeck.pop());
-    while(state.eHand.length<HAND_SIZE && state.eDeck.length) state.eHand.push(state.eDeck.pop());
+    while(state.eHand.length<Math.min(HAND_SIZE,5) && state.eDeck.length) state.eHand.push(state.eDeck.pop());
   }
 
-  // ===== Zoom =====
+  // ---------- Zoom ----------
   function openZoom(card){
     zoomWrap.innerHTML = `
       <div class="zoom-card">
@@ -58,7 +61,7 @@
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
   zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
 
-  // ===== Mano =====
+  // ---------- Mano ----------
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
     el.className='card';
@@ -75,51 +78,71 @@
     return el;
   }
 
-  // Distribuye la mano dentro del ancho del contenedor, sin solapes y sin salirse
-function layoutHand(){
-  const n = handEl.children.length;
-  if (!n) return;
-
-  const contW = handEl.clientWidth;
-  const first = handEl.children[0];
-  const cardW = first ? first.getBoundingClientRect().width : 0;
-  if (!contW || !cardW){ requestAnimationFrame(layoutHand); return; }
-
-  const EDGE = 8; // margen a izquierda y derecha
-  // Centro mínimo y máximo para que la carta no se salga
-  let startCenter = EDGE + cardW / 2;
-  let endCenter   = contW - EDGE - cardW / 2;
-
-  // Si el espacio útil es negativo, clamp
-  if (endCenter < startCenter) endCenter = startCenter;
-
-  // Calcula centros equiespaciados
-  let centers = [];
-  if (n === 1){
-    centers = [ (startCenter + endCenter) / 2 ];
-  } else {
-    const step = (endCenter - startCenter) / (n - 1);
-    for (let i = 0; i < n; i++) centers.push(startCenter + i * step);
+  // Espera a que todas las imágenes dentro de "root" estén listas y luego llama cb()
+  function whenImagesReady(root, cb){
+    const imgs = Array.from(root.querySelectorAll('img'));
+    if (imgs.length === 0){ cb(); return; }
+    let remaining = imgs.length;
+    const done = () => { remaining--; if (remaining <= 0) cb(); };
+    imgs.forEach(img=>{
+      if (img.complete) { done(); }
+      else {
+        img.addEventListener('load', done, {once:true});
+        img.addEventListener('error', done, {once:true});
+      }
+    });
   }
 
-  const mid = (n - 1) / 2;
-  [...handEl.children].forEach((el, i) => {
-    const cx = centers[i];
-    const tx = Math.round(cx - contW / 2); // offset respecto al centro del contenedor
-    el.style.setProperty('--x', `${tx}px`);
-    el.style.setProperty('--off', `0px`);
-    el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`); // abanico suave
-    el.style.zIndex = 10 + i;
-  });
-}
+  // Distribuye la mano dentro del ancho del contenedor, sin solapes y sin salirse
+  function layoutHand(){
+    const n = handEl.children.length;
+    if (!n) return;
+
+    const contW = handEl.clientWidth || handEl.getBoundingClientRect().width || window.innerWidth;
+    const first = handEl.children[0];
+    const cardW = first ? first.getBoundingClientRect().width : 0;
+    if (!contW || !cardW) return;
+
+    const EDGE = 8; // margen a izquierda y derecha
+    const startCenter = EDGE + cardW/2;
+    const endCenter   = Math.max(startCenter, contW - EDGE - cardW/2);
+
+    // Centros equiespaciados
+    let centers = [];
+    if (n === 1){
+      centers = [ (startCenter + endCenter) / 2 ];
+    } else {
+      const step = (endCenter - startCenter) / (n - 1);
+      for (let i = 0; i < n; i++) centers.push(startCenter + i*step);
+    }
+
+    const mid = (n - 1) / 2;
+    [...handEl.children].forEach((el, i) => {
+      const cx = centers[i];
+      const tx = Math.round(cx - contW/2); // offset desde el centro del contenedor
+      el.style.setProperty('--x', `${tx}px`);
+      el.style.setProperty('--off', `0px`);
+      el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`);
+      el.style.zIndex = 10 + i;
+    });
+  }
+
+  // Reintentos seguros para evitar solapes por imágenes aún sin medir (OPCIONAL aplicado)
+  function layoutHandSafe(){
+    layoutHand();                     // 1) ahora
+    requestAnimationFrame(layoutHand);// 2) próximo frame
+    setTimeout(layoutHand, 50);       // 3) pequeño delay
+    whenImagesReady(handEl, layoutHand); // 4) cuando carguen imágenes
+  }
 
   function renderHand(){
     handEl.innerHTML='';
-    state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,state.pHand.length)));
-    layoutHand();
+    const n = state.pHand.length;
+    state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n)));
+    layoutHandSafe(); // uso robusto
   }
 
-  // ===== Tablero =====
+  // ---------- Tablero ----------
   function renderBoard(){
     for(let i=0;i<3;i++){
       const ps=slotsPlayer[i], es=slotsEnemy[i];
@@ -143,14 +166,14 @@ function layoutHand(){
     }
   }
 
-  // ===== HUD =====
+  // ---------- HUD ----------
   function updateHUD(){
     roundNoEl.textContent=state.round;
     pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins;
     pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore;
   }
 
-  // ===== Drag & drop =====
+  // ---------- Drag & drop ----------
   let ghost=null;
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
@@ -172,7 +195,9 @@ function layoutHand(){
 
       const lane = laneUnder(ev.clientX, ev.clientY);
       if(lane !== -1) tryPlayFromHandToSlot(+src.dataset.index, lane);
+
       if (ghost) { ghost.remove(); ghost = null; }
+      layoutHandSafe(); // opcional/robusto: recolocar mano después del drag
     };
 
     window.addEventListener('pointermove', move, {passive:false});
@@ -190,7 +215,7 @@ function layoutHand(){
     return -1;
   }
 
-  // ===== Reglas =====
+  // ---------- Reglas ----------
   const canAfford = c => state.pCoins>=c.cost;
   function tryPlayFromHandToSlot(handIndex, slotIndex){
     if(handIndex<0||handIndex>=state.pHand.length) return;
@@ -201,9 +226,10 @@ function layoutHand(){
     state.pHand.splice(handIndex,1);
     if(state.pDeck.length) state.pHand.push(state.pDeck.pop());
     renderHand(); renderBoard(); updateHUD();
+    layoutHandSafe(); // opcional/robusto
   }
 
-  // ===== IA rival =====
+  // ---------- IA rival ----------
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     showTurnToast('TURNO RIVAL');
@@ -224,11 +250,12 @@ function layoutHand(){
     loop();
   }
 
-  // ===== Fin de partida / Puntuación =====
+  // ---------- Fin de partida / Puntuación ----------
   function endGame(){
     state.resolving = true;
     let title = 'Empate';
-    if(state.pScore > state.eScore) title = '¡Victoria!'; else if(state.eScore > state.pScore) title = 'Derrota';
+    if(state.pScore > state.eScore) title = '¡Victoria!';
+    else if(state.eScore > state.pScore) title = 'Derrota';
     endTitle.textContent = title;
     endLine.textContent = `Puntos — Tú: ${state.pScore} · Rival: ${state.eScore}`;
     endOverlay.classList.add('visible');
@@ -239,11 +266,13 @@ function layoutHand(){
     state.pScore+=p; state.eScore+=e; updateHUD();
     if(state.round === 8){ setTimeout(endGame, 300); return; }
     state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
-    drawToHand(); roundNoEl.textContent = state.round; setTimeout(()=> showTurnToast('TU TURNO'), 250);
+    drawToHand(); roundNoEl.textContent = state.round;
+    renderHand(); layoutHandSafe(); // opcional/robusto al empezar ronda
+    setTimeout(()=> showTurnToast('TU TURNO'), 250);
   }
   function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
 
-  // ===== Nueva partida =====
+  // ---------- Nueva partida ----------
   function newGame(){
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
@@ -253,10 +282,11 @@ function layoutHand(){
     state.pHand=[]; state.eHand=[];
     drawToHand(); state.pCoins+=1;
     renderBoard(); renderHand(); updateHUD();
+    layoutHandSafe(); // opcional/robusto tras newGame
     showTurnToast('TU TURNO');
   }
 
-  // ===== Toast de turno =====
+  // ---------- Toast de turno ----------
   let toastTimer=null;
   function showTurnToast(text, ms=1200){
     const el = document.getElementById('turnToast');
@@ -267,7 +297,7 @@ function layoutHand(){
     toastTimer = setTimeout(()=> el.classList.remove('show'), ms);
   }
 
-  // ===== Eventos =====
+  // ---------- Eventos ----------
   againBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
   resetBtn.addEventListener('click', ()=> newGame());
   passBtn.addEventListener('click', ()=>{
@@ -275,8 +305,8 @@ function layoutHand(){
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
   });
 
-  window.addEventListener('resize', layoutHand);
-  window.addEventListener('orientationchange', layoutHand);
+  window.addEventListener('resize', layoutHandSafe);          // opcional aplicado
+  window.addEventListener('orientationchange', layoutHandSafe); // opcional aplicado
 
   // Arranque con portada
   window.addEventListener('DOMContentLoaded', ()=>{
