@@ -29,7 +29,7 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cartas fijas (stats aleatorios al cargar, luego se mantienen) ----------
+  // ---------- Cartas fijas (stats aleatorios una vez por carga) ----------
   const CARDS = [
     { name:'Spiderman', art:'assets/Spiderman.png',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
     { name:'Leonardo',  art:'assets/Leonardo.PNG',   cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
@@ -62,7 +62,7 @@
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
   zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
 
-  // ---------- Mano (creación) ----------
+  // ---------- Mano ----------
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
     el.className='card';
@@ -79,7 +79,7 @@
     return el;
   }
 
-  // ===== Distribución de la mano: centrada y blindada =====
+  // Distribución de la mano centrada al tablero (con solape controlado)
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
@@ -90,7 +90,6 @@
     const cardW = first ? first.getBoundingClientRect().width : 0;
     if (!contW || !cardW){ requestAnimationFrame(layoutHand); return; }
 
-    // Centro del tablero relativo a la mano
     const boardEl = document.querySelector('.board');
     const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
     const targetCenter = (boardRect.left - contRect.left) + boardRect.width/2;
@@ -133,7 +132,6 @@
 
   // ---------- Tablero ----------
   function renderBoard(){
-    // 3 huecos por lado (0..2)
     for(let i=0;i<3;i++){
       const ps=slotsPlayer[i], es=slotsEnemy[i];
       if (!ps || !es) continue;
@@ -167,28 +165,21 @@
   let ghost=null;
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
 
-  // VERSION ARREGLO: evita scroll mientras se arrastra y maneja pointercancel
+  // Evita scroll del navegador durante el arrastre (móvil)
   function onDown(e){
     if(state.turn!=='player'||state.resolving) return;
 
     const src = e.currentTarget;
     src.setPointerCapture(e.pointerId);
-
-    // Evita que el navegador haga scroll/zoom con el gesto
     e.preventDefault();
 
-    // Crear ghost
     ghost = document.createElement('div');
     ghost.className = 'ghost';
     ghost.innerHTML = `${artHTML(src.dataset.art)}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="name-top">${src.dataset.name||''}</div><div class="desc">${src.dataset.text||''}</div>`;
     document.body.appendChild(ghost);
     moveGhost(e.clientX, e.clientY);
 
-    const move = ev => {
-      ev.preventDefault(); // clave en móviles para que no intente desplazar la página
-      moveGhost(ev.clientX, ev.clientY);
-    };
-
+    const move = ev => { ev.preventDefault(); moveGhost(ev.clientX, ev.clientY); };
     const finish = ev => {
       try { src.releasePointerCapture(e.pointerId); } catch(_) {}
       window.removeEventListener('pointermove', move, {passive:false});
@@ -209,7 +200,6 @@
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
 
   function laneUnder(x,y){
-    // Solo 3 slots del lado del jugador
     for(let i=0;i<3;i++){
       const el = document.querySelector(`.slot[data-side="player"][data-lane="${i}"]`);
       if(!el) continue;
@@ -264,7 +254,7 @@
     endOverlay.classList.add('visible');
   }
 
-  // ---------- Puntuación ----------
+  // ---------- Puntuación / rondas ----------
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
   function scoreTurn(){
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
@@ -307,10 +297,9 @@
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
   });
 
-  // Recalcular distribución en cambios de tamaño/orientación
   window.addEventListener('resize', layoutHand);
   window.addEventListener('orientationchange', layoutHand);
 
-  // Arrancar juego
+  // Arrancar
   window.addEventListener('DOMContentLoaded', newGame);
 })();
