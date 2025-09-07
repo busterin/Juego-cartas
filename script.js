@@ -66,7 +66,7 @@
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
   zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
 
-  // ---------- Mano (abanico ancho y suave) ----------
+  // ---------- Mano (creación) ----------
   function createHandCardEl(card,i,n){
     const el=document.createElement('div');
     el.className='card';
@@ -78,31 +78,44 @@
       <div class="name-top">${card.name||''}</div>
       <div class="desc">${card.text||''}</div>
     `;
-
-    // — Distribución a todo el ancho sin solapes —
-const EDGE = 6; // % de margen a cada lado (ajústalo si quieres más/menos aire)
-const leftPct = (n === 1)
-  ? 50
-  : EDGE + i * ((100 - EDGE * 2) / (n - 1));
-
-// — Abanico muy suave (opcional) —
-const mid   = (n - 1) / 2;
-const angle = (i - mid) * 4;   // menos giro para que “ocupen” mejor el ancho
-const extra = 0;               // ← nada de desplazamiento lateral adicional
-
-el.style.setProperty('--x', `calc(${leftPct}% - 50%)`);
-el.style.setProperty('--rot', `${angle}deg`);
-el.style.setProperty('--off', `${extra}px`);
-el.style.zIndex = 10 + i;
-
     el.addEventListener('click', ()=> openZoom(card));
     attachDragHandlers(el);
     return el;
   }
+
+  // Reparte las cartas para ocupar TODO el ancho con huecos iguales
+  function layoutHand(){
+    const n = handEl.children.length;
+    if (!n) return;
+
+    const contW = handEl.clientWidth;
+
+    // Lee el ancho real de carta desde la variable CSS --card-w (px)
+    const rootStyles = getComputedStyle(document.documentElement);
+    // getPropertyValue podría venir con "px"; parseFloat lo convierte
+    const cardW = parseFloat(rootStyles.getPropertyValue('--card-w'));
+
+    const EDGE = 10; // px de margen a cada lado
+    const free = Math.max(0, contW - 2*EDGE - n*cardW);
+    const gap  = free / (n + 1); // hueco entre cartas
+
+    const mid = (n - 1) / 2;
+    [...handEl.children].forEach((el, i) => {
+      const centerX = EDGE + gap*(i+1) + cardW*(i + 0.5);
+      const tx = Math.round(centerX - contW/2);
+
+      el.style.setProperty('--x', `${tx}px`);   // desplazamiento horizontal exacto
+      el.style.setProperty('--off', `0px`);     // sin offset lateral adicional
+      el.style.setProperty('--rot', `${(i - mid) * 4}deg`); // abanico suave
+      el.style.zIndex = 10 + i;
+    });
+  }
+
   function renderHand(){
     handEl.innerHTML='';
-    const n=state.pHand.length;
+    const n = state.pHand.length;
     state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n)));
+    layoutHand(); // ← distribuye tras pintar
   }
 
   // ---------- Tablero ----------
@@ -132,17 +145,6 @@ el.style.zIndex = 10 + i;
     roundNoEl.textContent=state.round;
     pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins;
     pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore;
-  }
-
-  // ---------- Toast ----------
-  let toastTimer=null;
-  function showTurnToast(text, ms=1200){
-    const el = document.getElementById('turnToast');
-    if(!el) return;
-    el.setAttribute('data-text', text);
-    el.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=> el.classList.remove('show'), ms);
   }
 
   // ---------- Drag & drop ----------
@@ -238,10 +240,24 @@ el.style.zIndex = 10 + i;
     showTurnToast('TU TURNO');
   }
 
+  // ---------- Toast de turno ----------
+  let toastTimer=null;
+  function showTurnToast(text, ms=1200){
+    const el = document.getElementById('turnToast');
+    if(!el) return;
+    el.setAttribute('data-text', text);
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> el.classList.remove('show'), ms);
+  }
+
   // ---------- Eventos ----------
   startBtn.addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
   againBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
   menuBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
   resetBtn.addEventListener('click', ()=> newGame());
   passBtn.addEventListener('click', ()=>{ if(state.turn!=='player'||state.resolving) return; state.playerPassed=true; state.turn='enemy'; enemyTurn(); });
+
+  // Recalcular distribución al redimensionar
+  window.addEventListener('resize', layoutHand);
 })();
