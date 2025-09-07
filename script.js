@@ -75,55 +75,58 @@
     return el;
   }
 
-  // Mano anclada a la fila del jugador (rail) y repartida uniformemente
+  // Mano anclada a la fila del jugador (rail = ancho de los 3 slots)
 function layoutHand(){
   const n = handEl.children.length;
   if (!n) return;
 
+  // Medidas básicas
   const contRect = handEl.getBoundingClientRect();
   const contW = contRect.width;
+
   const first = handEl.children[0];
   const cardW = first ? first.getBoundingClientRect().width : 0;
   if (!contW || !cardW){ requestAnimationFrame(layoutHand); return; }
 
-  // Rail = el ancho real de la fila del jugador
-  const lanesEl = document.querySelector('.row-player .lanes') || document.querySelector('.board');
-  const railRect = lanesEl.getBoundingClientRect();
+  // 1) Localiza el rail: el grupo de slots del jugador
+  const railEl = document.querySelector('.row-player .lanes') || document.querySelector('.board') || handEl;
+  const railRect = railEl.getBoundingClientRect();
 
-  const EDGE = 6; // margen duro dentro de la mano
   // Coordenadas del rail dentro del contenedor de la mano
+  const EDGE = 6; // margen duro dentro del contenedor de la mano
   let railL = Math.max(EDGE, railRect.left - contRect.left);
   let railR = Math.min(contW - EDGE, railRect.right - contRect.left);
   let railW = Math.max(0, railR - railL);
 
-  // Paso ideal si no hubiese solape: distribuye de extremo a extremo
+  // 2) Calcula el paso entre cartas:
+  //    - ideal: ocupar de extremo a extremo sin solape
+  //    - si no cabe, permite solape mínimo controlado
+  const BASE_GAP = 22;                         // separación objetivo
   let step = n > 1 ? (railW - cardW) / (n - 1) : 0;
+  const MIN_STEP = Math.max(4, cardW * 0.40);  // solape máx ≈ 60%
 
-  // Paso mínimo permitido (controla solape). 0.4*cardW ≈ 60% solape máx.
-  const MIN_STEP = Math.max(4, cardW * 0.20);
-  if (step < MIN_STEP){
-    step = MIN_STEP;
-    // Recalcula el inicio para recentrar dentro del rail sin salirse
-    const totalW = cardW + step * (n - 1);
-    const railCenter = railL + railW / 2;
-    railL = Math.round(railCenter - totalW / 2);
+  if (step > BASE_GAP) step = BASE_GAP;        // no separarlas "de más"
+  if (step < MIN_STEP) step = MIN_STEP;        // quepa con solape controlado
 
-    // Clamp final a bordes de la mano
-    if (railL < EDGE) railL = EDGE;
-    if (railL + totalW > contW - EDGE) railL = Math.max(EDGE, contW - EDGE - totalW);
-  }
+  // 3) Centra el bloque total dentro del rail y clamp a bordes de la mano
+  const totalW = cardW + step * (n - 1);
+  let startLeft = railL + (railW - totalW) / 2;
 
-  // Posiciona en abanico suave
+  if (startLeft < EDGE) startLeft = EDGE;
+  if (startLeft + totalW > contW - EDGE) startLeft = Math.max(EDGE, contW - EDGE - totalW);
+
+  // 4) Posiciona las cartas. Como tu CSS usa left:50% + translateX(--x),
+  //    calculamos el offset al centro del contenedor de la mano.
   const mid = (n - 1) / 2;
   for (let i = 0; i < n; i++){
     const el = handEl.children[i];
-    const left = railL + i * step;      // borde izquierdo de la carta i
-    const cx   = left + cardW / 2;      // centro de la carta i
-    const tx   = Math.round(cx - contW / 2);
+    const left = startLeft + i * step;         // borde izquierdo de la carta i
+    const cx   = left + cardW / 2;             // centro de esa carta
+    const tx   = Math.round(cx - contW / 2);   // offset desde el centro del contenedor
 
     el.style.setProperty('--x', `${tx}px`);
     el.style.setProperty('--off', `0px`);
-    el.style.setProperty('--rot', `${(i - mid) * 1.4}deg`);
+    el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`); // abanico suave
     el.style.zIndex = 10 + i;
   }
 }
