@@ -13,14 +13,10 @@
   const pCoinsEl = $('#pCoins'), eCoinsEl = $('#eCoins');
   const pScoreEl = $('#pScore'), eScoreEl = $('#eScore');
 
-  const startOverlay = $('#startOverlay');
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
-
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
 
-  const startBtn = $('#startBtn');
   const againBtn = $('#againBtn');
-  const menuBtn = $('#menuBtn');
   const passBtn = $('#passBtn');
   const resetBtn = $('#resetBtn');
 
@@ -58,7 +54,7 @@
         <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
         <div class="zoom-token cost">${card.cost}</div>
         <div class="zoom-token pts">${card.pts}</div>
-        <div class="name-top">${card.name}</div>
+        <div class="name">${card.name}</div>
         <div class="desc">${card.text}</div>
       </div>`;
     zoomOverlay.classList.add('visible');
@@ -103,18 +99,18 @@
     const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
     const targetCenter = (boardRect.left - contRect.left) + boardRect.width/2;
 
-    const EDGE = 6;                       // margen lateral asegurado
-    const BASE_GAP = 14;                  // separación deseada
-    const MIN_GAP  = -Math.round(cardW * 0.65); // ← solape máx. 65% del ancho
+    const EDGE = 6;                        // margen lateral asegurado
+    const BASE_GAP = 14;                   // separación deseada
+    const MIN_GAP  = -Math.round(cardW * 0.65); // solape máx. 65%
 
-    const maxTotal = contW - EDGE*2;      // ancho útil
+    const maxTotal = contW - EDGE*2;       // ancho útil
 
     // Gap inicial y reducción si no cabe (permitiendo solape hasta MIN_GAP)
     let gap = BASE_GAP;
     let totalW = n*cardW + (n-1)*gap;
     if (totalW > maxTotal){
       gap = (maxTotal - n*cardW) / (n-1);   // puede ser negativo (solape)
-      if (gap < MIN_GAP) gap = MIN_GAP;     // blindaje: como mucho 65% solape
+      if (gap < MIN_GAP) gap = MIN_GAP;
       totalW = n*cardW + (n-1)*gap;
     }
 
@@ -132,7 +128,7 @@
       const tx = Math.round(centerX - contW/2);
       el.style.setProperty('--x', `${tx}px`);
       el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 1.8}deg`); // abanico muy plano
+      el.style.setProperty('--rot', `${(i - mid) * 1.8}deg`); // abanico plano
       el.style.zIndex = 10 + i;
     });
   }
@@ -271,20 +267,24 @@
   function showTurnToast(text, ms=1200){
     const el = document.getElementById('turnToast');
     if(!el) return;
-    el.setAttribute('data-text', text);
+    el.textContent = text;
     el.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(()=> el.classList.remove('show'), ms);
   }
 
   // ---------- Eventos ----------
-  startBtn.addEventListener('click', ()=>{ startOverlay.classList.remove('visible'); newGame(); });
   againBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
-  menuBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); startOverlay.classList.add('visible'); });
   resetBtn.addEventListener('click', ()=> newGame());
-  passBtn.addEventListener('click', ()=>{ if(state.turn!=='player'||state.resolving) return; state.playerPassed=true; state.turn='enemy'; enemyTurn(); });
+  passBtn.addEventListener('click', ()=>{
+    if(state.turn!=='player'||state.resolving) return;
+    state.playerPassed=true; state.turn='enemy'; enemyTurn();
+  });
 
   // Recalcular distribución en cambios de tamaño/orientación
   window.addEventListener('resize', layoutHand);
   window.addEventListener('orientationchange', layoutHand);
+
+  // Arrancar juego al cargar (sin portada)
+  window.addEventListener('DOMContentLoaded', newGame);
 })();
