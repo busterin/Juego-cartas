@@ -29,7 +29,7 @@ html,body{
     radial-gradient(1200px 800px at 20% 0%, #1a2458 0, transparent 60%),
     radial-gradient(900px 600px at 80% 100%, #141e46 0, transparent 60%),
     linear-gradient(180deg, var(--bg1), var(--bg2));
-  overflow:hidden; /* evita scroll y contenido fantasma */
+  overflow:hidden;
 }
 #game{
   height: 100dvh;
@@ -47,7 +47,7 @@ html,body{
   display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
   align-items:center; gap:6px; padding-inline:2px;
   position:relative;
-  z-index:300; /* encima de todo */
+  z-index:300;
 }
 .portrait{ display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; min-width:0; }
 .portrait.enemy{ justify-self:end; }
@@ -68,9 +68,17 @@ html,body{
   display:grid; place-items:center; font-weight:900; color:#101010;
   box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.18), 0 3px 8px rgba(0,0,0,.35);
   font-size:.85rem;
+  position:relative;
 }
 .meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .meter.pts { background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
+/* Glow/bounce cuando cambian monedas/puntos */
+.meter.bump{ animation: bump .6s ease; }
+@keyframes bump{
+  0%{ transform:scale(1); box-shadow:0 0 0 0 rgba(255,255,255,.0), inset 0 0 0 rgba(0,0,0,0) }
+  40%{ transform:scale(1.18); box-shadow:0 0 20px rgba(255,255,255,.4) }
+  100%{ transform:scale(1); box-shadow:0 0 0 rgba(255,255,255,0) }
+}
 
 /* ===== Tablero ===== */
 .board{ display:flex; flex-direction:column; justify-content:center; align-items:stretch; min-height:0; }
@@ -82,8 +90,15 @@ html,body{
   border-radius:var(--slot-br);
   display:grid; place-items:center; position:relative;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
+  transition: border-color .15s ease, background .15s ease;
 }
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
+/* Slot ocupado: borde sólido y fondo ligeramente más intenso */
+.slot.occupied{
+  border-style: solid;
+  border-color: rgba(255,255,255,.28);
+  background: linear-gradient(180deg, rgba(34,48,88,.45), rgba(34,48,88,.25));
+}
 
 /* Carta colocada */
 .placed{
@@ -134,6 +149,22 @@ html,body{
 /* ===== Ghost ===== */
 .ghost{ position:fixed; z-index:9999; pointer-events:none; width:var(--card-w); height:var(--card-h); transform: translate(-50%, -50%) scale(1.06); border:1px solid rgba(255,255,255,.35); border-radius:12px; overflow:visible; }
 .ghost .art img{ border-radius:inherit; }
+
+/* ===== Carta voladora del robo ===== */
+.fly-card{
+  position: fixed;
+  left: 50%; top: 50%;
+  width: var(--card-w); height: var(--card-h);
+  transform: translate(-50%, -50%) scale(1);
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 1500;
+  transition: transform .45s cubic-bezier(.2,.8,.2,1);
+  box-shadow: 0 10px 30px rgba(0,0,0,.55);
+}
+.fly-card .art, .fly-card .art img{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+}
 
 /* ===== Score float ===== */
 .score-float{ position:absolute; z-index:50; padding:6px 10px; border-radius:12px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.2); font-weight:900; color:#eaf2ff; left:50%; transform:translateX(-50%); animation: scoreFloat 900ms ease-out both; }
@@ -191,7 +222,7 @@ html,body{
   filter: drop-shadow(0 3px 8px rgba(0,0,0,.55));
 }
 
-/* ===== Toast de turno ===== */
+/* ===== Toast de turno / avisos ===== */
 .turn-toast{
   position: fixed; left: 50%; top: 42%;
   transform: translate(-50%, -50%) scale(.96);
@@ -203,6 +234,13 @@ html,body{
   z-index: 120;
 }
 .turn-toast.show{ opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+/* Toast de aviso (insuficiente, etc.) */
+.turn-toast.warn{
+  background: radial-gradient(60% 60% at 50% 40%, #ffd1d1 0, #ff8b8b 55%, #ff5a5a 100%);
+  border-color: rgba(255,255,255,.8);
+  color:#3c0d0d;
+}
 
 /* ===== Splash ===== */
 .splash{
@@ -222,6 +260,7 @@ html,body{
   border: 2px solid rgba(255,255,255,.4);
   box-shadow:0 6px 20px rgba(0,0,0,.55);
 }
+
 /* ===== Robo de carta: overlay que muestra la carta en grande ===== */
 .draw-overlay{
   position: fixed;
@@ -232,11 +271,20 @@ html,body{
   opacity: 0;
   pointer-events: none;
   transition: opacity .25s ease;
-  z-index: 1100;              /* por encima del HUD y del overlay normal */
+  z-index: 1100;
 }
 .draw-overlay.visible{
   opacity: 1;
   pointer-events: auto;
 }
 
-/* El contenido ya usa .zoom-card, así que hereda tamaño y estilo del zoom */
+/* ===== Feedback coste insuficiente: shake ===== */
+@keyframes shake {
+  10%, 90% { transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot)) translateY(0) }
+  20%, 80% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
+  30%, 50%, 70% { transform: translateX(calc(var(--x) + var(--off, 0px) + 3px)) rotate(var(--rot)) }
+  40%, 60% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
+}
+.card.shake{
+  animation: shake .45s ease;
+}
