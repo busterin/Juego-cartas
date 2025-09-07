@@ -297,6 +297,17 @@
   window.addEventListener('resize', layoutHand);
   window.addEventListener('orientationchange', layoutHand);
 
-  // Arrancar
-  window.addEventListener('DOMContentLoaded', newGame);
+    // Arrancar
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const startOv = document.getElementById('startOverlay');
+    const startBtn = document.getElementById('startBtn');
+    if(startBtn){
+      startBtn.addEventListener('click', ()=>{
+        startOv.classList.remove('visible');
+        newGame();
+      });
+    } else {
+      newGame(); // fallback si no hay portada
+    }
+  });
 })();
