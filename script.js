@@ -3,6 +3,15 @@
   const $  = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
 
+  const bump = (meterValueEl) => {
+    const meter = meterValueEl?.closest('.meter');
+    if(!meter) return;
+    meter.classList.remove('bump');
+    // reflow para reiniciar animación
+    void meter.offsetWidth;
+    meter.classList.add('bump');
+  };
+
   // ---------- DOM ----------
   const handEl = $('#hand');
   const slotsPlayer = $$('.slot[data-side="player"]');
@@ -27,8 +36,10 @@
   const drawOverlay = $('#drawOverlay');
   const drawCardEl  = $('#drawCard');
 
+  const turnToast = $('#turnToast');
+
   // ---------- Estado ----------
-  const SLOTS = 3, HAND_SIZE = 4;
+  const SLOTS = 3, HAND_SIZE = 4, MAX_ROUNDS = 8;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
     pDeck: [], eDeck: [], pHand: [], eHand: [],
@@ -45,9 +56,9 @@
     { name:'Bardo',    art:'assets/Bardo.PNG',     cost:1, pts:2, text:"Inspira y desarma con melodías." }
   ];
 
-  const tokenCost = v => `<div class="token t-cost">${v}</div>`;
-  const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
-  const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
+  const tokenCost = v => `<div class="token t-cost" aria-label="Coste ${v}">${v}</div>`;
+  const tokenPts  = v => `<div class="token t-pts" aria-label="Puntos ${v}">${v}</div>`;
+  const artHTML = (src, alt='') => `<div class="art">${src?`<img src="${src}" alt="${alt}">`:''}</div>`;
 
   // ---------- Limpieza de nodos temporales ----------
   function purgeTransientNodes(){
@@ -58,10 +69,10 @@
   // ---------- Zoom ----------
   function openZoom(card){
     zoomWrap.innerHTML = `
-      <div class="zoom-card">
+      <div class="zoom-card" role="dialog" aria-label="${card.name}">
         <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
-        <div class="zoom-token cost">${card.cost}</div>
-        <div class="zoom-token pts">${card.pts}</div>
+        <div class="zoom-token cost" aria-label="Coste ${card.cost}">${card.cost}</div>
+        <div class="zoom-token pts" aria-label="Puntos ${card.pts}">${card.pts}</div>
         <div class="name">${card.name}</div>
         <div class="desc">${card.text}</div>
       </div>`;
@@ -147,14 +158,25 @@
     el.className='card';
     el.dataset.index=i; el.dataset.cost=card.cost; el.dataset.pts=card.pts;
     el.dataset.name=card.name||''; el.dataset.art=card.art||''; el.dataset.text=card.text||'';
+    el.setAttribute('role','listitem');
+    el.setAttribute('aria-label', `${card.name}, coste ${card.cost}, ${card.pts} puntos`);
     el.innerHTML=`
-      ${artHTML(card.art)}
+      ${artHTML(card.art, card.name)}
       ${tokenCost(card.cost)}${tokenPts(card.pts)}
       <div class="name-top">${card.name||''}</div>
       <div class="desc">${card.text||''}</div>
     `;
-    el.addEventListener('click', ()=> openZoom(card));
-    attachDragHandlers(el);
+
+    // Evitar click fantasma tras drag
+    let dragged = false;
+    el.addEventListener('click', (ev)=> {
+      if (dragged) { dragged = false; return; } // no abrir zoom si fue drag
+      openZoom(card);
+    });
+
+    // Arrastre
+    attachDragHandlers(el, () => { dragged = true; });
+
     return el;
   }
   function renderHand(){
@@ -166,9 +188,8 @@
 
   // ---------- Robo (vista grande + vuelo a mano) ----------
   function showDrawLarge(card, cb){
-    // Reutilizamos el layout del zoom para que sea idéntico
     drawCardEl.innerHTML = `
-      <div class="zoom-card">
+      <div class="zoom-card" aria-label="Carta robada: ${card.name}">
         <div class="art"><img src="${card.art}" alt="${card.name}"></div>
         <div class="zoom-token cost">${card.cost}</div>
         <div class="zoom-token pts">${card.pts}</div>
@@ -177,15 +198,13 @@
       </div>
     `;
     drawOverlay.classList.add('visible');
-    // Visible ~900ms
     setTimeout(()=>{
       drawOverlay.classList.remove('visible');
-      if(cb) setTimeout(cb, 250); // espera transición
+      if(cb) setTimeout(cb, 250);
     }, 900);
   }
 
   function flyCardToHand(card, onDone){
-    // Asegura elemento destino existente
     const idx = state.pHand.length - 1;
     const targetEl = handEl.children[idx];
     if(!targetEl){ if(onDone) onDone(); return; }
@@ -194,12 +213,11 @@
     const targetX = r.left + r.width/2;
     const targetY = r.top  + r.height/2;
 
-    // Oculta la real mientras vuela el clon
     targetEl.style.opacity = '0';
 
     const fly = document.createElement('div');
     fly.className = 'fly-card';
-    fly.innerHTML = `<div class="art"><img src="${card.art}" alt=""></div>`;
+    fly.innerHTML = `<div class="art"><img src="${card.art}" alt="${card.name}"></div>`;
     document.body.appendChild(fly);
 
     const startX = window.innerWidth/2;
@@ -227,10 +245,8 @@
     const card = state.pDeck.pop();
 
     showDrawLarge(card, ()=>{
-      // Añade a mano y renderiza para medir destino
       state.pHand.push(card);
       renderHand();
-      // Vuela del centro a la carta real
       requestAnimationFrame(()=> flyCardToHand(card, done));
     });
   }
@@ -245,7 +261,9 @@
 
   // Enemigo roba sin animación
   function topUpEnemyInstant(){
-    while(state.eHand.length<Math.min(HAND_SIZE,5) && state.eDeck.length) state.eHand.push(state.eDeck.pop());
+    while(state.eHand.length < HAND_SIZE && state.eDeck.length){
+      state.eHand.push(state.eDeck.pop());
+    }
   }
 
   // ---------- Tablero ----------
@@ -255,17 +273,23 @@
       if (!ps || !es) continue;
       ps.innerHTML=''; es.innerHTML='';
       const p=state.center[i].p, e=state.center[i].e;
+
+      ps.classList.toggle('occupied', !!p);
+      es.classList.toggle('occupied', !!e);
+
       if(p){
         const d=document.createElement('div');
         d.className='placed';
-        d.innerHTML = `${artHTML(p.art)}${tokenPts(p.pts)}<div class="name-top">${p.name}</div><div class="desc">${p.text}</div>`;
+        d.setAttribute('aria-label', `${p.name} con ${p.pts} puntos`);
+        d.innerHTML = `${artHTML(p.art, p.name)}${tokenPts(p.pts)}<div class="name-top">${p.name}</div><div class="desc">${p.text}</div>`;
         d.addEventListener('click', ()=> openZoom(p));
         ps.appendChild(d);
       }
       if(e){
         const d=document.createElement('div');
         d.className='placed enemy';
-        d.innerHTML = `${artHTML(e.art)}${tokenPts(e.pts)}<div class="name-top">${e.name}</div><div class="desc">${e.text}</div>`;
+        d.setAttribute('aria-label', `${e.name} con ${e.pts} puntos`);
+        d.innerHTML = `${artHTML(e.art, e.name)}${tokenPts(e.pts)}<div class="name-top">${e.name}</div><div class="desc">${e.text}</div>`;
         d.addEventListener('click', ()=> openZoom(e));
         es.appendChild(d);
       }
@@ -281,34 +305,35 @@
 
   // ---------- Drag & drop ----------
   let ghost=null;
-  function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
-  function onDown(e){
-    if(state.turn!=='player'||state.resolving) return;
-    const src = e.currentTarget; src.setPointerCapture(e.pointerId); e.preventDefault();
+  function attachDragHandlers(el, onDragMoveCb){ el.addEventListener('pointerdown', onDown, {passive:false});
+    function onDown(e){
+      if(state.turn!=='player'||state.resolving) return;
+      const src = e.currentTarget; src.setPointerCapture(e.pointerId); e.preventDefault();
 
-    ghost = document.createElement('div');
-    ghost.className = 'ghost';
-    ghost.innerHTML = `${artHTML(src.dataset.art)}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="name-top">${src.dataset.name||''}</div><div class="desc">${src.dataset.text||''}</div>`;
-    document.body.appendChild(ghost);
-    moveGhost(e.clientX, e.clientY);
+      ghost = document.createElement('div');
+      ghost.className = 'ghost';
+      ghost.innerHTML = `${artHTML(src.dataset.art, src.dataset.name||'')}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="name-top">${src.dataset.name||''}</div><div class="desc">${src.dataset.text||''}</div>`;
+      document.body.appendChild(ghost);
+      moveGhost(e.clientX, e.clientY);
 
-    const move = ev => { ev.preventDefault(); moveGhost(ev.clientX, ev.clientY); };
-    const finish = ev => {
-      try { src.releasePointerCapture(e.pointerId); } catch(_) {}
-      window.removeEventListener('pointermove', move, {passive:false});
-      window.removeEventListener('pointerup', finish, true);
-      window.removeEventListener('pointercancel', finish, true);
+      const move = ev => { ev.preventDefault(); moveGhost(ev.clientX, ev.clientY); onDragMoveCb && onDragMoveCb(); };
+      const finish = ev => {
+        try { src.releasePointerCapture(e.pointerId); } catch(_) {}
+        window.removeEventListener('pointermove', move, {passive:false});
+        window.removeEventListener('pointerup', finish, true);
+        window.removeEventListener('pointercancel', finish, true);
 
-      const lane = laneUnder(ev.clientX, ev.clientY);
-      if(lane !== -1) tryPlayFromHandToSlot(+src.dataset.index, lane);
+        const lane = laneUnder(ev.clientX, ev.clientY);
+        if(lane !== -1) tryPlayFromHandToSlot(+src.dataset.index, lane);
 
-      if (ghost) { ghost.remove(); ghost = null; }
-      layoutHandSafe();
-    };
+        if (ghost) { ghost.remove(); ghost = null; }
+        layoutHandSafe();
+      };
 
-    window.addEventListener('pointermove', move, {passive:false});
-    window.addEventListener('pointerup', finish, {passive:false, capture:true});
-    window.addEventListener('pointercancel', finish, {passive:false, capture:true});
+      window.addEventListener('pointermove', move, {passive:false});
+      window.addEventListener('pointerup', finish, {passive:false, capture:true});
+      window.addEventListener('pointercancel', finish, {passive:false, capture:true});
+    }
   }
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
   function laneUnder(x,y){
@@ -321,41 +346,100 @@
     return -1;
   }
 
+  // ---------- Toast ----------
+  let toastTimer=null;
+  function showTurnToast(text, ms=1200, variant='normal'){
+    if(!turnToast) return;
+    turnToast.textContent = text;
+    turnToast.classList.toggle('warn', variant==='warn');
+    turnToast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> turnToast.classList.remove('show'), ms);
+  }
+
   // ---------- Reglas ----------
   const canAfford = c => state.pCoins>=c.cost;
+
+  function insufficientFeedback(handIndex){
+    const el = handEl.children[handIndex];
+    if(el){
+      el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+    }
+    showTurnToast('Monedas insuficientes', 900, 'warn');
+  }
+
   function tryPlayFromHandToSlot(handIndex, slotIndex){
     if(handIndex<0||handIndex>=state.pHand.length) return;
     const card=state.pHand[handIndex];
-    if(!canAfford(card)) return;
+
+    // no pisar carta ya colocada
+    if (state.center[slotIndex].p) return;
+
+    if(!canAfford(card)) { insufficientFeedback(handIndex); return; }
+
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
     state.pHand.splice(handIndex,1);
     renderHand(); renderBoard(); updateHUD();
+    bump(pCoinsEl);
 
-    // Roba 1 animada si hay cartas en mazo
+    // robar si hay mazo
     if(state.pDeck.length){
       drawOneAnimated(()=>{ renderHand(); updateHUD(); });
     }
   }
 
-  // ---------- IA rival ----------
+  // ---------- IA rival (contrarresta tu línea más fuerte si puede) ----------
   function enemyTurn(){
-    state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
+    state.resolving=true; state.enemyPassed=false;
+    updateHUD();
     showTurnToast('TURNO RIVAL');
+
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins);
-    const tryPlayOnce=()=>{
-      if(!canPlay()) return false;
+
+    // elige carta por mejor ratio pts*2 - cost (como antes)
+    function pickBestCardIndex(){
       let best=-1,score=-1;
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
-      const card=state.eHand[best];
-      let target=-1;
-      for(let i=0;i<3;i++){ if(!state.center[i].e){ target=i; break; } }
+      return best;
+    }
+
+    // elige línea: primero donde tú tengas más puntos y el rival esté libre; si no, primer hueco libre
+    function pickBestLane(){
+      let bestLane = -1, bestPts = -1;
+      for(let i=0;i<SLOTS;i++){
+        const lane = state.center[i];
+        if(!lane.e && lane.p){
+          if(lane.p.pts > bestPts){ bestPts = lane.p.pts; bestLane = i; }
+        }
+      }
+      if(bestLane !== -1) return bestLane;
+      for(let i=0;i<SLOTS;i++){ if(!state.center[i].e) return i; }
+      return -1;
+    }
+
+    const tryPlayOnce=()=>{
+      if(!canPlay()) return false;
+
+      const bestIdx = pickBestCardIndex();
+      if(bestIdx === -1) return false;
+
+      const target = pickBestLane();
       if(target===-1) return false;
-      state.eCoins-=card.cost; state.center[target].e={...card};
-      state.eHand.splice(best,1); if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
-      renderBoard(); updateHUD(); return true;
+
+      const card = state.eHand[bestIdx];
+      state.eCoins -= card.cost;
+      state.center[target].e = {...card};
+      state.eHand.splice(bestIdx,1);
+
+      // robar instant si hay
+      if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
+
+      renderBoard(); updateHUD(); bump(eCoinsEl);
+      return true;
     };
-    const loop=()=>{ if(!tryPlayOnce()){ state.enemyPassed=true; setTimeout(()=>{state.resolving=false; checkBothPassedThenScore();},500); return; } setTimeout(loop,200); };
+
+    const loop=()=>{ if(!tryPlayOnce()){ state.enemyPassed=true; setTimeout(()=>{state.resolving=false; checkBothPassedThenScore();},500); return; } setTimeout(loop,220); };
     loop();
   }
 
@@ -370,12 +454,25 @@
     endOverlay.classList.add('visible');
   }
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
+
   function scoreTurn(){
+    // sumar puntos del tablero actual
     let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
     state.pScore+=p; state.eScore+=e; updateHUD();
-    if(state.round === 8){ setTimeout(endGame, 300); return; }
+    bump(pScoreEl); bump(eScoreEl);
 
-    state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
+    // limpiar tablero para la siguiente ronda
+    state.center = Array.from({length:3},()=>({p:null,e:null}));
+    renderBoard();
+
+    if(state.round === MAX_ROUNDS){ setTimeout(endGame, 300); return; }
+
+    // avanzar ronda
+    state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player';
+
+    // +1 monedas para ambos al inicio de ronda
+    state.pCoins+=1; state.eCoins+=1; updateHUD();
+    bump(pCoinsEl); bump(eCoinsEl);
 
     // Relleno manos: enemigo instantáneo, jugador animado
     topUpEnemyInstant();
@@ -404,17 +501,6 @@
       renderHand(); layoutHandSafe(); updateHUD();
       showTurnToast('TU TURNO');
     });
-  }
-
-  // ---------- Toast de turno ----------
-  let toastTimer=null;
-  function showTurnToast(text, ms=1200){
-    const el = document.getElementById('turnToast');
-    if(!el) return;
-    el.textContent = text;
-    el.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=> el.classList.remove('show'), ms);
   }
 
   // ---------- Eventos ----------
