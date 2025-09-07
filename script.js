@@ -100,7 +100,7 @@ function layoutHand(){
   let step = n > 1 ? (railW - cardW) / (n - 1) : 0;
 
   // Paso mínimo permitido (controla solape). 0.4*cardW ≈ 60% solape máx.
-  const MIN_STEP = Math.max(4, cardW * 0.40);
+  const MIN_STEP = Math.max(4, cardW * 0.20);
   if (step < MIN_STEP){
     step = MIN_STEP;
     // Recalcula el inicio para recentrar dentro del rail sin salirse
