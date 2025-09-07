@@ -222,3 +222,21 @@ html,body{
   border: 2px solid rgba(255,255,255,.4);
   box-shadow:0 6px 20px rgba(0,0,0,.55);
 }
+/* ===== Robo de carta: overlay que muestra la carta en grande ===== */
+.draw-overlay{
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+  z-index: 1100;              /* por encima del HUD y del overlay normal */
+}
+.draw-overlay.visible{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* El contenido ya usa .zoom-card, así que hereda tamaño y estilo del zoom */
