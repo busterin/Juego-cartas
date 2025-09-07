@@ -125,12 +125,15 @@ body{
   position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
 }
 
-/* ===== Mano (siempre abajo) ===== */
+/* ===== Mano (siempre abajo, visible y sin recortes) ===== */
 .hand-zone{
-  height: calc(var(--card-h) + 12px);
-  min-height:0; position:relative; z-index:2;
+  height: calc(var(--card-h) + 18px); /* +alto para el giro */
+  min-height:0;
+  position:relative;
+  z-index:5;            /* por encima del tablero */
+  overflow:visible;     /* no recortar cartas rotadas */
 }
-.hand{ position:relative; width:100%; height:100%; }
+.hand{ position:relative; width:100%; height:100%; overflow:visible; }
 .hand .card{
   position:absolute; bottom:0; left:50%;
   width:var(--card-w); height:var(--card-h);
@@ -164,8 +167,7 @@ body{
 .t-cost{ left:6px; background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .t-pts { right:6px; background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 
-/* ===== Nombre y descripción ===== */
-
+/* ===== Nombre/Descripción ===== */
 /* Ocultar texto y nombre en MINIATURAS (mano y tablero) */
 .card .name-top, .card .desc,
 .placed .name-top, .placed .desc { display:none !important; }
@@ -175,7 +177,6 @@ body{
   position:absolute; top:12px; left:58px; right:58px;
   text-align:center; font-size:1rem; font-weight:900; color:#0e1420;
   padding:8px 12px; border-radius:10px; z-index:3;
-  /* metal base */
   background:
     linear-gradient(135deg, #f4f7fb 0%, #cfd6e6 20%, #8a93a6 48%, #dfe5ef 60%, #7b8497 78%, #c7cfdd 100%);
   border: 1px solid rgba(255,255,255,.65);
@@ -186,12 +187,10 @@ body{
   text-shadow: 0 1px 0 rgba(255,255,255,.55), 0 2px 6px rgba(0,0,0,.35);
 }
 .zoom-card .name-top::after{
-  /* brillo diagonal */
   content:""; position:absolute; inset:0;
   background: linear-gradient(30deg, transparent 0 40%, rgba(255,255,255,.35) 45%, transparent 55% 100%);
   border-radius:inherit; pointer-events:none;
 }
-
 /* Descripción SOLO en ZOOM */
 .zoom-card .desc{
   position:absolute; bottom:12px; left:12px; right:12px;
