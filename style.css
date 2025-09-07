@@ -13,11 +13,10 @@
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
 
-  /* Tablero centrado */
-  --board-h: clamp(220px, 36vh, 320px);
-  --lanes-gap: 8px;
-  --slot-ratio: 2/3;
-  --slot-inset: 5px;
+  /* Tablero centrado (más alto para que “llene pantalla”) */
+  --board-h: clamp(320px, 48vh, 560px);
+  --lanes-gap: 10px;
+  --slot-inset: 6px;
   --slot-br: 12px;
 
   --bottom-pad: 10px;
@@ -39,7 +38,11 @@ body{
   max-width: var(--game-max);
   margin-inline:auto;
   display: grid;
-  grid-template-rows: auto auto 1fr auto auto;
+  grid-template-rows: auto /* HUD */
+                      auto /* (banner oculto) */
+                      1fr  /* tablero */
+                      auto /* mano */
+                      auto;/* footer */
   gap: var(--gap);
   padding: 6px 8px calc(var(--bottom-pad) + env(safe-area-inset-bottom));
   overflow:hidden;
@@ -52,13 +55,7 @@ body{
 }
 .portrait{ display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; min-width:0; }
 .portrait.enemy{ justify-self:end; }
-
-/* Emojis sin marco */
-.frame.hex{
-  width:var(--hex); height:var(--hex);
-  display:grid; place-items:center; font-size:calc(var(--hex)*.7);
-  background:transparent; border:none;
-}
+.frame.hex{ width:var(--hex); height:var(--hex); display:grid; place-items:center; font-size:calc(var(--hex)*.7); background:transparent; border:none; }
 .frame.hex img{ display:none; }
 
 .info{ display:flex; flex-direction:column; gap:3px; min-width:0; }
@@ -82,31 +79,31 @@ body{
 .meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .meter.pts { background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 
-/* ===== Banner ===== */
-.banner{
-  text-align:center; font-weight:800; color:#d7e6ff;
-  border:1px solid var(--panel-br); background:var(--panel);
-  padding:4px 8px; border-radius:10px; box-shadow:var(--glow);
-  font-size:.86rem;
-}
+/* ===== Banner (oculto) ===== */
+.banner{ display:none; }
 
 /* ===== Tablero ===== */
-.board{ display:grid; place-items:center; min-height:0; }
-.center-hint{
-  text-align:center; color:#aecdff; font-weight:700; font-size:.86rem;
+.board{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:stretch;
+  min-height:0;
+}
+.row{
+  width:100%;
+  max-width: var(--game-max);
+  margin-inline:auto;
 }
 .lanes-6x2{
+  height: calc(var(--board-h) / 2);     /* cada fila ocupa mitad del tablero */
   display:grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, 1fr);/* 3 huecos por lado */
   gap: var(--lanes-gap);
 }
-.row-enemy .lanes-6x2,
-.row-player .lanes-6x2{
-  height: calc((var(--board-h) - 20px - 1.2em) / 2);
-  min-height: 0;
-}
 .slot{
-  aspect-ratio: var(--slot-ratio);
+  /* cada slot ocupa TODO el alto de su fila, así “llenan” bien */
+  height: 100%;
   border:2px dashed rgba(105,240,255,.35);
   border-radius:var(--slot-br);
   display:grid; place-items:center; position:relative;
@@ -114,6 +111,7 @@ body{
 }
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
 
+/* Carta colocada dentro de un slot */
 .placed{
   position:absolute; inset:var(--slot-inset);
   border-radius:calc(var(--slot-br) - 2px);
@@ -128,7 +126,7 @@ body{
   border-radius:inherit; overflow:hidden;
 }
 
-/* ===== Mano ===== */
+/* ===== Mano (siempre visible) ===== */
 .hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; position:relative; z-index:5; overflow:visible; }
 .hand{ position:relative; width:100%; height:100%; overflow:visible; }
 .hand .card{
@@ -192,8 +190,7 @@ body{
 /* Tokens en miniaturas fuera de la carta y en extremos */
 .hand .card, .placed{ overflow: visible; }
 .hand .card .token, .placed .token{
-  top:-14px;
-  z-index:4;
+  top:-14px; z-index:4;
   filter: drop-shadow(0 3px 8px rgba(0,0,0,.55));
 }
 .hand .card .t-cost, .placed .t-cost{ left:-6px; }
@@ -216,30 +213,26 @@ body{
   transition: opacity .18s ease, transform .18s ease;
   z-index: 120;
 }
-.turn-toast.show{
-  opacity: 1; transform: translate(-50%, -50%) scale(1);
-}
+.turn-toast.show{ opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
-/* Compactos */
+/* Compactos por altura */
 @media (max-height: 720px){
   :root{
     --hex: 52px; --round-sz: 44px; --meter-sz: 24px;
-    --board-h: clamp(200px, 34vh, 300px);
+    --board-h: clamp(300px, 44vh, 520px);
     --card-w: clamp(68px, 15vw, 102px);
   }
 }
 @media (max-height: 640px){
   :root{
     --hex: 48px; --round-sz: 40px; --meter-sz: 22px;
-    --board-h: clamp(180px, 30vh, 260px);
+    --board-h: clamp(260px, 40vh, 480px);
     --card-w: clamp(62px, 14vw, 96px);
-    --lanes-gap: 7px; --slot-inset: 4px; --slot-ratio: 2/3;
+    --lanes-gap: 8px; --slot-inset: 5px;
   }
-  .center-hint{ display:none }
-  .hand-zone{ height: calc(var(--card-h) + 8px) }
   .btn{ padding:8px 12px }
 }
 @media (max-height: 560px){
-  :root{ --board-h: clamp(160px, 28vh, 220px); }
+  :root{ --board-h: clamp(240px, 36vh, 420px); }
   .btn{ padding:7px 10px; border-radius:10px; }
 }
