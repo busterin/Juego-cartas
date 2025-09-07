@@ -79,19 +79,21 @@
       <div class="desc">${card.text||''}</div>
     `;
 
-    // Ocupa todo el ancho con margen de seguridad en los bordes
-    const EDGE = 10; // %
-    const leftPct = (n===1) ? 50 : EDGE + i * ((100 - EDGE*2) / (n - 1));
+    // — Distribución a todo el ancho sin solapes —
+const EDGE = 6; // % de margen a cada lado (ajústalo si quieres más/menos aire)
+const leftPct = (n === 1)
+  ? 50
+  : EDGE + i * ((100 - EDGE * 2) / (n - 1));
 
-    // Abanico más suave (menos giro y menos desplazamiento)
-    const mid = (n-1)/2;
-    const angle = (i - mid) * 6;
-    const extra = (i - mid) * 12;
+// — Abanico muy suave (opcional) —
+const mid   = (n - 1) / 2;
+const angle = (i - mid) * 4;   // menos giro para que “ocupen” mejor el ancho
+const extra = 0;               // ← nada de desplazamiento lateral adicional
 
-    el.style.setProperty('--x', `calc(${leftPct}% - 50%)`);
-    el.style.setProperty('--rot', `${angle}deg`);
-    el.style.setProperty('--off', `${extra}px`);
-    el.style.zIndex = 10 + i;
+el.style.setProperty('--x', `calc(${leftPct}% - 50%)`);
+el.style.setProperty('--rot', `${angle}deg`);
+el.style.setProperty('--off', `${extra}px`);
+el.style.zIndex = 10 + i;
 
     el.addEventListener('click', ()=> openZoom(card));
     attachDragHandlers(el);
