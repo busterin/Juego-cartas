@@ -75,7 +75,7 @@
     return el;
   }
 
-  // Mano: centrada al tablero con sesgo a la izquierda y sin salirse de pantalla
+  // Mano anclada a la fila del jugador (rail) y repartida uniformemente
 function layoutHand(){
   const n = handEl.children.length;
   if (!n) return;
@@ -86,51 +86,46 @@ function layoutHand(){
   const cardW = first ? first.getBoundingClientRect().width : 0;
   if (!contW || !cardW){ requestAnimationFrame(layoutHand); return; }
 
-  // Centro del tablero (zona de juego)
-  const boardEl = document.querySelector('.board');
-  const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
-  let targetCenter = (boardRect.left - contRect.left) + boardRect.width / 2;
+  // Rail = el ancho real de la fila del jugador
+  const lanesEl = document.querySelector('.row-player .lanes') || document.querySelector('.board');
+  const railRect = lanesEl.getBoundingClientRect();
 
-  // Sesgo hacia la derecha
-const RIGHT_BIAS = Math.min(28, contW * 0.06);
-targetCenter += RIGHT_BIAS;
+  const EDGE = 6; // margen duro dentro de la mano
+  // Coordenadas del rail dentro del contenedor de la mano
+  let railL = Math.max(EDGE, railRect.left - contRect.left);
+  let railR = Math.min(contW - EDGE, railRect.right - contRect.left);
+  let railW = Math.max(0, railR - railL);
 
-  // Parámetros de separación/solape
-  const EDGE = 6;                      // margen duro en los extremos
-  const BASE_GAP = 22;                 // separación deseada
-  const MIN_GAP  = -Math.round(cardW * 0.50); // solape máximo permitido
+  // Paso ideal si no hubiese solape: distribuye de extremo a extremo
+  let step = n > 1 ? (railW - cardW) / (n - 1) : 0;
 
-  // Calcula separación real para que quepan
-  const maxTotal = contW - EDGE * 2;   // ancho útil dentro del contenedor
-  let gap = BASE_GAP;
-  let totalW = n * cardW + (n - 1) * gap;
-  if (totalW > maxTotal){
-    gap = (maxTotal - n * cardW) / (n - 1);
-    if (gap < MIN_GAP) gap = MIN_GAP;
-    totalW = n * cardW + (n - 1) * gap;
+  // Paso mínimo permitido (controla solape). 0.4*cardW ≈ 60% solape máx.
+  const MIN_STEP = Math.max(4, cardW * 0.40);
+  if (step < MIN_STEP){
+    step = MIN_STEP;
+    // Recalcula el inicio para recentrar dentro del rail sin salirse
+    const totalW = cardW + step * (n - 1);
+    const railCenter = railL + railW / 2;
+    railL = Math.round(railCenter - totalW / 2);
+
+    // Clamp final a bordes de la mano
+    if (railL < EDGE) railL = EDGE;
+    if (railL + totalW > contW - EDGE) railL = Math.max(EDGE, contW - EDGE - totalW);
   }
 
-  // Punto de inicio, con clamp a bordes
-  let startX = targetCenter - totalW / 2;
-  if (startX < EDGE) startX = EDGE;
-  if (startX + totalW > contW - EDGE) startX = contW - EDGE - totalW;
-
-  // Ajuste final: si aún hubiera overflow a la derecha, corrige hacia la izquierda
-  const overflowRight = (startX + totalW) - (contW - EDGE);
-  if (overflowRight > 0){
-    startX = Math.max(EDGE, startX - overflowRight);
-  }
-
-  // Posiciona las cartas (abanico suave)
+  // Posiciona en abanico suave
   const mid = (n - 1) / 2;
-  [...handEl.children].forEach((el, i) => {
-    const centerX = startX + i * (cardW + gap) + cardW / 2;
-    const tx = Math.round(centerX - contW / 2);
+  for (let i = 0; i < n; i++){
+    const el = handEl.children[i];
+    const left = railL + i * step;      // borde izquierdo de la carta i
+    const cx   = left + cardW / 2;      // centro de la carta i
+    const tx   = Math.round(cx - contW / 2);
+
     el.style.setProperty('--x', `${tx}px`);
     el.style.setProperty('--off', `0px`);
     el.style.setProperty('--rot', `${(i - mid) * 1.4}deg`);
     el.style.zIndex = 10 + i;
-  });
+  }
 }
 
   function renderHand(){
