@@ -7,14 +7,13 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Portada -->
-  <div id="startOverlay" class="overlay visible">
-    <div class="cover">
+  <!-- Portada a pantalla completa -->
+  <div id="startOverlay" class="splash visible" aria-hidden="false">
+    <div class="splash-cover">
       <button id="startBtn" class="btn start">JUGAR ▶</button>
     </div>
   </div>
 
-  <!-- Juego -->
   <main id="game" aria-label="Cartas de coste y puntos">
     <!-- HUD superior -->
     <header class="top-hud">
@@ -45,7 +44,7 @@
       </div>
     </header>
 
-    <!-- Tablero -->
+    <!-- Tablero (2 filas de 3) -->
     <section class="board" aria-label="Tablero central">
       <div class="row row-enemy">
         <div class="lanes lanes-3 enemy">
@@ -93,7 +92,7 @@
     </div>
   </div>
 
-  <!-- Toast turno -->
+  <!-- Toast de turno -->
   <div id="turnToast" class="turn-toast" aria-live="polite"></div>
 
   <script src="script.js"></script>
