@@ -1,19 +1,15 @@
 :root{
-  /* Tema */
   --bg1:#0b0f1e; --bg2:#151b36; --ink:#eaf2ff; --muted:#a5b3cc;
   --panel:rgba(255,255,255,.06); --panel-br:rgba(255,255,255,.14);
   --glow:0 10px 30px rgba(0,0,0,.45), inset 0 0 40px rgba(255,255,255,.035);
 
-  /* Layout */
   --game-max:760px;
   --gap:10px;
 
-  /* HUD y mano */
   --hex: 56px; --round-sz: 48px; --meter-sz: 26px;
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
 
-  /* Tablero */
   --board-h: clamp(300px, 44vh, 520px);
   --lanes-gap: 10px;
   --slot-inset: 6px;
@@ -73,15 +69,9 @@ body{
 .meter.pts { background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 
 /* ===== Tablero ===== */
-.board{
-  display:flex; flex-direction:column; justify-content:center; align-items:stretch; min-height:0;
-}
+.board{ display:flex; flex-direction:column; justify-content:center; align-items:stretch; min-height:0; }
 .row{ width:100%; max-width:var(--game-max); margin-inline:auto; }
-.lanes-3{
-  height: calc(var(--board-h) / 2);
-  display:grid; grid-template-columns: repeat(3, 1fr);
-  gap: var(--lanes-gap);
-}
+.lanes-3{ height: calc(var(--board-h) / 2); display:grid; grid-template-columns: repeat(3, 1fr); gap: var(--lanes-gap); }
 .slot{
   height: 100%;
   border:2px dashed rgba(105,240,255,.35);
@@ -102,7 +92,7 @@ body{
 }
 .placed .art, .placed .art img{
   position:absolute; inset:0; width:100%; height:100%;
-  object-fit:cover; /* LLENAR, sin bandas */
+  object-fit:cover; /* llenar sin bordes */
   border-radius:inherit; overflow:hidden;
 }
 
@@ -119,15 +109,9 @@ body{
   overflow: visible;
   touch-action: none;
 }
-.hand .card:hover{
-  transform: translateX(calc(var(--x) + var(--off, 0px))) translateY(-6px) rotate(0deg) scale(1.06);
-  z-index:40;
-}
+.hand .card:hover{ transform: translateX(calc(var(--x) + var(--off, 0px))) translateY(-6px) rotate(0deg) scale(1.06); z-index:40; }
 .card .art, .ghost .art{ position:absolute; inset:0; }
-.card .art img, .ghost .art img{
-  width:100%; height:100%; object-fit:cover; /* LLENAR miniaturas y ghost */
-  border-radius:inherit; overflow:hidden;
-}
+.card .art img, .ghost .art img{ width:100%; height:100%; object-fit:cover; border-radius:inherit; overflow:hidden; }
 
 /* ===== Tokens ===== */
 .token{ position:absolute; top:5px; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:.9rem; font-weight:900; z-index:2; color:#101010; box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.4); }
@@ -154,12 +138,12 @@ body{
 .btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
 .btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
 
-/* Overlays base */
+/* Overlays */
 .overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:100; }
 .overlay.visible{ opacity:1; pointer-events:auto; }
 .panel{ width:min(92%, 460px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); padding:16px; border-radius:16px; box-shadow:var(--glow); text-align:center; }
 
-/* Zoom — más grande y LLENO (sin bordes) */
+/* Zoom más grande y lleno */
 .zoom-panel{ width:min(92%, 560px); background: rgba(255,255,255,.06); border:1px solid var(--panel-br); border-radius:16px; box-shadow:var(--glow); padding:16px; text-align:center; }
 .zoom-card{ margin:10px auto 12px auto; width: clamp(220px, 64vw, 440px); aspect-ratio: 5/7; border-radius:14px; overflow:hidden; position:relative; border:1px solid rgba(255,255,255,.22); background:#0b0f1e; }
 .zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
@@ -172,9 +156,7 @@ body{
 
 /* Tokens en miniatura fuera y en extremos */
 .hand .card, .placed{ overflow: visible; }
-.hand .card .token, .placed .token{
-  top:-14px; z-index:4; filter: drop-shadow(0 3px 8px rgba(0,0,0,.55));
-}
+.hand .card .token, .placed .token{ top:-14px; z-index:4; filter: drop-shadow(0 3px 8px rgba(0,0,0,.55)); }
 .hand .card .t-cost, .placed .t-cost{ left:-6px; }
 .hand .card .t-pts, .placed .t-pts{ right:-6px; }
 
@@ -191,18 +173,21 @@ body{
 }
 .turn-toast.show{ opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
-/* Compactos */
-@media (max-height: 720px){
-  :root{ --hex: 52px; --round-sz: 44px; --meter-sz: 24px; --card-w: clamp(68px, 15vw, 102px); }
+/* ======= SPLASH (Portada) ======= */
+.splash{
+  position: fixed; inset: 0; z-index: 9999;
+  opacity: 0; pointer-events: none; transition: opacity .25s ease;
 }
-@media (max-height: 640px){
-  :root{
-    --hex: 48px; --round-sz: 40px; --meter-sz: 22px;
-    --board-h: clamp(260px, 40vh, 480px);
-    --card-w: clamp(62px, 14vw, 96px);
-    --lanes-gap: 8px; --slot-inset: 5px;
-  }
+.splash.visible{ opacity: 1; pointer-events: auto; }
+.splash-cover{
+  position:absolute; inset:0;
+  background: url("assets/Portadacartas.PNG") center center / cover no-repeat;
+  display:flex; align-items:flex-end; justify-content:center;
+  padding-bottom: 12%;
 }
-@media (max-height: 560px){
-  :root{ --board-h: clamp(240px, 36vh, 420px); }
+.btn.start{
+  font-size:1.2rem; padding:14px 22px; border-radius:14px; font-weight:900;
+  background: linear-gradient(180deg, rgba(108,80,255,.55), rgba(108,80,255,.25));
+  border: 2px solid rgba(255,255,255,.4);
+  box-shadow:0 6px 20px rgba(0,0,0,.55);
 }
