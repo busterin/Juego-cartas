@@ -29,7 +29,7 @@
     turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
   };
 
-  // ---------- Cartas fijas (stats aleatorios solo al cargar) ----------
+  // ---------- Cartas fijas (stats aleatorios al cargar, luego se mantienen) ----------
   const CARDS = [
     { name:'Spiderman', art:'assets/Spiderman.png',  cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
     { name:'Leonardo',  art:'assets/Leonardo.PNG',   cost: rand(1,4), pts: rand(2,6), text:"Lorem ipsum dolor sit amet." },
@@ -79,7 +79,7 @@
     return el;
   }
 
-  // ===== Distribución: centrada al tablero, con solape "blindado" =====
+  // ===== Distribución de la mano: centrada y blindada =====
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
@@ -88,47 +88,38 @@
     const contW = contRect.width;
     const first = handEl.children[0];
     const cardW = first ? first.getBoundingClientRect().width : 0;
-
-    if (!contW || !cardW){
-      requestAnimationFrame(layoutHand);
-      return;
-    }
+    if (!contW || !cardW){ requestAnimationFrame(layoutHand); return; }
 
     // Centro del tablero relativo a la mano
     const boardEl = document.querySelector('.board');
     const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
     const targetCenter = (boardRect.left - contRect.left) + boardRect.width/2;
 
-    const EDGE = 6;                        // margen lateral asegurado
-    const BASE_GAP = 14;                   // separación deseada
-    const MIN_GAP  = -Math.round(cardW * 0.65); // solape máx. 65%
+    const EDGE = 6;
+    const BASE_GAP = 14;
+    const MIN_GAP  = -Math.round(cardW * 0.65);
 
-    const maxTotal = contW - EDGE*2;       // ancho útil
+    const maxTotal = contW - EDGE*2;
 
-    // Gap inicial y reducción si no cabe (permitiendo solape hasta MIN_GAP)
     let gap = BASE_GAP;
     let totalW = n*cardW + (n-1)*gap;
     if (totalW > maxTotal){
-      gap = (maxTotal - n*cardW) / (n-1);   // puede ser negativo (solape)
+      gap = (maxTotal - n*cardW) / (n-1);
       if (gap < MIN_GAP) gap = MIN_GAP;
       totalW = n*cardW + (n-1)*gap;
     }
 
-    // Colocar bloque centrado EXACTO al tablero
     let startX = targetCenter - totalW/2;
-
-    // Clamp final para que nunca sobresalga del contenedor de mano
     if (startX < EDGE) startX = EDGE;
     if (startX + totalW > contW - EDGE) startX = contW - EDGE - totalW;
 
-    // Posicionar cada carta
     const mid = (n - 1) / 2;
     [...handEl.children].forEach((el, i) => {
       const centerX = startX + i*(cardW + gap) + cardW/2;
       const tx = Math.round(centerX - contW/2);
       el.style.setProperty('--x', `${tx}px`);
       el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 1.8}deg`); // abanico plano
+      el.style.setProperty('--rot', `${(i - mid) * 1.8}deg`);
       el.style.zIndex = 10 + i;
     });
   }
@@ -142,8 +133,11 @@
 
   // ---------- Tablero ----------
   function renderBoard(){
-    for(let i=0;i<SLOTS;i++){
-      const ps=slotsPlayer[i], es=slotsEnemy[i]; ps.innerHTML=''; es.innerHTML='';
+    // Ajustado a 3 huecos por lado (0..2)
+    for(let i=0;i<3;i++){
+      const ps=slotsPlayer[i], es=slotsEnemy[i];
+      if (!ps || !es) continue;
+      ps.innerHTML=''; es.innerHTML='';
       const p=state.center[i].p, e=state.center[i].e;
       if(p){
         const d=document.createElement('div');
@@ -191,7 +185,14 @@
     e.preventDefault();
   }
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
-  function laneUnder(x,y){ for(let i=0;i<SLOTS;i++){ const r=slotsPlayer[i].getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return i; } return -1; }
+  function laneUnder(x,y){
+    // Solo 3 slots del lado del jugador
+    for(let i=0;i<3;i++){
+      const r=document.querySelector(`.slot[data-side="player"][data-lane="${i}"]`).getBoundingClientRect();
+      if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return i;
+    }
+    return -1;
+  }
 
   // ---------- Reglas ----------
   const canAfford = c => state.pCoins>=c.cost;
@@ -217,7 +218,7 @@
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
       const card=state.eHand[best];
       let target=-1;
-      for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
+      for(let i=0;i<3;i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1) return false;
       state.eCoins-=card.cost; state.center[target].e={...card};
       state.eHand.splice(best,1); if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
@@ -253,7 +254,7 @@
   function newGame(){
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
-    state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
+    state.center=Array.from({length:3},()=>({p:null,e:null}));
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.eDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.pHand=[]; state.eHand=[];
@@ -285,6 +286,6 @@
   window.addEventListener('resize', layoutHand);
   window.addEventListener('orientationchange', layoutHand);
 
-  // Arrancar juego al cargar (sin portada)
+  // Arrancar juego
   window.addEventListener('DOMContentLoaded', newGame);
 })();
