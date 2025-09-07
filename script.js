@@ -83,34 +83,30 @@
     return el;
   }
 
-  // ===== Distribución de mano SIN solapes (ocupa todo el ancho) =====
+  // ===== Distribución centrada =====
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
 
-    // Medidas reales del contenedor y la carta
     const contW = handEl.getBoundingClientRect().width;
     const first = handEl.children[0];
     const cardW = first ? first.getBoundingClientRect().width : 0;
 
-    // Si aún no hay medidas (render no listo), reintenta en el próximo frame
     if (!contW || !cardW){
       requestAnimationFrame(layoutHand);
       return;
     }
 
-    const EDGE = 10; // px de margen a cada lado
-    const free = Math.max(0, contW - 2*EDGE - n*cardW);
-    const gap  = free / (n + 1); // hueco constante
+    const GAP = 14; // separación entre cartas en px
+    const totalW = n*cardW + (n-1)*GAP;
+    const startX = (contW - totalW) / 2;
 
     const mid = (n - 1) / 2;
     [...handEl.children].forEach((el, i) => {
-      const centerX = EDGE + gap*(i+1) + cardW*(i + 0.5);
-      const tx = Math.round(centerX - contW/2);
-
-      el.style.setProperty('--x', `${tx}px`);   // despl. horizontal exacto
-      el.style.setProperty('--off', `0px`);     // sin offset extra
-      el.style.setProperty('--rot', `${(i - mid) * 4}deg`); // abanico suave
+      const tx = Math.round(startX + i*(cardW + GAP) + cardW/2 - contW/2);
+      el.style.setProperty('--x', `${tx}px`);
+      el.style.setProperty('--off', `0px`);
+      el.style.setProperty('--rot', `${(i - mid) * 4}deg`);
       el.style.zIndex = 10 + i;
     });
   }
@@ -119,7 +115,6 @@
     handEl.innerHTML='';
     const n = state.pHand.length;
     state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n)));
-    // distribuir tras pintar
     layoutHand();
   }
 
