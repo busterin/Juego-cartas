@@ -81,36 +81,50 @@
 
   const contRect = handEl.getBoundingClientRect();
   const contW = handEl.clientWidth || contRect.width || window.innerWidth;
-  const first = handEl.children[0];
-  const cardW = first ? first.getBoundingClientRect().width : 0;
+  const firstEl = handEl.children[0];
+  const cardW = firstEl ? firstEl.getBoundingClientRect().width : 0;
   if (!contW || !cardW) return;
 
   const EDGE = 8;
 
-  // === NUEVO: alinear 1ª carta con el oso ===
-  const bearEl = document.querySelector('.portrait.player .frame.hex');
+  // Anclas visuales: oso (izquierda) y demonio (derecha)
+  const bearEl  = document.querySelector('.portrait.player .frame.hex');
+  const demonEl = document.querySelector('.portrait.enemy  .frame.hex');
+
+  // Centro para la 1ª carta (alineada al oso)
   let startCenter;
   if (bearEl){
     const bearLeftInHand = bearEl.getBoundingClientRect().left - contRect.left;
-    // Queremos que el borde IZQUIERDO de la 1ª carta coincida con el emoji del oso:
-    // centro = (borde_izq) + (ancho_carta/2)
-    startCenter = bearLeftInHand + cardW / 2;
+    // 1ª carta: alinear su BORDE IZQUIERDO con el icono del oso
+    startCenter = bearLeftInHand + cardW/2; // + offset si quieres: + 4
   } else {
-    // Fallback por si no existe el ancla (raro)
-    startCenter = EDGE + cardW / 2;
+    startCenter = EDGE + cardW/2;
   }
-  // Clamp para que no se salga a la izquierda
+  // Clamp izquierdo
   startCenter = Math.max(EDGE + cardW/2, startCenter);
 
-  // El resto NO cambia: calculamos el centro máximo permitido y distribuimos
-  const endCenter = Math.max(startCenter, contW - EDGE - cardW/2);
+  // Centro para la última carta (alineada al demonio)
+  let endCenter;
+  if (demonEl){
+    const demonRightInHand = demonEl.getBoundingClientRect().right - contRect.left;
+    // Última carta: alinear su BORDE DERECHO con el icono del demonio
+    endCenter = demonRightInHand - cardW/2; // - offset si quieres: - 4
+  } else {
+    endCenter = contW - EDGE - cardW/2;
+  }
+  // Clamp derecho
+  endCenter = Math.min(contW - EDGE - cardW/2, endCenter);
 
+  // Si por tamaños extremos se cruzan, fuerza un mínimo
+  if (endCenter < startCenter) endCenter = startCenter;
+
+  // Distribuye equiespaciado entre ambos anclajes
   let centers = [];
   if (n === 1){
     centers = [ (startCenter + endCenter) / 2 ];
   } else {
     const step = (endCenter - startCenter) / (n - 1);
-    for (let i = 0; i < n; i++) centers.push(startCenter + i*step);
+    for (let i = 0; i < n; i++) centers.push(startCenter + i * step);
   }
 
   const mid = (n - 1) / 2;
