@@ -83,12 +83,13 @@
     return el;
   }
 
-  // ===== Distribución: encaja siempre dentro, con solape si hace falta =====
+  // ===== Distribución: centrada respecto al TABLERO, sin sobresalir =====
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
 
-    const contW = handEl.getBoundingClientRect().width;
+    const contRect = handEl.getBoundingClientRect();
+    const contW = contRect.width;
     const first = handEl.children[0];
     const cardW = first ? first.getBoundingClientRect().width : 0;
 
@@ -97,32 +98,41 @@
       return;
     }
 
-    const EDGE = 8;               // margen lateral fijo (px)
-    const BASE_GAP = 14;          // separación deseada (px)
-    const MAX_OVERLAP = -Math.round(cardW * 0.40); // permite solape hasta el 40%
+    // 1) Medimos el tablero y calculamos su centro relativo al contenedor de la mano
+    const boardEl = document.querySelector('.board');
+    const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
+    const targetCenter = (boardRect.left - contRect.left) + boardRect.width/2;
 
-    // Máximo ancho disponible para el bloque (respetando EDGE a ambos lados)
+    // 2) Mantener la separación actual (o permitir solape moderado si hace falta)
+    const EDGE = 8;                     // margen de seguridad a los lados
+    const BASE_GAP = 14;                // separación deseada entre cartas
+    const MAX_OVERLAP = -Math.round(cardW * 0.40); // solape máx. permitido
+
+    // Gap que cabe dentro de la mano respetando EDGE
     const maxTotal = contW - EDGE*2;
-
-    // Calcula un gap que quepa SIEMPRE dentro del ancho disponible
     let gap = BASE_GAP;
     const totalWithBase = n*cardW + (n-1)*gap;
-
     if (totalWithBase > maxTotal){
-      gap = (maxTotal - n*cardW) / (n-1); // puede ser negativo => solape
+      gap = (maxTotal - n*cardW) / (n-1); // puede ser negativo
     }
-    gap = Math.min(gap, BASE_GAP);   // nunca más grande que el base
-    gap = Math.max(gap, MAX_OVERLAP);// pero permite solape controlado
+    gap = Math.min(gap, BASE_GAP);
+    gap = Math.max(gap, MAX_OVERLAP);
 
-    const totalW = n*cardW + (n-1)*gap;     // ancho final del bloque
-    const startX = (contW - totalW) / 2;    // centrado exacto (ya cabe dentro)
+    // 3) Centrar el bloque en el centro del TABLERO
+    const totalW = n*cardW + (n-1)*gap;
+    let startX = targetCenter - totalW/2;          // borde izquierdo del bloque
 
+    // 4) Clamp: que no se salga del contenedor de mano
+    startX = Math.max(EDGE, Math.min(startX, contW - EDGE - totalW));
+
+    // 5) Posicionar cada carta (transform: translateX)
     const mid = (n - 1) / 2;
     [...handEl.children].forEach((el, i) => {
-      const tx = Math.round(startX + i*(cardW + gap) + cardW/2 - contW/2);
+      const centerX = startX + i*(cardW + gap) + cardW/2;
+      const tx = Math.round(centerX - contW/2);
       el.style.setProperty('--x', `${tx}px`);
       el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 2.5}deg`); // abanico más plano
+      el.style.setProperty('--rot', `${(i - mid) * 2.5}deg`); // abanico plano
       el.style.zIndex = 10 + i;
     });
   }
