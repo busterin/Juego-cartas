@@ -83,7 +83,7 @@
     return el;
   }
 
-  // ===== Distribución centrada =====
+  // ===== Distribución centrada con solape controlado =====
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
@@ -97,16 +97,24 @@
       return;
     }
 
-    const GAP = 14; // separación entre cartas en px
-    const totalW = n*cardW + (n-1)*GAP;
-    const startX = (contW - totalW) / 2;
+    const BASE_GAP = 14;                   // separación deseada
+    const MAX_OVERLAP = -Math.round(cardW * 0.25); // solape máximo permitido
+
+    const freeSpace = contW - n*cardW;
+    let gap = (freeSpace - BASE_GAP) / (n - 1) + BASE_GAP;
+    gap = Math.min(BASE_GAP, gap);   // no más ancho que el base
+    gap = Math.max(MAX_OVERLAP, gap);// permite solape si hace falta
+
+    const totalW = n*cardW + (n-1)*gap;
+    const LEFT_BIAS = Math.min(20, Math.max(0, (totalW - contW) / 4 + 10));
+    const startX = (contW - totalW) / 2 - LEFT_BIAS;
 
     const mid = (n - 1) / 2;
     [...handEl.children].forEach((el, i) => {
-      const tx = Math.round(startX + i*(cardW + GAP) + cardW/2 - contW/2);
+      const tx = Math.round(startX + i*(cardW + gap) + cardW/2 - contW/2);
       el.style.setProperty('--x', `${tx}px`);
       el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 4}deg`);
+      el.style.setProperty('--rot', `${(i - mid) * 3.5}deg`);
       el.style.zIndex = 10 + i;
     });
   }
