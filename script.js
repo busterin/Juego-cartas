@@ -91,9 +91,9 @@ function layoutHand(){
   const boardRect = boardEl ? boardEl.getBoundingClientRect() : contRect;
   let targetCenter = (boardRect.left - contRect.left) + boardRect.width / 2;
 
-  // Sesgo hacia la izquierda (6% del ancho de la mano, máx 28px)
-  const LEFT_BIAS = Math.min(0, contW * 0.06);
-  targetCenter -= LEFT_BIAS;
+  // Sesgo hacia la derecha
+const RIGHT_BIAS = Math.min(28, contW * 0.06);
+targetCenter += RIGHT_BIAS;
 
   // Parámetros de separación/solape
   const EDGE = 6;                      // margen duro en los extremos
