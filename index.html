@@ -11,7 +11,7 @@
     <!-- HUD superior -->
     <header class="top-hud">
       <div class="portrait player">
-        <div class="frame hex"><div class="emoji">🐻</div></div>
+        <div class="frame hex" aria-hidden="true">🐻</div>
         <div class="info">
           <div class="name">JUGADOR</div>
           <div class="meters">
@@ -26,7 +26,7 @@
       </div>
 
       <div class="portrait enemy">
-        <div class="frame hex"><div class="emoji">😈</div></div>
+        <div class="frame hex" aria-hidden="true">😈</div>
         <div class="info">
           <div class="name">RIVAL</div>
           <div class="meters">
@@ -37,24 +37,32 @@
       </div>
     </header>
 
-    <!-- Ocultamos el banner tradicional -->
-    <div id="phaseBanner" class="banner" aria-hidden="true"></div>
+    <!-- (opcional) aviso breve -->
+    <div id="phaseBanner" class="banner" hidden>Arrastra cartas a tus huecos (2×3 por lado)</div>
 
-    <!-- Tablero: 1 línea por lado (3 huecos) -->
+    <!-- Tablero (2 filas de 3 por lado) -->
     <section class="board" aria-label="Tablero central">
       <div class="row row-enemy">
-        <div class="lanes lanes-3x1 enemy">
+        <div class="lanes lanes-6x2 enemy">
           <div class="slot enemy" data-side="enemy" data-lane="0"></div>
           <div class="slot enemy" data-side="enemy" data-lane="1"></div>
           <div class="slot enemy" data-side="enemy" data-lane="2"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="3"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="4"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="5"></div>
         </div>
       </div>
 
+      <div class="center-hint">Las cartas permanecen entre turnos. Puedes reemplazar tus propias cartas.</div>
+
       <div class="row row-player">
-        <div class="lanes lanes-3x1 player">
-          <div class="slot player" data-side="player" data-lane="0"></div>
-          <div class="slot player" data-side="player" data-lane="1"></div>
-          <div class="slot player" data-side="player" data-lane="2"></div>
+        <div class="lanes lanes-6x2">
+          <div class="slot" data-side="player" data-lane="0"></div>
+          <div class="slot" data-side="player" data-lane="1"></div>
+          <div class="slot" data-side="player" data-lane="2"></div>
+          <div class="slot" data-side="player" data-lane="3"></div>
+          <div class="slot" data-side="player" data-lane="4"></div>
+          <div class="slot" data-side="player" data-lane="5"></div>
         </div>
       </div>
     </section>
@@ -71,25 +79,13 @@
     </footer>
   </main>
 
-  <!-- Toast central de turno -->
-  <div id="turnToast" class="turn-toast" aria-live="polite" aria-atomic="true"></div>
-
-  <!-- Portada (overlay independiente) -->
-  <div id="startOverlay" class="overlay visible" role="dialog" aria-label="Portada">
-    <div class="cover-screen">
-      <img src="assets/Portadacartas.PNG" alt="Portada del juego" class="cover-bg" />
-      <button id="startBtn" class="btn big">JUGAR</button>
-    </div>
-  </div>
-
-  <!-- Fin de partida -->
+  <!-- Overlay fin de partida -->
   <div id="endOverlay" class="overlay" role="dialog" aria-live="polite">
     <div class="panel">
       <h2 id="endTitle">Resultado</h2>
       <p id="endLine" class="muted"></p>
       <div class="row-btns">
         <button id="againBtn" class="btn">Jugar de nuevo</button>
-        <button id="menuBtn" class="btn">Menú</button>
       </div>
     </div>
   </div>
@@ -101,7 +97,9 @@
     </div>
   </div>
 
-  <div id="toasts" aria-live="polite" aria-atomic="true"></div>
+  <!-- Toast de turno -->
+  <div id="turnToast" class="turn-toast" aria-live="polite"></div>
+
   <script src="script.js"></script>
 </body>
 </html>
