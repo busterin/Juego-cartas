@@ -37,32 +37,24 @@
       </div>
     </header>
 
-    <!-- (opcional) aviso breve -->
-    <div id="phaseBanner" class="banner" hidden>Arrastra cartas a tus huecos (2×3 por lado)</div>
+    <!-- Pista breve (oculta para ganar espacio) -->
+    <div id="phaseBanner" class="banner" hidden>Arrastra cartas a tus huecos</div>
 
-    <!-- Tablero (2 filas de 3 por lado) -->
+    <!-- Tablero: 2 filas (rival/ jugador) con 3 slots cada una -->
     <section class="board" aria-label="Tablero central">
       <div class="row row-enemy">
         <div class="lanes lanes-6x2 enemy">
           <div class="slot enemy" data-side="enemy" data-lane="0"></div>
           <div class="slot enemy" data-side="enemy" data-lane="1"></div>
           <div class="slot enemy" data-side="enemy" data-lane="2"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="3"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="4"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="5"></div>
         </div>
       </div>
-
-      <div class="center-hint">Las cartas permanecen entre turnos. Puedes reemplazar tus propias cartas.</div>
 
       <div class="row row-player">
         <div class="lanes lanes-6x2">
           <div class="slot" data-side="player" data-lane="0"></div>
           <div class="slot" data-side="player" data-lane="1"></div>
           <div class="slot" data-side="player" data-lane="2"></div>
-          <div class="slot" data-side="player" data-lane="3"></div>
-          <div class="slot" data-side="player" data-lane="4"></div>
-          <div class="slot" data-side="player" data-lane="5"></div>
         </div>
       </div>
     </section>
