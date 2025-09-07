@@ -92,7 +92,7 @@ function layoutHand(){
   let targetCenter = (boardRect.left - contRect.left) + boardRect.width / 2;
 
   // Sesgo hacia la izquierda (6% del ancho de la mano, máx 28px)
-  const LEFT_BIAS = Math.min(28, contW * 0.06);
+  const LEFT_BIAS = Math.min(50, contW * 0.06);
   targetCenter -= LEFT_BIAS;
 
   // Parámetros de separación/solape
