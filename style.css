@@ -100,7 +100,7 @@ html,body{
   background: linear-gradient(180deg, rgba(34,48,88,.45), rgba(34,48,88,.25));
 }
 
-/* Carta colocada */
+/* Cartas colocadas (mesa) */
 .placed{
   position:absolute; inset:var(--slot-inset);
   border-radius:calc(var(--slot-br) - 2px);
@@ -108,14 +108,13 @@ html,body{
   box-shadow: 0 6px 24px rgba(0,0,0,.5);
   background:#0f1633; overflow:visible;
 }
-/* Cartas colocadas: mostrar la parte superior de la ilustración */
-.placed .art img{
-  width:100%;
-  height:100%;
-  object-fit: cover;        /* mantiene proporción, rellena el hueco */
-  object-position: top;     /* <-- alinear arriba en lugar de centrado */
-  border-radius: inherit;
+.placed .art, .placed .art img{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover;
+  object-position: top;   /* mostrar la parte superior de la carta */
+  border-radius:inherit;
 }
+
 /* ===== Mano ===== */
 .hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; position:relative; z-index:120; overflow:visible; }
 .hand{ position:relative; width:100%; height:100%; overflow:visible; z-index:121; }
@@ -132,64 +131,27 @@ html,body{
 .card .art, .ghost .art{ position:absolute; inset:0; }
 .card .art img, .ghost .art img{ width:100%; height:100%; object-fit:cover; border-radius:inherit; }
 
-/* ===== Tokens en la mano: que sobresalgan hacia arriba ===== */
-.hand .card .token {
-  top: -14px;          /* los subimos más arriba */
-  width: 24px;         /* opcional: un poco más pequeños */
-  height: 24px;
-  font-size: .75rem;
-}
-
-.hand .card .t-cost { left: 4px; }
-.hand .card .t-pts  { right: 4px; }
-
-/* ===== Botones (igual que antes) ===== */
-.bottom-bar{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; padding:8px 8px var(--bottom-pad); background: linear-gradient(180deg, rgba(5,8,18,0), rgba(5,8,18,.55)); }
-.btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
-.btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
-
-/* ===== Zoom (restaurado) ===== */
-.overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:1000; }
-.overlay.visible{ opacity:1; pointer-events:auto; }
-
-.zoom-panel{ position: fixed; inset: 0; display: grid; place-items: center; background: transparent; border: none; padding: 0; }
-
-/* Tamaño seguro en móviles: fallback a vh y override con dvh/svh */
-.zoom-card{
-  width: min(92vw, calc(92vh * 5 / 7));  /* fallback */
-  aspect-ratio: 5 / 7;
-  border-radius: 14px; overflow: hidden; position: relative;
-  border: 1px solid rgba(255,255,255,.22);
-  background:#0b0f1e; box-shadow: 0 18px 40px rgba(0,0,0,.6);
-}
-@supports (height: 1dvh){
-  .zoom-card{ width: min(92vw, calc(92dvh * 5 / 7)); }
-}
-@supports (height: 1svh){
-  .zoom-card{ width: min(92vw, calc(92svh * 5 / 7)); }
-}
-
-.zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
-.zoom-card .art img{ width:100%; height:100%; object-fit:cover; }
-.zoom-card .zoom-token{
-  position:absolute; top:10px; width:42px; height:42px;
-  border-radius:50%; display:grid; place-items:center; font-weight:900; color:#101010;
-  box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42);
-}
-.zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
-.zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
-.zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
-.zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:.85rem; }
-
-/* ===== Tokens mini ===== */
+/* ===== Tokens ===== */
 .token{ position:absolute; top:5px; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:.9rem; font-weight:900; z-index:2; color:#101010; box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.4); }
 .t-cost{ left:6px; background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .t-pts { right:6px; background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
+
+/* Tokens en la mano: sobresalen hacia arriba y molestan menos */
+.hand .card .token{
+  top: -14px;        /* subir por encima del borde */
+  width: 24px;
+  height: 24px;
+  font-size: .75rem;
+}
+.hand .card .t-cost{ left:4px; }
+.hand .card .t-pts { right:4px; }
+
 .name-top{ position:absolute; left:6px; right:6px; top:6px; text-align:center; font-weight:900; font-size:.75rem; color:#eaf2ff; background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:3px 6px; }
 .desc{ position:absolute; left:6px; right:6px; bottom:6px; font-size:.68rem; color:#d9e6ff; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.14); border-radius:10px; padding:4px 6px; }
 
-/* Ocultar nombre/desc en mesa/miniaturas */
-.hand .card .name-top, .hand .card .desc, .placed .name-top, .placed .desc{ display:none; }
+/* Ocultar nombre/desc en miniaturas y mesa */
+.hand .card .name-top, .hand .card .desc,
+.placed .name-top, .placed .desc{ display:none; }
 
 /* ===== Ghost arrastre ===== */
 .ghost{ position:fixed; z-index:9999; pointer-events:none; width:var(--card-w); height:var(--card-h); transform: translate(-50%, -50%) scale(1.06); border:1px solid rgba(255,255,255,.35); border-radius:12px; overflow:visible; }
@@ -205,6 +167,49 @@ html,body{
   box-shadow: 0 10px 30px rgba(0,0,0,.55);
 }
 .fly-card .art, .fly-card .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+
+/* ===== Botones ===== */
+.bottom-bar{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; padding:8px 8px var(--bottom-pad); background: linear-gradient(180deg, rgba(5,8,18,0), rgba(5,8,18,.55)); }
+.btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
+.btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
+
+/* ===== Zoom (sin borde negro) ===== */
+.overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:1000; }
+.overlay.visible{ opacity:1; pointer-events:auto; }
+
+.zoom-panel{ position: fixed; inset: 0; display: grid; place-items: center; background: transparent; border: none; padding: 0; }
+
+.zoom-card{
+  width: min(92vw, calc(92vh * 5 / 7));
+  aspect-ratio: 5 / 7;
+  border-radius: 14px; overflow: hidden; position: relative;
+  border: 1px solid rgba(255,255,255,.22);
+  background: transparent; /* eliminar fondo negro */
+  box-shadow: 0 18px 40px rgba(0,0,0,.6);
+}
+@supports (height: 1dvh){
+  .zoom-card{ width: min(92vw, calc(92dvh * 5 / 7)); }
+}
+@supports (height: 1svh){
+  .zoom-card{ width: min(92vw, calc(92svh * 5 / 7)); }
+}
+.zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
+.zoom-card .art img{
+  width:100%; height:100%;
+  object-fit:cover;
+  object-position: top;   /* evita franja arriba */
+  display:block;
+  background:none;
+}
+.zoom-card .zoom-token{
+  position:absolute; top:10px; width:42px; height:42px;
+  border-radius:50%; display:grid; place-items:center; font-weight:900; color:#101010;
+  box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42);
+}
+.zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
+.zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
+.zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
+.zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:.85rem; }
 
 /* ===== Toast ===== */
 .turn-toast{
@@ -231,7 +236,7 @@ html,body{
 .draw-overlay.visible{ opacity: 1; pointer-events: auto; }
 
 /* ===== Shake coste insuficiente ===== */
-@keyframes shake {
+@keyframes shake{
   10%, 90% { transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot)) translateY(0) }
   20%, 80% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
   30%, 50%, 70% { transform: translateX(calc(var(--x) + var(--off, 0px) + 3px)) rotate(var(--rot)) }
@@ -242,9 +247,15 @@ html,body{
 /* ===== 💥 Explosión al destruir ===== */
 .explosion{
   position:absolute; left:50%; top:50%;
-  width:140%; height:140%; transform: translate(-50%,-50%) scale(.6);
+  width:140%; height:140%;
+  transform: translate(-50%,-50%) scale(.6);
   border-radius:50%; pointer-events:none;
-  background: radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(255,230,120,.9) 22%, rgba(255,160,0,.75) 42%, rgba(255,60,0,.45) 58%, rgba(255,0,0,0) 72%);
+  background: radial-gradient(circle,
+    rgba(255,255,255,.95) 0%,
+    rgba(255,230,120,.9) 22%,
+    rgba(255,160,0,.75) 42%,
+    rgba(255,60,0,.45) 58%,
+    rgba(255,0,0,0) 72%);
   filter: blur(1px); mix-blend-mode: screen; opacity:1;
   animation: boom .45s ease-out forwards; z-index: 200;
 }
@@ -252,7 +263,7 @@ html,body{
 .placed.destroy{ animation: popOut .32s ease-in forwards; }
 @keyframes popOut{ to{ transform: scale(.75); opacity:0; } }
 
-/* Compactación en móviles pequeños */
+/* ===== Compactación móviles ===== */
 @media (max-width: 480px){
   :root{ --lanes-gap: 8px; --slot-inset: 5px; --slot-br: 10px; }
 }
