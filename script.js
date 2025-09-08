@@ -5,12 +5,9 @@
 
   // ---------- DOM ----------
   const handEl = $('#hand');
-  const slotsPlayer = $$('.slot[data-side="player"]');
-  const slotsEnemy  = $$('.slot[data-side="enemy"]');
-
   const roundNoEl = $('#roundNo');
   const pCoinsEl = $('#pCoins'), eCoinsEl = $('#eCoins');
-  const pScoreEl = $('#pScore'), eScoreEl = $('#eScore');
+  const pScoreEl = $('#pScore'), eScoreEl = $('#eScore'); // ahora muestran VIDA
 
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
@@ -19,29 +16,29 @@
   const passBtn = $('#passBtn');
   const resetBtn = $('#resetBtn');
 
-  // Splash (portada)
-  const startOv  = $('#startOverlay');
-  const startBtn = $('#startBtn');
+  // Portada + Intro
+  const startOv  = $('#startOverlay'); const startBtn = $('#startBtn');
+  const introOv = $('#introOverlay'); const introTextEl = $('#introText'); const introNext = $('#introNext');
 
-  // Intro “Fire Emblem”
-  const introOv     = $('#introOverlay');
-  const introTextEl = $('#introText');
-  const introNext   = $('#introNext');
-
-  // Overlays de robo/animación
-  const drawOverlay = $('#drawOverlay');
-  const drawCardEl  = $('#drawCard');
+  // Robo animado
+  const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard');
 
   // ---------- Estado ----------
-  const SLOTS = 3, HAND_SIZE = 4;
+  const SLOTS = 6;         // 3x2 por lado
+  const HAND_SIZE = 4;
+
   const state = {
-    round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
+    round: 1,
+    pCoins: 3, eCoins: 3,
+    pScore: 10, eScore: 10,       // VIDA inicial 10
     pDeck: [], eDeck: [], pHand: [], eHand: [],
-    center: Array.from({length:SLOTS*2},()=>({p:null,e:null})), // 3 columnas x 2 filas por lado (ya lo manejamos por índice)
-    turn: 'player', playerPassed:false, enemyPassed:false, resolving:false
+    center: Array.from({length:SLOTS},()=>({p:null,e:null})),
+    turn: 'player',
+    playerPassed:false, enemyPassed:false,
+    resolving:false
   };
 
-  // ---------- Cartas fijas ----------
+  // ---------- Cartas ----------
   const CARDS = [
     { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:5, text:"Cuando la colocas enfrente de una carta rival, la destruye automáticamente." },
     { name:'Maga',     art:'assets/Maga.PNG',      cost:2, pts:4, text:"Canaliza energías arcanas a tu favor." },
@@ -52,7 +49,7 @@
 
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
-  const artHTML = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
+  const artHTML   = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
 
   // ---------- Limpieza de nodos temporales ----------
   function purgeTransientNodes(){
@@ -90,7 +87,7 @@
     });
   }
 
-  // ---------- Layout Mano (anclada a 🐻 y 😈) ----------
+  // ---------- Layout Mano ----------
   function layoutHand(){
     const n = handEl.children.length;
     if (!n) return;
@@ -245,10 +242,9 @@
 
   // ---------- Tablero ----------
   function renderBoard(){
-    // Hay 6 huecos por lado (3x2). Recorremos por orden DOM.
     const playerSlots = $$('.slot[data-side="player"]');
     const enemySlots  = $$('.slot[data-side="enemy"]');
-    for(let i=0;i<playerSlots.length;i++){
+    for(let i=0;i<SLOTS;i++){
       const ps=playerSlots[i], es=enemySlots[i];
       if (!ps || !es) continue;
       ps.innerHTML=''; es.innerHTML='';
@@ -276,7 +272,89 @@
   function updateHUD(){
     roundNoEl.textContent=state.round;
     pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins;
-    pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore;
+    pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore; // muestran VIDA
+  }
+
+  // ---------- Combate / Daño ----------
+  function getSlotsEls(index){
+    const playerSlots = $$('.slot[data-side="player"]');
+    const enemySlots  = $$('.slot[data-side="enemy"]');
+    return { ps: playerSlots[index], es: enemySlots[index] };
+  }
+
+  function spawnExplosionOn(el){
+    if(!el) return;
+    const placed = el.querySelector('.placed');
+    if(!placed) return;
+    const boom = document.createElement('div');
+    boom.className = 'explosion';
+    placed.appendChild(boom);
+    setTimeout(()=> boom.remove(), 500);
+  }
+
+  function applyDamage(to, amount){
+    if(amount<=0) return;
+    if(to==='enemy'){ state.eScore = Math.max(0, state.eScore - amount); }
+    else { state.pScore = Math.max(0, state.pScore - amount); }
+    updateHUD();
+    checkDefeat();
+  }
+
+  function checkDefeat(){
+    if(state.eScore<=0 || state.pScore<=0){
+      state.resolving = true;
+      let title = state.eScore<=0 ? '¡Victoria!' : 'Derrota';
+      endTitle.textContent = title;
+      endLine.textContent = `Vida — Tú: ${state.pScore} · Rival: ${state.eScore}`;
+      endOverlay.classList.add('visible');
+      return true;
+    }
+    return false;
+  }
+
+  // atacanteSide: 'player' | 'enemy'
+  function resolveConfrontation(index, attackerSide, forcedDestroy=false, attackerPts=0){
+    const pair = state.center[index];
+    if(!pair) return;
+
+    if(attackerSide==='player'){
+      const atk = pair.p; const def = pair.e;
+      if(!def) return;
+      // Si Guerrera u orden forzada: destruir siempre y daño = max(0, atk.pts - def.pts)
+      if(forcedDestroy || (atk && atk.name==='Guerrera')){
+        const { es } = getSlotsEls(index);
+        spawnExplosionOn(es);
+        pair.e = null;
+        renderBoard();
+        applyDamage('enemy', Math.max(0, (atk?.pts||attackerPts) - def.pts));
+        return;
+      }
+      if(atk && def && atk.pts > def.pts){
+        const { es } = getSlotsEls(index);
+        spawnExplosionOn(es);
+        pair.e = null;
+        renderBoard();
+        applyDamage('enemy', atk.pts - def.pts);
+      }
+    }else{
+      const atk = pair.e; const def = pair.p;
+      if(!def) return;
+      if(forcedDestroy || (atk && atk.name==='Guerrera')){ // por simetría
+        const { ps } = getSlotsEls(index);
+        spawnExplosionOn(ps);
+        pair.p = null;
+        renderBoard();
+        applyDamage('player', Math.max(0, (atk?.pts||attackerPts) - def.pts));
+        return;
+      }
+      if(atk && def && atk.pts > def.pts){
+        const { ps } = getSlotsEls(index);
+        spawnExplosionOn(ps);
+        pair.p = null;
+        renderBoard();
+        applyDamage('player', atk.pts - def.pts);
+      }
+    }
   }
 
   // ---------- Drag & drop ----------
@@ -321,46 +399,28 @@
     return -1;
   }
 
-  // ---------- Reglas ----------
+  // ---------- Reglas de juego ----------
   const canAfford = c => state.pCoins>=c.cost;
+
   function tryPlayFromHandToSlot(handIndex, slotIndex){
     if(handIndex<0||handIndex>=state.pHand.length) return;
     const card=state.pHand[handIndex];
     if(!canAfford(card)){
-      // feedback opcional
       const el = handEl.children[handIndex];
       if (el){ el.classList.add('shake'); setTimeout(()=> el.classList.remove('shake'), 450); }
       return;
     }
+    // Pagar y colocar
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
     state.pHand.splice(handIndex,1);
     renderHand(); renderBoard(); updateHUD();
 
-    // Efecto especial de la Guerrera: destruye carta rival enfrente
-    if(card.name==='Guerrera'){
-      const enemySlots = $$('.slot[data-side="enemy"]');
-      const es = enemySlots[slotIndex];
-      if(state.center[slotIndex].e && es){
-        const placed = es.querySelector('.placed');
-        if(placed){
-          // explosión visual si existe el estilo; si no, quitar directo
-          const boom = document.createElement('div');
-          boom.className='explosion';
-          placed.appendChild(boom);
-          setTimeout(()=>{
-            state.center[slotIndex].e = null;
-            renderBoard();
-            updateHUD();
-          }, 320);
-        }else{
-          state.center[slotIndex].e = null;
-          renderBoard(); updateHUD();
-        }
-      }
-    }
+    // Enfrentamiento inmediato (con efecto de Guerrera)
+    const forced = card.name==='Guerrera';
+    resolveConfrontation(slotIndex, 'player', forced, card.pts);
 
-    // Roba 1 animada si hay cartas en mazo
+    // Roba 1 animada si hay mazo
     if(state.pDeck.length){
       drawOneAnimated(()=>{ renderHand(); updateHUD(); });
     }
@@ -371,55 +431,59 @@
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     showTurnToast('TURNO RIVAL');
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins);
+
     const tryPlayOnce=()=>{
       if(!canPlay()) return false;
+      // Elegir carta simple por heurística pts*2 - cost
       let best=-1,score=-1;
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
       const card=state.eHand[best];
+
+      // Buscar primer hueco enemigo libre
       let target=-1;
-      for(let i=0;i<state.center.length;i++){ if(!state.center[i].e){ target=i; break; } }
+      for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1) return false;
+
+      // Pagar y colocar
       state.eCoins-=card.cost; state.center[target].e={...card};
       state.eHand.splice(best,1); if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
-      renderBoard(); updateHUD(); return true;
+      renderBoard(); updateHUD();
+
+      // Enfrentamiento inmediato (simétrico)
+      const forced = card.name==='Guerrera';
+      resolveConfrontation(target, 'enemy', forced, card.pts);
+
+      return true;
     };
-    const loop=()=>{ if(!tryPlayOnce()){ state.enemyPassed=true; setTimeout(()=>{state.resolving=false; checkBothPassedThenScore();},500); return; } setTimeout(loop,200); };
+
+    const loop=()=>{ if(!tryPlayOnce()){ state.enemyPassed=true; setTimeout(()=>{state.resolving=false; checkBothPassedThenNextRound();},400); return; } setTimeout(loop,220); };
     loop();
   }
 
-  // ---------- Fin de partida / Puntuación ----------
-  function endGame(){
-    state.resolving = true;
-    let title = 'Empate';
-    if(state.pScore > state.eScore) title = '¡Victoria!';
-    else if(state.eScore > state.pScore) title = 'Derrota';
-    endTitle.textContent = title;
-    endLine.textContent = `Puntos — Tú: ${state.pScore} · Rival: ${state.eScore}`;
-    endOverlay.classList.add('visible');
-  }
+  // ---------- Rondas (sin sumar puntos) ----------
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
-  function scoreTurn(){
-    let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
-    state.pScore+=p; state.eScore+=e; updateHUD();
-    if(state.round === 8){ setTimeout(endGame, 300); return; }
 
-    state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player'; state.pCoins+=1;
-
-    // Relleno manos: enemigo instantáneo, jugador animado
+  function nextRound(){
+    // No hay puntuación por tablero, solo avanza la ronda
+    state.round+=1;
+    state.playerPassed=false; state.enemyPassed=false;
+    state.turn='player';
+    state.pCoins+=1; // como antes
     topUpEnemyInstant();
     topUpPlayerAnimated(()=>{
       renderHand(); layoutHandSafe(); updateHUD();
       setTimeout(()=> showTurnToast('TU TURNO'), 200);
     });
   }
-  function checkBothPassedThenScore(){ if(bothPassed()) scoreTurn(); }
+  function checkBothPassedThenNextRound(){ if(!checkDefeat() && bothPassed()) nextRound(); }
 
   // ---------- Nueva partida ----------
   function newGame(){
     purgeTransientNodes();
-    state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
+    state.round=1; state.pCoins=3; state.eCoins=3;
+    state.pScore=10; state.eScore=10;           // VIDA 10
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
-    state.center=Array.from({length:6},()=>({p:null,e:null}));
+    state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.eDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.pHand=[]; state.eHand=[];
@@ -457,9 +521,9 @@
     introOv.setAttribute('aria-hidden','false');
     typingIdx = 0;
     typingRunning = true;
-    introNext.disabled = true;
+    if(introNext) introNext.disabled = true;
 
-    const speed = 22; // ms por carácter
+    const speed = 22; // ms/char
     const run = () => {
       if (typingIdx < INTRO_TEXT.length){
         introTextEl.textContent = INTRO_TEXT.slice(0, typingIdx+1);
@@ -467,7 +531,7 @@
         typingTimer = setTimeout(run, speed);
       } else {
         typingRunning = false;
-        introNext.disabled = false;
+        if(introNext) introNext.disabled = false;
       }
     };
     run();
@@ -476,28 +540,21 @@
   function skipOrContinueIntro(){
     if(!introOv) return;
     if (typingRunning){
-      // Termina de escribir al instante
       clearTimeout(typingTimer);
       introTextEl.textContent = INTRO_TEXT;
       typingRunning = false;
-      introNext.disabled = false;
+      if(introNext) introNext.disabled = false;
       return;
     }
-    // Cerrar intro y arrancar juego
     introOv.classList.remove('visible');
     introOv.setAttribute('aria-hidden','true');
     newGame();
   }
 
-  if(introNext){
-    introNext.addEventListener('click', skipOrContinueIntro);
-  }
+  if(introNext){ introNext.addEventListener('click', skipOrContinueIntro); }
   if(introOv){
     introOv.addEventListener('click', (e)=>{
-      // Clic fuera del panel NO avanza; solo dentro del panel (o botón)
-      if(e.target.closest('.intro-panel')){
-        skipOrContinueIntro();
-      }
+      if(e.target.closest('.intro-panel')) skipOrContinueIntro();
     });
   }
 
@@ -512,13 +569,12 @@
   window.addEventListener('resize', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
   window.addEventListener('orientationchange', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
 
-  // Arranque con portada
+  // Arranque
   window.addEventListener('DOMContentLoaded', ()=>{
     if(startBtn){
       startBtn.addEventListener('click', ()=>{
         startOv.classList.remove('visible');
-        // Mostrar intro Fire Emblem
-        startIntro();
+        startIntro(); // Intro antes del juego
       });
     }else{
       newGame();
