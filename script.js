@@ -2,13 +2,11 @@
   // ---------- Utils ----------
   const $  = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
-
   const bump = (meterValueEl) => {
     const meter = meterValueEl?.closest('.meter');
     if(!meter) return;
     meter.classList.remove('bump');
-    // reflow para reiniciar animación
-    void meter.offsetWidth;
+    void meter.offsetWidth; // reflow para reiniciar animación
     meter.classList.add('bump');
   };
 
@@ -25,18 +23,15 @@
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
 
   const againBtn = $('#againBtn');
-  const passBtn = $('#passBtn');
+  const passBtn  = $('#passBtn');
   const resetBtn = $('#resetBtn');
 
-  // Splash
   const startOv  = $('#startOverlay');
   const startBtn = $('#startBtn');
 
-  // Overlays de robo/animación
   const drawOverlay = $('#drawOverlay');
   const drawCardEl  = $('#drawCard');
-
-  const turnToast = $('#turnToast');
+  const turnToast   = $('#turnToast');
 
   // ---------- Estado ----------
   const SLOTS = 3, HAND_SIZE = 4, MAX_ROUNDS = 8;
@@ -98,9 +93,7 @@
 
   // ---------- Layout Mano (anclada a 🐻 y 😈) ----------
   function layoutHand(){
-    const n = handEl.children.length;
-    if (!n) return;
-
+    const n = handEl.children.length; if (!n) return;
     const contRect = handEl.getBoundingClientRect();
     const contW = handEl.clientWidth || contRect.width || window.innerWidth;
     const cardW = handEl.children[0]?.getBoundingClientRect().width || 0;
@@ -110,23 +103,19 @@
     const bearEl  = document.querySelector('.portrait.player .frame.hex');
     const demonEl = document.querySelector('.portrait.enemy  .frame.hex');
 
-    // Centro 1ª carta (borde izq alineado a 🐻)
     let startCenter = EDGE + cardW/2;
     if (bearEl){
       const bearLeftInHand = bearEl.getBoundingClientRect().left - contRect.left;
       startCenter = Math.max(EDGE + cardW/2, bearLeftInHand + cardW/2);
     }
 
-    // Centro última carta (borde dcho alineado a 😈)
     let endCenter = contW - EDGE - cardW/2;
     if (demonEl){
       const demonRightInHand = demonEl.getBoundingClientRect().right - contRect.left;
       endCenter = Math.min(contW - EDGE - cardW/2, demonRightInHand - cardW/2);
     }
-
     if (endCenter < startCenter) endCenter = startCenter;
 
-    // Distribución equiespaciada
     const centers = [];
     if (n === 1){
       centers.push((startCenter + endCenter)/2);
@@ -169,8 +158,8 @@
 
     // Evitar click fantasma tras drag
     let dragged = false;
-    el.addEventListener('click', (ev)=> {
-      if (dragged) { dragged = false; return; } // no abrir zoom si fue drag
+    el.addEventListener('click', ()=> {
+      if (dragged) { dragged = false; return; }
       openZoom(card);
     });
 
@@ -181,8 +170,7 @@
   }
   function renderHand(){
     handEl.innerHTML='';
-    const n = state.pHand.length;
-    state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,n)));
+    state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i,state.pHand.length)));
     layoutHandSafe();
   }
 
@@ -207,7 +195,7 @@
   function flyCardToHand(card, onDone){
     const idx = state.pHand.length - 1;
     const targetEl = handEl.children[idx];
-    if(!targetEl){ if(onDone) onDone(); return; }
+    if(!targetEl){ onDone && onDone(); return; }
 
     const r = targetEl.getBoundingClientRect();
     const targetX = r.left + r.width/2;
@@ -236,12 +224,12 @@
       fly.remove();
       targetEl.style.opacity = '';
       layoutHandSafe();
-      if(onDone) onDone();
+      onDone && onDone();
     }, 500);
   }
 
   function drawOneAnimated(done){
-    if(!state.pDeck.length){ if(done) done(); return; }
+    if(!state.pDeck.length){ done && done(); return; }
     const card = state.pDeck.pop();
 
     showDrawLarge(card, ()=>{
@@ -253,7 +241,7 @@
 
   function topUpPlayerAnimated(done){
     const step = () => {
-      if(state.pHand.length >= HAND_SIZE || !state.pDeck.length){ if(done) done(); return; }
+      if(state.pHand.length >= HAND_SIZE || !state.pDeck.length){ done && done(); return; }
       drawOneAnimated(step);
     };
     step();
@@ -268,7 +256,7 @@
 
   // ---------- Tablero ----------
   function renderBoard(){
-    for(let i=0;i<3;i++){
+    for(let i=0;i<SLOTS;i++){
       const ps=slotsPlayer[i], es=slotsEnemy[i];
       if (!ps || !es) continue;
       ps.innerHTML=''; es.innerHTML='';
@@ -305,7 +293,8 @@
 
   // ---------- Drag & drop ----------
   let ghost=null;
-  function attachDragHandlers(el, onDragMoveCb){ el.addEventListener('pointerdown', onDown, {passive:false});
+  function attachDragHandlers(el, onDragMoveCb){
+    el.addEventListener('pointerdown', onDown, {passive:false});
     function onDown(e){
       if(state.turn!=='player'||state.resolving) return;
       const src = e.currentTarget; src.setPointerCapture(e.pointerId); e.preventDefault();
@@ -337,7 +326,7 @@
   }
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
   function laneUnder(x,y){
-    for(let i=0;i<3;i++){
+    for(let i=0;i<SLOTS;i++){
       const el = document.querySelector(`.slot[data-side="player"][data-lane="${i}"]`);
       if(!el) continue;
       const r = el.getBoundingClientRect();
@@ -383,7 +372,7 @@
     renderHand(); renderBoard(); updateHUD();
     bump(pCoinsEl);
 
-    // robar si hay mazo
+    // Roba 1 animada si hay cartas en mazo
     if(state.pDeck.length){
       drawOneAnimated(()=>{ renderHand(); updateHUD(); });
     }
@@ -397,14 +386,12 @@
 
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins);
 
-    // elige carta por mejor ratio pts*2 - cost (como antes)
     function pickBestCardIndex(){
       let best=-1,score=-1;
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
       return best;
     }
 
-    // elige línea: primero donde tú tengas más puntos y el rival esté libre; si no, primer hueco libre
     function pickBestLane(){
       let bestLane = -1, bestPts = -1;
       for(let i=0;i<SLOTS;i++){
@@ -432,7 +419,7 @@
       state.center[target].e = {...card};
       state.eHand.splice(bestIdx,1);
 
-      // robar instant si hay
+      // Roba instant si hay
       if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
 
       renderBoard(); updateHUD(); bump(eCoinsEl);
@@ -456,19 +443,22 @@
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
 
   function scoreTurn(){
-    // sumar puntos del tablero actual
-    let p=0,e=0; state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
-    state.pScore+=p; state.eScore+=e; updateHUD();
+    // Sumar puntos del tablero actual (las cartas permanecen en mesa)
+    let p=0,e=0;
+    state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
+    state.pScore+=p; state.eScore+=e;
+    updateHUD();
     bump(pScoreEl); bump(eScoreEl);
 
-    // limpiar tablero para la siguiente ronda
-    state.center = Array.from({length:3},()=>({p:null,e:null}));
-    renderBoard();
+    // 🔴 IMPORTANTE: NO limpiar tablero aquí (se mantiene)
+    // (No modificar state.center)
 
     if(state.round === MAX_ROUNDS){ setTimeout(endGame, 300); return; }
 
-    // avanzar ronda
-    state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player';
+    // Avanzar ronda
+    state.round+=1;
+    state.playerPassed=false; state.enemyPassed=false;
+    state.turn='player';
 
     // +1 monedas para ambos al inicio de ronda
     state.pCoins+=1; state.eCoins+=1; updateHUD();
@@ -489,7 +479,10 @@
 
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
-    state.center=Array.from({length:3},()=>({p:null,e:null}));
+
+    // ✅ Solo aquí se limpia el tablero:
+    state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
+
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.eDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.pHand=[]; state.eHand=[];
