@@ -297,3 +297,38 @@ html,body{
 .meter.pts{
   background: radial-gradient(60% 60% at 30% 30%, #ffc1c1 0, #ff6b6b 60%, #cc1f1f 100%);
 }
+
+/* === Ataque: UI y efectos === */
+#attackBtn{
+  display:none;
+}
+#attackBtn.show{
+  display:inline-block;
+}
+
+/* Resalte de objetivos al elegir carta a atacar */
+.slot.enemy.targetable{
+  outline: 2px solid rgba(255,120,120,.9);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 3px rgba(255,120,120,.25) inset, 0 6px 18px rgba(255,0,0,.25);
+  cursor: pointer;
+}
+
+/* Pulso de impacto en la carta que recibe el golpe */
+.placed.hit{
+  animation: hitPulse .36s ease-out;
+}
+@keyframes hitPulse{
+  0%{ transform: scale(1); filter: brightness(1); }
+  35%{ transform: scale(1.03); filter: brightness(1.25); }
+  100%{ transform: scale(1); filter: brightness(1); }
+}
+/* Token de puntos dañado: flash rojo y pequeño rebote */
+.token.t-pts.damage{
+  animation: dmgFlash .6s ease;
+}
+@keyframes dmgFlash{
+  0%{ background: radial-gradient(#ffd0d0, #ff6b6b); transform: translateY(-2px) scale(1.08); }
+  40%{ background: radial-gradient(#ffc1c1, #e64545); }
+  100%{ transform: translateY(0) scale(1); }
+}
