@@ -10,7 +10,8 @@
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
 
-  --board-h: clamp(300px, 44vh, 520px);
+  /* ↑ Dejamos el tamaño de carta y slots como estaba */
+  --board-h: clamp(300px, 44vh, 520px); /* altura "base" anterior para 1 fila por lado */
   --lanes-gap: 10px;
   --slot-inset: 6px;
   --slot-br: 12px;
@@ -81,8 +82,16 @@ html,body{
 
 /* ===== Tablero ===== */
 .board{ display:flex; flex-direction:column; justify-content:center; align-items:stretch; min-height:0; }
-.row{ width:100%; max-width:var(--game-max); margin-inline:auto; }
-.lanes-3{ height: calc(var(--board-h) / 2); display:grid; grid-template-columns: repeat(3, 1fr); gap: var(--lanes-gap); }
+.row{ width:100%; max-width:var(--game-max); margin-inline:auto; display: grid; gap: var(--lanes-gap); }
+/* Dos filas de 3 por lado */
+.row-enemy{ grid-template-rows: auto auto; }
+.row-player{ grid-template-rows: auto auto; }
+.lanes-3{
+  /* Para mantener el tamaño de cada hueco como antes,
+     cada "lanes-3" conserva la misma altura que antes tenía la mitad del tablero */
+  height: calc(var(--board-h) / 2);
+  display:grid; grid-template-columns: repeat(3, 1fr); gap: var(--lanes-gap);
+}
 .slot{
   height: 100%;
   border:2px dashed rgba(105,240,255,.35);
@@ -90,7 +99,7 @@ html,body{
   display:grid; place-items:center; position:relative;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
   transition: border-color .15s ease, background .15s ease;
-  overflow: hidden; /* para recortar la explosión */
+  overflow: hidden;
 }
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
 .slot.occupied{
@@ -302,15 +311,10 @@ html,body{
   mix-blend-mode: screen;
   opacity:1;
   animation: boom .45s ease-out forwards;
-  z-index: 200; /* por encima del contenido del slot */
+  z-index: 200;
 }
 @keyframes boom{
   to{ transform: translate(-50%,-50%) scale(1.4); opacity:0; }
 }
-/* Encogido/desvanecido de la carta destruida */
-.placed.destroy{
-  animation: popOut .32s ease-in forwards;
-}
-@keyframes popOut{
-  to{ transform: scale(.75); opacity:0; }
-}
+.placed.destroy{ animation: popOut .32s ease-in forwards; }
+@keyframes popOut{ to{ transform: scale(.75); opacity:0; } }
