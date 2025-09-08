@@ -16,16 +16,12 @@
 
   const startOv  = $('#startOverlay'); const startBtn = $('#startBtn');
 
-  const introOv = $('#introOverlay');
-  const introTextEl = $('#introText');
-  const introProgress = $('#introProgress');
-  const introContinue = $('#introContinue');
-  const introSkip = $('#introSkip');
+  const introOv = $('#introOverlay'); const introContinue = $('#introContinue');
 
   const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard'); const turnToast = $('#turnToast');
 
   // ---------- Estado ----------
-  const SLOTS = 6;
+  const SLOTS = 6;                  // 6 por lado (3x2)
   const HAND_SIZE = 4, MAX_ROUNDS = 8;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
@@ -47,92 +43,6 @@
   const tokenCost = v => `<div class="token t-cost" aria-label="Coste ${v}">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts" aria-label="Puntos ${v}">${v}</div>`;
   const artHTML = (src, alt='') => `<div class="art">${src?`<img src="${src}" alt="${alt}">`:''}</div>`;
-
-  // ---------- Intro: historia + máquina de escribir (2 páginas) ----------
-  const FULL_STORY = [
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sit amet magna vitae sapien tristique vulputate. Nulla facilisi. Vivamus commodo mi vel sapien viverra, a rutrum nulla cursus. Integer pretium arcu at sem tempor, non ultricies mi vestibulum. Aenean laoreet, tortor a tincidunt pretium, arcu nisl porta ligula, sit amet commodo sapien est a ligula. Cras varius venenatis nunc vel efficitur.",
-    "Suspendisse potenti. Cras porta viverra ipsum, sit amet malesuada tortor vulputate ac. Etiam laoreet efficitur varius. Donec semper, turpis sed pulvinar porta, est arcu vehicula neque, in condimentum est tortor id nunc. Praesent ut felis id risus suscipit congue. Aliquam erat volutpat. Curabitur vitae sodales ipsum. Nam id suscipit enim, in mattis ipsum."
-  ].join(" ");
-
-  function splitInTwo(text){
-    const words = text.trim().split(/\s+/);
-    const half = Math.ceil(words.length/2);
-    return [ words.slice(0,half).join(" "), words.slice(half).join(" ") ];
-  }
-
-  let introPage = 0; // 0 y 1
-  let typing = false, typingTimer = null, typedLen = 0, pageTexts = splitInTwo(FULL_STORY);
-
-  function setIntroButtons(){
-    introProgress.textContent = `${introPage+1}/2`;
-    introContinue.textContent = (introPage===0) ? 'Siguiente ▶' : 'Comenzar ▶';
-  }
-
-  function typeText(el, text, speed=22){
-    // Limpia
-    if(typingTimer){ clearInterval(typingTimer); typingTimer=null; }
-    el.innerHTML = '';
-    typedLen = 0; typing = true;
-
-    const caret = document.createElement('span');
-    caret.className = 'caret';
-    // Bucle
-    typingTimer = setInterval(()=>{
-      if(typedLen >= text.length){
-        clearInterval(typingTimer); typingTimer=null; typing=false;
-        el.appendChild(caret);
-        return;
-      }
-      // añadir siguiente “bloque” (palabra o carácter)
-      // preferimos palabras para velocidad visual:
-      const next = text.slice(typedLen).match(/^\S+\s*/)?.[0] ?? text[typedLen];
-      el.insertAdjacentText('beforeend', next);
-      typedLen += next.length;
-      // mantiene caret visible al final
-      if(!caret.isConnected) el.appendChild(caret);
-      el.scrollTop = el.scrollHeight;
-    }, speed);
-  }
-
-  function revealAll(el, text){
-    if(typingTimer){ clearInterval(typingTimer); typingTimer=null; }
-    typing=false;
-    el.textContent = text;
-    const caret = document.createElement('span');
-    caret.className = 'caret';
-    el.appendChild(caret);
-    el.scrollTop = el.scrollHeight;
-  }
-
-  function startIntroPage(pageIndex){
-    introPage = pageIndex;
-    setIntroButtons();
-    typeText(introTextEl, pageTexts[introPage], 22);
-  }
-
-  // Interacción sobre el texto: click para revelar todo si está escribiendo
-  introTextEl?.addEventListener('click', ()=>{
-    if(typing) revealAll(introTextEl, pageTexts[introPage]);
-  });
-
-  // Botones de la intro
-  introContinue?.addEventListener('click', ()=>{
-    if(typing){
-      revealAll(introTextEl, pageTexts[introPage]);
-      return;
-    }
-    if(introPage===0){
-      startIntroPage(1);
-    }else{
-      introOv.classList.remove('visible');
-      newGame();
-    }
-  });
-  introSkip?.addEventListener('click', ()=>{
-    if(typing){ revealAll(introTextEl, pageTexts[introPage]); }
-    introOv.classList.remove('visible');
-    newGame();
-  });
 
   // ---------- Limpieza ----------
   function purgeTransientNodes(){
@@ -400,7 +310,7 @@
   }
   const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; };
   function laneUnder(x,y){
-    for(let i=0;i=SLOTS;i++){
+    for(let i=0;i<SLOTS;i++){
       const el = document.querySelector(`.slot[data-side="player"][data-lane="${i}"]`);
       if(!el) continue;
       const r = el.getBoundingClientRect();
@@ -550,9 +460,9 @@
   }
 
   // ---------- Eventos ----------
-  againBtn?.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
-  resetBtn?.addEventListener('click', ()=> newGame());
-  passBtn?.addEventListener('click', ()=>{
+  againBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
+  resetBtn.addEventListener('click', ()=> newGame());
+  passBtn.addEventListener('click', ()=>{
     if(state.turn!=='player'||state.resolving) return;
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
   });
@@ -562,19 +472,21 @@
     startBtn.addEventListener('click', ()=>{
       startOv.classList.remove('visible');
       introOv?.classList.add('visible');
-      // preparar textos (por si en el futuro cambiamos FULL_STORY dinámicamente)
-      pageTexts = splitInTwo(FULL_STORY);
-      startIntroPage(0);
-      // foco para accesibilidad
-      setTimeout(()=> introTextEl?.focus(), 50);
     });
   }
 
-  // Resize
+  // Intro → Juego
+  if(introContinue){
+    introContinue.addEventListener('click', ()=>{
+      introOv.classList.remove('visible');
+      newGame();
+    });
+  }
+
   window.addEventListener('resize', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
   window.addEventListener('orientationchange', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
 
-  // Arranque sin portada (fallback)
+  // Arranque (si no hay portada visible por cualquier motivo)
   window.addEventListener('DOMContentLoaded', ()=>{
     if(!startBtn){ newGame(); }
   });
