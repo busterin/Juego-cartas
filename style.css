@@ -292,3 +292,8 @@ html,body{
 
 .intro-actions{ text-align: right; }
 #introNext[disabled]{ opacity:.6; filter:grayscale(.2); cursor:not-allowed; }
+
+/* Marcador de vida (antes puntos) en HUD: rojo */
+.meter.pts{
+  background: radial-gradient(60% 60% at 30% 30%, #ffc1c1 0, #ff6b6b 60%, #cc1f1f 100%);
+}
