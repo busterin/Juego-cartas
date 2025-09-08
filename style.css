@@ -72,10 +72,9 @@ html,body{
 }
 .meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .meter.pts { background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
-/* Glow/bounce cuando cambian monedas/puntos */
 .meter.bump{ animation: bump .6s ease; }
 @keyframes bump{
-  0%{ transform:scale(1); box-shadow:0 0 0 0 rgba(255,255,255,.0), inset 0 0 0 rgba(0,0,0,0) }
+  0%{ transform:scale(1); box-shadow:0 0 0 0 rgba(255,255,255,.0) }
   40%{ transform:scale(1.18); box-shadow:0 0 20px rgba(255,255,255,.4) }
   100%{ transform:scale(1); box-shadow:0 0 0 rgba(255,255,255,0) }
 }
@@ -91,9 +90,9 @@ html,body{
   display:grid; place-items:center; position:relative;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
   transition: border-color .15s ease, background .15s ease;
+  overflow: hidden; /* para recortar la explosión */
 }
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
-/* Slot ocupado: borde sólido y fondo ligeramente más intenso */
 .slot.occupied{
   border-style: solid;
   border-color: rgba(255,255,255,.28);
@@ -108,6 +107,7 @@ html,body{
   box-shadow: 0 6px 24px rgba(0,0,0,.5);
   background:#0f1633;
   overflow: visible;
+  will-change: transform, opacity;
 }
 .placed .art, .placed .art img{
   position:absolute; inset:0; width:100%; height:100%;
@@ -211,7 +211,7 @@ html,body{
 .zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
 .zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:.85rem; }
 
-/* ===== Tokens en miniatura (más pequeños y por debajo del HUD) ===== */
+/* ===== Tokens pequeños ===== */
 .hand .card .token,
 .placed .token {
   width:20px;
@@ -222,7 +222,7 @@ html,body{
   filter: drop-shadow(0 3px 8px rgba(0,0,0,.55));
 }
 
-/* ===== Toast de turno / avisos ===== */
+/* ===== Toast ===== */
 .turn-toast{
   position: fixed; left: 50%; top: 42%;
   transform: translate(-50%, -50%) scale(.96);
@@ -234,8 +234,6 @@ html,body{
   z-index: 120;
 }
 .turn-toast.show{ opacity: 1; transform: translate(-50%, -50%) scale(1); }
-
-/* Toast de aviso (insuficiente, etc.) */
 .turn-toast.warn{
   background: radial-gradient(60% 60% at 50% 40%, #ffd1d1 0, #ff8b8b 55%, #ff5a5a 100%);
   border-color: rgba(255,255,255,.8);
@@ -261,7 +259,7 @@ html,body{
   box-shadow:0 6px 20px rgba(0,0,0,.55);
 }
 
-/* ===== Robo de carta: overlay que muestra la carta en grande ===== */
+/* ===== Robo (overlay) ===== */
 .draw-overlay{
   position: fixed;
   inset: 0;
@@ -278,13 +276,41 @@ html,body{
   pointer-events: auto;
 }
 
-/* ===== Feedback coste insuficiente: shake ===== */
+/* ===== Shake coste insuficiente ===== */
 @keyframes shake {
   10%, 90% { transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot)) translateY(0) }
   20%, 80% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
   30%, 50%, 70% { transform: translateX(calc(var(--x) + var(--off, 0px) + 3px)) rotate(var(--rot)) }
   40%, 60% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
 }
-.card.shake{
-  animation: shake .45s ease;
+.card.shake{ animation: shake .45s ease; }
+
+/* ===== 💥 Explosión al destruir ===== */
+.explosion{
+  position:absolute; left:50%; top:50%;
+  width:140%; height:140%;
+  transform: translate(-50%,-50%) scale(.6);
+  border-radius:50%;
+  pointer-events:none;
+  background: radial-gradient(circle,
+    rgba(255,255,255,.95) 0%,
+    rgba(255,230,120,.9) 22%,
+    rgba(255,160,0,.75) 42%,
+    rgba(255,60,0,.45) 58%,
+    rgba(255,0,0,0) 72%);
+  filter: blur(1px);
+  mix-blend-mode: screen;
+  opacity:1;
+  animation: boom .45s ease-out forwards;
+  z-index: 200; /* por encima del contenido del slot */
+}
+@keyframes boom{
+  to{ transform: translate(-50%,-50%) scale(1.4); opacity:0; }
+}
+/* Encogido/desvanecido de la carta destruida */
+.placed.destroy{
+  animation: popOut .32s ease-in forwards;
+}
+@keyframes popOut{
+  to{ transform: scale(.75); opacity:0; }
 }
