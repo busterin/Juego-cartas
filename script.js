@@ -12,8 +12,8 @@
 
   // ---------- DOM ----------
   const handEl = $('#hand');
-  const slotsPlayer = $$('.slot[data-side="player"]');
-  const slotsEnemy  = $$('.slot[data-side="enemy"]');
+  const slotsPlayer = $$('.slot[data-side="player"]'); // ahora 6
+  const slotsEnemy  = $$('.slot[data-side="enemy"]');  // ahora 6
 
   const roundNoEl = $('#roundNo');
   const pCoinsEl = $('#pCoins'), eCoinsEl = $('#eCoins');
@@ -34,7 +34,7 @@
   const turnToast   = $('#turnToast');
 
   // ---------- Estado ----------
-  const SLOTS = 3, HAND_SIZE = 4, MAX_ROUNDS = 8;
+  const SLOTS = 6, HAND_SIZE = 4, MAX_ROUNDS = 8;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
     pDeck: [], eDeck: [], pHand: [], eHand: [],
@@ -144,7 +144,7 @@
     whenImagesReady(handEl, layoutHand);
   }
 
-  // ---------- 💥 Explosión util ----------
+  // ---------- Explosión ----------
   function addExplosion(slotEl){
     if(!slotEl) return;
     const ex = document.createElement('div');
@@ -162,21 +162,18 @@
     const placed = slotEl?.querySelector('.placed');
     if(placed){ placed.classList.add('destroy'); }
     addExplosion(slotEl);
-    // esperar la animación antes de re-renderizar
     setTimeout(()=>{ renderBoard(); }, 330);
     const who = targetSide === 'enemy' ? '😈' : '🛡️';
     showTurnToast(`${who} ${killedName||'Carta'} destruida`, 900, 'warn');
   }
 
   function applyOnPlaceEffects(side, laneIndex, card){
-    // Efecto Guerrera: destruye la carta de enfrente si existe (con FX)
+    // Guerrera: destruye carta de enfrente si existe
     if (isGuerrera(card)) {
       const cell = state.center[laneIndex];
       if (side === 'player' && cell.e){
         const killed = cell.e;
-        // Primero aplicamos FX sobre el DOM actual...
         destroyWithFX('enemy', laneIndex, killed.name);
-        // ...y luego mutamos el estado tras un pequeño delay
         setTimeout(()=>{ cell.e = null; }, 300);
       } else if (side === 'enemy' && cell.p){
         const killed = cell.p;
@@ -200,12 +197,8 @@
       <div class="name-top">${card.name||''}</div>
       <div class="desc">${card.text||''}</div>
     `;
-
     let dragged = false;
-    el.addEventListener('click', ()=> {
-      if (dragged) { dragged = false; return; }
-      openZoom(card);
-    });
+    el.addEventListener('click', ()=> { if (dragged) { dragged = false; return; } openZoom(card); });
     attachDragHandlers(el, () => { dragged = true; });
     return el;
   }
@@ -227,72 +220,38 @@
       </div>
     `;
     drawOverlay.classList.add('visible');
-    setTimeout(()=>{
-      drawOverlay.classList.remove('visible');
-      if(cb) setTimeout(cb, 250);
-    }, 900);
+    setTimeout(()=>{ drawOverlay.classList.remove('visible'); if(cb) setTimeout(cb, 250); }, 900);
   }
-
   function flyCardToHand(card, onDone){
     const idx = state.pHand.length - 1;
     const targetEl = handEl.children[idx];
     if(!targetEl){ onDone && onDone(); return; }
-
     const r = targetEl.getBoundingClientRect();
     const targetX = r.left + r.width/2;
     const targetY = r.top  + r.height/2;
-
     targetEl.style.opacity = '0';
-
     const fly = document.createElement('div');
     fly.className = 'fly-card';
     fly.innerHTML = `<div class="art"><img src="${card.art}" alt="${card.name}"></div>`;
     document.body.appendChild(fly);
-
     const startX = window.innerWidth/2;
     const startY = window.innerHeight/2;
-
     const flyW = parseFloat(getComputedStyle(fly).width);
     const scale = r.width / flyW;
-
-    requestAnimationFrame(()=>{
-      requestAnimationFrame(()=>{
-        fly.style.transform = `translate(${targetX - startX}px, ${targetY - startY}px) scale(${scale})`;
-      });
-    });
-
-    setTimeout(()=>{
-      fly.remove();
-      targetEl.style.opacity = '';
-      layoutHandSafe();
-      onDone && onDone();
-    }, 500);
+    requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ fly.style.transform = `translate(${targetX - startX}px, ${targetY - startY}px) scale(${scale})`; }); });
+    setTimeout(()=>{ fly.remove(); targetEl.style.opacity = ''; layoutHandSafe(); onDone && onDone(); }, 500);
   }
-
   function drawOneAnimated(done){
     if(!state.pDeck.length){ done && done(); return; }
     const card = state.pDeck.pop();
-
-    showDrawLarge(card, ()=>{
-      state.pHand.push(card);
-      renderHand();
-      requestAnimationFrame(()=> flyCardToHand(card, done));
-    });
+    showDrawLarge(card, ()=>{ state.pHand.push(card); renderHand(); requestAnimationFrame(()=> flyCardToHand(card, done)); });
   }
-
   function topUpPlayerAnimated(done){
-    const step = () => {
-      if(state.pHand.length >= HAND_SIZE || !state.pDeck.length){ done && done(); return; }
-      drawOneAnimated(step);
-    };
+    const step = () => { if(state.pHand.length >= HAND_SIZE || !state.pDeck.length){ done && done(); return; } drawOneAnimated(step); };
     step();
   }
-
-  // Enemigo roba sin animación
   function topUpEnemyInstant(){
-    while(state.eHand.length < HAND_SIZE && state.eDeck.length){
-      state.eHand.push(state.eDeck.pop());
-    }
+    while(state.eHand.length < HAND_SIZE && state.eDeck.length){ state.eHand.push(state.eDeck.pop()); }
   }
 
   // ---------- Tablero ----------
@@ -302,10 +261,8 @@
       if (!ps || !es) continue;
       ps.innerHTML=''; es.innerHTML='';
       const p=state.center[i].p, e=state.center[i].e;
-
       ps.classList.toggle('occupied', !!p);
       es.classList.toggle('occupied', !!e);
-
       if(p){
         const d=document.createElement('div');
         d.className='placed';
@@ -339,27 +296,22 @@
     function onDown(e){
       if(state.turn!=='player'||state.resolving) return;
       const src = e.currentTarget; src.setPointerCapture(e.pointerId); e.preventDefault();
-
       ghost = document.createElement('div');
       ghost.className = 'ghost';
       ghost.innerHTML = `${artHTML(src.dataset.art, src.dataset.name||'')}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="name-top">${src.dataset.name||''}</div><div class="desc">${src.dataset.text||''}</div>`;
       document.body.appendChild(ghost);
       moveGhost(e.clientX, e.clientY);
-
       const move = ev => { ev.preventDefault(); moveGhost(ev.clientX, ev.clientY); onDragMoveCb && onDragMoveCb(); };
       const finish = ev => {
         try { src.releasePointerCapture(e.pointerId); } catch(_) {}
         window.removeEventListener('pointermove', move, {passive:false});
         window.removeEventListener('pointerup', finish, true);
         window.removeEventListener('pointercancel', finish, true);
-
         const lane = laneUnder(ev.clientX, ev.clientY);
         if(lane !== -1) tryPlayFromHandToSlot(+src.dataset.index, lane);
-
         if (ghost) { ghost.remove(); ghost = null; }
         layoutHandSafe();
       };
-
       window.addEventListener('pointermove', move, {passive:false});
       window.addEventListener('pointerup', finish, {passive:false, capture:true});
       window.addEventListener('pointercancel', finish, {passive:false, capture:true});
@@ -392,17 +344,14 @@
 
   function insufficientFeedback(handIndex){
     const el = handEl.children[handIndex];
-    if(el){
-      el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
-    }
+    if(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
     showTurnToast('Monedas insuficientes', 900, 'warn');
   }
 
   function tryPlayFromHandToSlot(handIndex, slotIndex){
     if(handIndex<0||handIndex>=state.pHand.length) return;
     const card=state.pHand[handIndex];
-
-    if (state.center[slotIndex].p) return;
+    if (state.center[slotIndex].p) return; // no pisar carta propia
     if(!canAfford(card)) { insufficientFeedback(handIndex); return; }
 
     state.pCoins -= card.cost;
@@ -412,12 +361,9 @@
     applyOnPlaceEffects('player', slotIndex, card);
 
     state.pHand.splice(handIndex,1);
-    renderHand(); renderBoard(); updateHUD();
-    bump(pCoinsEl);
+    renderHand(); renderBoard(); updateHUD(); bump(pCoinsEl);
 
-    if(state.pDeck.length){
-      drawOneAnimated(()=>{ renderHand(); updateHUD(); });
-    }
+    if(state.pDeck.length){ drawOneAnimated(()=>{ renderHand(); updateHUD(); }); }
   }
 
   // ---------- IA rival ----------
@@ -449,10 +395,8 @@
 
     const tryPlayOnce=()=>{
       if(!canPlay()) return false;
-
       const bestIdx = pickBestCardIndex();
       if(bestIdx === -1) return false;
-
       const target = pickBestLane();
       if(target===-1) return false;
 
@@ -513,17 +457,13 @@
   // ---------- Nueva partida ----------
   function newGame(){
     purgeTransientNodes();
-
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
-
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
-
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.eDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.pHand=[]; state.eHand=[];
     renderBoard(); renderHand(); updateHUD();
-
     topUpEnemyInstant();
     topUpPlayerAnimated(()=>{
       renderHand(); layoutHandSafe(); updateHUD();
