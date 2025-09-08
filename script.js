@@ -7,7 +7,7 @@
   const handEl = $('#hand');
   const roundNoEl = $('#roundNo');
   const pCoinsEl = $('#pCoins'), eCoinsEl = $('#eCoins');
-  const pScoreEl = $('#pScore'), eScoreEl = $('#eScore'); // ahora muestran VIDA
+  const pScoreEl = $('#pScore'), eScoreEl = $('#eScore'); // VIDA
 
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
@@ -23,8 +23,19 @@
   // Robo animado
   const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard');
 
+  // Crear botón ATACAR dinámicamente en la barra inferior
+  const bottomBar = document.querySelector('.bottom-bar');
+  let attackBtn = document.getElementById('attackBtn');
+  if(!attackBtn){
+    attackBtn = document.createElement('button');
+    attackBtn.id = 'attackBtn';
+    attackBtn.className = 'btn primary';
+    attackBtn.textContent = 'ATACAR';
+    bottomBar.insertBefore(attackBtn, passBtn); // antes de PASAR TURNO
+  }
+
   // ---------- Estado ----------
-  const SLOTS = 6;         // 3x2 por lado
+  const SLOTS = 6;         // 3 columnas x 2 filas por lado
   const HAND_SIZE = 4;
 
   const state = {
@@ -35,7 +46,9 @@
     center: Array.from({length:SLOTS},()=>({p:null,e:null})),
     turn: 'player',
     playerPassed:false, enemyPassed:false,
-    resolving:false
+    resolving:false,
+    attackCtx: null,     // {attIndex:number, column:number, targets:number[]}
+    targeting: false
   };
 
   // ---------- Cartas ----------
@@ -272,10 +285,13 @@
   function updateHUD(){
     roundNoEl.textContent=state.round;
     pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins;
-    pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore; // muestran VIDA
+    pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore; // VIDA
   }
 
-  // ---------- Combate / Daño ----------
+  // ---------- Utilidades combate ----------
+  const columnOf = idx => idx % 3; // 3 columnas
+  const enemyIndicesSameColumn = (col) => [0,1,2,3,4,5].filter(i => i%3===col);
+
   function getSlotsEls(index){
     const playerSlots = $$('.slot[data-side="player"]');
     const enemySlots  = $$('.slot[data-side="enemy"]');
@@ -290,6 +306,14 @@
     boom.className = 'explosion';
     placed.appendChild(boom);
     setTimeout(()=> boom.remove(), 500);
+  }
+
+  function hitEffectOn(el){
+    if(!el) return;
+    const placed = el.querySelector('.placed');
+    if(!placed) return;
+    placed.classList.add('hit');
+    setTimeout(()=> placed.classList.remove('hit'), 360);
   }
 
   function applyDamage(to, amount){
@@ -312,56 +336,112 @@
     return false;
   }
 
-  // atacanteSide: 'player' | 'enemy'
-  function resolveConfrontation(index, attackerSide, forcedDestroy=false, attackerPts=0){
-    const pair = state.center[index];
-    if(!pair) return;
+  // ---------- Modo ataque del jugador ----------
+  function computePlayerTargets(attIndex){
+    const col = columnOf(attIndex);
+    const candidates = enemyIndicesSameColumn(col).filter(i => state.center[i].e);
+    return { col, targets: candidates };
+  }
 
-    if(attackerSide==='player'){
-      const atk = pair.p; const def = pair.e;
-      if(!def) return;
-      // Si Guerrera u orden forzada: destruir siempre y daño = max(0, atk.pts - def.pts)
-      if(forcedDestroy || (atk && atk.name==='Guerrera')){
-        const { es } = getSlotsEls(index);
-        spawnExplosionOn(es);
-        pair.e = null;
-        renderBoard();
-        applyDamage('enemy', Math.max(0, (atk?.pts||attackerPts) - def.pts));
-        return;
-      }
-      if(atk && def && atk.pts > def.pts){
-        const { es } = getSlotsEls(index);
-        spawnExplosionOn(es);
-        pair.e = null;
-        renderBoard();
-        applyDamage('enemy', atk.pts - def.pts);
-      }
+  function showAttackButton(attIndex){
+    const { targets } = computePlayerTargets(attIndex);
+    if(targets.length){
+      state.attackCtx = { attIndex, column: columnOf(attIndex), targets };
+      attackBtn.classList.add('show');
+      attackBtn.disabled = false;
     }else{
-      const atk = pair.e; const def = pair.p;
-      if(!def) return;
-      if(forcedDestroy || (atk && atk.name==='Guerrera')){ // por simetría
-        const { ps } = getSlotsEls(index);
-        spawnExplosionOn(ps);
-        pair.p = null;
-        renderBoard();
-        applyDamage('player', Math.max(0, (atk?.pts||attackerPts) - def.pts));
-        return;
-      }
-      if(atk && def && atk.pts > def.pts){
-        const { ps } = getSlotsEls(index);
-        spawnExplosionOn(ps);
-        pair.p = null;
-        renderBoard();
-        applyDamage('player', atk.pts - def.pts);
-      }
+      state.attackCtx = null;
+      attackBtn.classList.remove('show');
     }
   }
+
+  function enterTargetMode(){
+    if(!state.attackCtx) return;
+    state.targeting = true;
+    attackBtn.disabled = true;
+
+    // Marcar objetivos
+    const enemySlots = $$('.slot[data-side="enemy"]');
+    state.attackCtx.targets.forEach(i=>{
+      const el = enemySlots[i];
+      if(!el) return;
+      el.classList.add('targetable');
+      const choose = () => {
+        exitTargetMode();
+        resolvePlayerAttack(state.attackCtx.attIndex, i);
+      };
+      el._chooseHandler = choose;
+      el.addEventListener('click', choose, {once:true});
+    });
+  }
+
+  function exitTargetMode(){
+    state.targeting = false;
+    const enemySlots = $$('.slot[data-side="enemy"]');
+    enemySlots.forEach(el=>{
+      el.classList.remove('targetable');
+      if(el._chooseHandler){
+        el.removeEventListener('click', el._chooseHandler);
+        delete el._chooseHandler;
+      }
+    });
+  }
+
+  function updateEnemyPlacedTokenValue(slotIndex, newPts){
+    const enemySlots = $$('.slot[data-side="enemy"]');
+    const es = enemySlots[slotIndex];
+    const token = es?.querySelector('.token.t-pts');
+    if(token){
+      token.textContent = newPts;
+      token.classList.add('damage');
+      setTimeout(()=> token.classList.remove('damage'), 600);
+    }
+  }
+
+  function resolvePlayerAttack(attIndex, defIndex){
+    const pairA = state.center[attIndex];
+    const pairD = state.center[defIndex];
+    const attacker = pairA?.p;
+    const defender = pairD?.e;
+    if(!attacker || !defender) { attackBtn.classList.remove('show'); state.attackCtx=null; return; }
+
+    const attPts = attacker.pts;
+    const defPts = defender.pts;
+
+    // Efecto visual de impacto en el objetivo
+    const { es } = getSlotsEls(defIndex);
+    hitEffectOn(es);
+
+    if(attPts >= defPts){
+      // Destruye y daño a vida = diferencia
+      const diff = attPts - defPts;
+      spawnExplosionOn(es);
+      state.center[defIndex].e = null;
+      renderBoard();
+      applyDamage('enemy', diff);
+    }else{
+      // No destruye: resta attPts a la carta rival
+      const remaining = Math.max(0, defPts - attPts);
+      state.center[defIndex].e = { ...defender, pts: remaining };
+      renderBoard();
+      updateEnemyPlacedTokenValue(defIndex, remaining);
+    }
+
+    // Fin de este ataque
+    attackBtn.classList.remove('show');
+    state.attackCtx = null;
+  }
+
+  attackBtn.addEventListener('click', ()=>{
+    if(state.resolving || state.turn!=='player' || !state.attackCtx) return;
+    enterTargetMode();
+  });
 
   // ---------- Drag & drop ----------
   let ghost=null;
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
-    if(state.turn!=='player'||state.resolving) return;
+    if(state.turn!=='player'||state.resolving||state.targeting) return;
     const src = e.currentTarget; src.setPointerCapture(e.pointerId); e.preventDefault();
 
     ghost = document.createElement('div');
@@ -416,9 +496,21 @@
     state.pHand.splice(handIndex,1);
     renderHand(); renderBoard(); updateHUD();
 
-    // Enfrentamiento inmediato (con efecto de Guerrera)
-    const forced = card.name==='Guerrera';
-    resolveConfrontation(slotIndex, 'player', forced, card.pts);
+    // Mostrar botón ATACAR si hay objetivos válidos en la columna
+    showAttackButton(slotIndex);
+
+    // Efecto Guerrera (pasiva de colocar): destruye automáticamente si hay carta justo enfrente (mismo índice),
+    // PERO mantenemos el nuevo sistema: este efecto ocurre antes de habilitar el ataque manual adicional.
+    if(card.name==='Guerrera' && state.center[slotIndex].e){
+      const { es } = getSlotsEls(slotIndex);
+      spawnExplosionOn(es);
+      const defPts = state.center[slotIndex].e.pts;
+      state.center[slotIndex].e = null;
+      renderBoard();
+      applyDamage('enemy', Math.max(0, card.pts - defPts));
+      // Después de destruir “enfrente”, puede que todavía queden otros objetivos en la columna:
+      showAttackButton(slotIndex);
+    }
 
     // Roba 1 animada si hay mazo
     if(state.pDeck.length){
@@ -426,7 +518,7 @@
     }
   }
 
-  // ---------- IA rival ----------
+  // ---------- IA rival (sin selección de objetivo; usa lógica previa) ----------
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     showTurnToast('TURNO RIVAL');
@@ -434,24 +526,41 @@
 
     const tryPlayOnce=()=>{
       if(!canPlay()) return false;
-      // Elegir carta simple por heurística pts*2 - cost
       let best=-1,score=-1;
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
       const card=state.eHand[best];
 
-      // Buscar primer hueco enemigo libre
       let target=-1;
       for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1) return false;
 
-      // Pagar y colocar
       state.eCoins-=card.cost; state.center[target].e={...card};
       state.eHand.splice(best,1); if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
       renderBoard(); updateHUD();
 
-      // Enfrentamiento inmediato (simétrico)
-      const forced = card.name==='Guerrera';
-      resolveConfrontation(target, 'enemy', forced, card.pts);
+      // Confrontación simple automática contra la casilla exacta (para no alargar turno IA)
+      const pair = state.center[target];
+      if(pair.p && pair.e){
+        const { ps } = getSlotsEls(target);
+        hitEffectOn(ps);
+        if(pair.e.pts >= pair.p.pts){
+          // si IA >= jugador, destruye la tuya y daño diferencia
+          const diff = pair.e.pts - pair.p.pts;
+          const { ps:psEl } = getSlotsEls(target);
+          spawnExplosionOn(psEl);
+          pair.p = null;
+          renderBoard();
+          applyDamage('player', diff);
+        }else{
+          // reduce tu carta
+          const rem = Math.max(0, pair.p.pts - pair.e.pts);
+          pair.p = { ...pair.p, pts: rem };
+          renderBoard();
+          const playerSlots = $$('.slot[data-side="player"]');
+          const token = playerSlots[target]?.querySelector('.token.t-pts');
+          if(token){ token.textContent = rem; token.classList.add('damage'); setTimeout(()=> token.classList.remove('damage'), 600); }
+        }
+      }
 
       return true;
     };
@@ -464,11 +573,13 @@
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
 
   function nextRound(){
-    // No hay puntuación por tablero, solo avanza la ronda
     state.round+=1;
     state.playerPassed=false; state.enemyPassed=false;
     state.turn='player';
-    state.pCoins+=1; // como antes
+    state.pCoins+=1;
+    attackBtn.classList.remove('show');
+    state.attackCtx=null; state.targeting=false;
+
     topUpEnemyInstant();
     topUpPlayerAnimated(()=>{
       renderHand(); layoutHandSafe(); updateHUD();
@@ -487,6 +598,8 @@
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.eDeck = [...CARDS].sort(()=> Math.random()-0.5);
     state.pHand=[]; state.eHand=[];
+    attackBtn.classList.remove('show'); state.attackCtx=null; state.targeting=false;
+
     renderBoard(); renderHand(); updateHUD();
 
     // Relleno inicial
@@ -516,7 +629,7 @@
 
   function startIntro(){
     if(!introOv) { newGame(); return; }
-    introTextEl.textContent = "";
+    introTextEl && (introTextEl.textContent = "");
     introOv.classList.add('visible');
     introOv.setAttribute('aria-hidden','false');
     typingIdx = 0;
@@ -526,7 +639,7 @@
     const speed = 22; // ms/char
     const run = () => {
       if (typingIdx < INTRO_TEXT.length){
-        introTextEl.textContent = INTRO_TEXT.slice(0, typingIdx+1);
+        introTextEl && (introTextEl.textContent = INTRO_TEXT.slice(0, typingIdx+1));
         typingIdx++;
         typingTimer = setTimeout(run, speed);
       } else {
@@ -541,7 +654,7 @@
     if(!introOv) return;
     if (typingRunning){
       clearTimeout(typingTimer);
-      introTextEl.textContent = INTRO_TEXT;
+      introTextEl && (introTextEl.textContent = INTRO_TEXT);
       typingRunning = false;
       if(introNext) introNext.disabled = false;
       return;
@@ -562,8 +675,11 @@
   againBtn.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
   resetBtn.addEventListener('click', ()=> newGame());
   passBtn.addEventListener('click', ()=>{
-    if(state.turn!=='player'||state.resolving) return;
-    state.playerPassed=true; state.turn='enemy'; enemyTurn();
+    if(state.turn!=='player'||state.resolving||state.targeting) return;
+    state.playerPassed=true; state.turn='enemy';
+    attackBtn.classList.remove('show');
+    state.attackCtx=null; state.targeting=false;
+    enemyTurn();
   });
 
   window.addEventListener('resize', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
