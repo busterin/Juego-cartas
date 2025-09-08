@@ -210,6 +210,14 @@ html,body{
 .zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
 .zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:.85rem; }
 
+/* Rellenar por completo la carta en zoom con un ligero recorte (zoom-in) */
+.zoom-card .art img{
+  object-fit: cover;
+  object-position: top;
+  transform: scale(1.08);        /* ajusta 1.05–1.12 a tu gusto */
+  transform-origin: center top;  /* prioriza la parte superior de la carta */
+}
+
 /* ===== Toast ===== */
 .turn-toast{
   position: fixed; left: 50%; top: 42%;
