@@ -332,3 +332,48 @@ html,body{
   40%{ background: radial-gradient(#ffc1c1, #e64545); }
   100%{ transform: translateY(0) scale(1); }
 }
+/* === Selección de objetivo: ya lo tenías === */
+#attackBtn{ display:none; }
+#attackBtn.show{ display:inline-block; }
+.slot.enemy.targetable{
+  outline: 2px solid rgba(255,120,120,.9);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 3px rgba(255,120,120,.25) inset, 0 6px 18px rgba(255,0,0,.25);
+  cursor: pointer;
+}
+
+/* Pulso de impacto (ligero) */
+.placed.hit{ animation: hitPulse .36s ease-out; }
+@keyframes hitPulse{
+  0%{ transform: scale(1); filter: brightness(1); }
+  35%{ transform: scale(1.03); filter: brightness(1.25); }
+  100%{ transform: scale(1); filter: brightness(1); }
+}
+
+/* === Shake MUY visible cuando sufre daño === */
+.placed.dmg-shake{
+  animation: dmgShake .5s cubic-bezier(.36,.07,.19,.97);
+}
+@keyframes dmgShake{
+  0%   { transform: translate(0, 0) rotate(0); }
+  10%  { transform: translate(-5px, -2px) rotate(-1.2deg); }
+  20%  { transform: translate(6px, 2px) rotate(1.1deg); }
+  30%  { transform: translate(-6px, 1px) rotate(-1.0deg); }
+  40%  { transform: translate(5px, -1px) rotate(.9deg); }
+  50%  { transform: translate(-4px, 2px) rotate(-.8deg); }
+  60%  { transform: translate(3px, -2px) rotate(.7deg); }
+  70%  { transform: translate(-2px, 1px) rotate(-.5deg); }
+  80%  { transform: translate(2px, -1px) rotate(.4deg); }
+  90%  { transform: translate(-1px, 0) rotate(-.2deg); }
+  100% { transform: translate(0, 0) rotate(0); }
+}
+
+/* Token de puntos dañado: flash rojo y pequeño rebote */
+.token.t-pts.damage{
+  animation: dmgFlash .6s ease;
+}
+@keyframes dmgFlash{
+  0%{ background: radial-gradient(#ffd0d0, #ff6b6b); transform: translateY(-2px) scale(1.1); }
+  40%{ background: radial-gradient(#ffc1c1, #e64545); }
+  100%{ transform: translateY(0) scale(1); }
+}
