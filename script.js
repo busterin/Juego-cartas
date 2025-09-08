@@ -44,7 +44,8 @@
 
   // ---------- Cartas fijas ----------
   const CARDS = [
-    { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:5, text:"Lidera la carga con fuerza indomable." },
+    { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:5,
+      text:"Cuando la colocas enfrente de una carta rival, la destruye automáticamente." },
     { name:'Maga',     art:'assets/Maga.PNG',      cost:2, pts:4, text:"Canaliza energías arcanas a tu favor." },
     { name:'Arquero',  art:'assets/Arquero.PNG',   cost:1, pts:3, text:"Dispara con precisión quirúrgica." },
     { name:'Sanadora', art:'assets/Sanadora.PNG',  cost:2, pts:2, text:"Restaura y protege a los tuyos." },
@@ -139,6 +140,31 @@
     requestAnimationFrame(layoutHand);
     setTimeout(layoutHand, 60);
     whenImagesReady(handEl, layoutHand);
+  }
+
+  // ---------- Efectos ----------
+  const isGuerrera = c => c && c.name === 'Guerrera';
+
+  function applyOnPlaceEffects(side, laneIndex, card){
+    // Efecto Guerrera: destruye la carta de enfrente si existe
+    if (isGuerrera(card)) {
+      const cell = state.center[laneIndex];
+      if (side === 'player') {
+        if (cell.e) {
+          const killed = cell.e;
+          cell.e = null;
+          renderBoard();
+          showTurnToast(`⚔️ Guerrera destruye ${killed.name||'una carta'}`, 900, 'warn');
+        }
+      } else { // side === 'enemy'
+        if (cell.p) {
+          const killed = cell.p;
+          cell.p = null;
+          renderBoard();
+          showTurnToast(`😈 Guerrera rival destruye ${killed.name||'una carta'}`, 900, 'warn');
+        }
+      }
+    }
   }
 
   // ---------- Mano ----------
@@ -368,6 +394,10 @@
 
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
+
+    // 🔥 Efectos al colocar (jugador)
+    applyOnPlaceEffects('player', slotIndex, card);
+
     state.pHand.splice(handIndex,1);
     renderHand(); renderBoard(); updateHUD();
     bump(pCoinsEl);
@@ -417,6 +447,10 @@
       const card = state.eHand[bestIdx];
       state.eCoins -= card.cost;
       state.center[target].e = {...card};
+
+      // 🔥 Efectos al colocar (rival)
+      applyOnPlaceEffects('enemy', target, card);
+
       state.eHand.splice(bestIdx,1);
 
       // Roba instant si hay
@@ -450,9 +484,6 @@
     updateHUD();
     bump(pScoreEl); bump(eScoreEl);
 
-    // 🔴 IMPORTANTE: NO limpiar tablero aquí (se mantiene)
-    // (No modificar state.center)
-
     if(state.round === MAX_ROUNDS){ setTimeout(endGame, 300); return; }
 
     // Avanzar ronda
@@ -480,7 +511,7 @@
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
 
-    // ✅ Solo aquí se limpia el tablero:
+    // Solo aquí se limpia el tablero:
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
 
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
