@@ -247,3 +247,48 @@ html,body{
   40%, 60% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
 }
 .card.shake{ animation: shake .45s ease; }
+
+/* ===== Intro “Fire Emblem” ===== */
+.overlay.intro{
+  background: none;
+  opacity: 0; pointer-events: none; transition: opacity .25s ease;
+  z-index: 10000;
+}
+.overlay.intro.visible{ opacity: 1; pointer-events: auto; }
+.intro-bg{
+  position:absolute; inset:0;
+  background: url("assets/Guerrera.PNG") center center / cover no-repeat;
+  filter: brightness(.65) saturate(1.05);
+}
+.intro-panel{
+  position:absolute; left:50%; bottom:8%;
+  transform: translateX(-50%);
+  width: min(92vw, 760px);
+  background: rgba(10,15,30,.88);
+  border: 2px solid rgba(255,255,255,.28);
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.55);
+}
+.intro-text{
+  font-size: .98rem; line-height: 1.55;
+  color: var(--ink);
+  min-height: 3.2em;
+  margin: 0 0 12px 0;
+  position: relative;
+  /* cursor “caret” parpadeante */
+}
+.intro-text::after{
+  content: "";
+  display: inline-block;
+  width: 8px; height: 1.1em;
+  vertical-align: -0.15em;
+  background: currentColor;
+  margin-left: 4px;
+  opacity: 1;
+  animation: caretBlink .9s steps(1) infinite;
+}
+@keyframes caretBlink{ 50%{ opacity:0 } }
+
+.intro-actions{ text-align: right; }
+#introNext[disabled]{ opacity:.6; filter:grayscale(.2); cursor:not-allowed; }
