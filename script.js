@@ -5,9 +5,7 @@
   const bump = (meterValueEl) => {
     const meter = meterValueEl?.closest('.meter');
     if(!meter) return;
-    meter.classList.remove('bump');
-    void meter.offsetWidth;
-    meter.classList.add('bump');
+    meter.classList.remove('bump'); void meter.offsetWidth; meter.classList.add('bump');
   };
 
   // ---------- DOM ----------
@@ -19,19 +17,15 @@
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
 
-  const againBtn = $('#againBtn');
-  const passBtn  = $('#passBtn');
-  const resetBtn = $('#resetBtn');
+  const againBtn = $('#againBtn'); const passBtn  = $('#passBtn'); const resetBtn = $('#resetBtn');
 
-  const startOv  = $('#startOverlay');
-  const startBtn = $('#startBtn');
+  const startOv  = $('#startOverlay'); const startBtn = $('#startBtn');
 
-  const drawOverlay = $('#drawOverlay');
-  const drawCardEl  = $('#drawCard');
-  const turnToast   = $('#turnToast');
+  const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard'); const turnToast = $('#turnToast');
 
   // ---------- Estado ----------
-  const SLOTS = 3, HAND_SIZE = 4, MAX_ROUNDS = 8;
+  const SLOTS = 6;                 // 3 columnas × 2 filas por lado
+  const HAND_SIZE = 4, MAX_ROUNDS = 8;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
     pDeck: [], eDeck: [], pHand: [], eHand: [],
@@ -53,7 +47,7 @@
   const tokenPts  = v => `<div class="token t-pts" aria-label="Puntos ${v}">${v}</div>`;
   const artHTML = (src, alt='') => `<div class="art">${src?`<img src="${src}" alt="${alt}">`:''}</div>`;
 
-  // ---------- Limpieza de nodos temporales ----------
+  // ---------- Limpieza ----------
   function purgeTransientNodes(){
     document.querySelectorAll('.fly-card, .ghost').forEach(n=>n.remove());
     drawOverlay?.classList.remove('visible');
@@ -74,7 +68,7 @@
   function closeZoom(){ zoomOverlay.classList.remove('visible'); }
   zoomOverlay.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
 
-  // ---------- Espera imágenes ----------
+  // ---------- Imagenes listas ----------
   function whenImagesReady(root, cb){
     const imgs = Array.from(root.querySelectorAll('img'));
     if (imgs.length === 0){ cb(); return; }
@@ -82,18 +76,13 @@
     const done = () => { remaining--; if (remaining <= 0) cb(); };
     imgs.forEach(img=>{
       if (img.complete) { done(); }
-      else {
-        img.addEventListener('load', done, {once:true});
-        img.addEventListener('error', done, {once:true});
-      }
+      else { img.addEventListener('load', done, {once:true}); img.addEventListener('error', done, {once:true}); }
     });
   }
 
-  // ---------- Layout Mano ----------
+  // ---------- Layout mano ----------
   function layoutHand(){
-    const n = handEl.children.length;
-    if (!n) return;
-
+    const n = handEl.children.length; if (!n) return;
     const contRect = handEl.getBoundingClientRect();
     const contW = handEl.clientWidth || contRect.width || window.innerWidth;
     const cardW = handEl.children[0]?.getBoundingClientRect().width || 0;
@@ -108,7 +97,6 @@
       const bearLeftInHand = bearEl.getBoundingClientRect().left - contRect.left;
       startCenter = Math.max(EDGE + cardW/2, bearLeftInHand + cardW/2);
     }
-
     let endCenter = contW - EDGE - cardW/2;
     if (demonEl){
       const demonRightInHand = demonEl.getBoundingClientRect().right - contRect.left;
@@ -126,22 +114,16 @@
 
     const mid = (n - 1) / 2;
     [...handEl.children].forEach((el, i) => {
-      const cx = centers[i];
-      const tx = Math.round(cx - contW/2);
+      const cx = centers[i], tx = Math.round(cx - contW/2);
       el.style.setProperty('--x', `${tx}px`);
       el.style.setProperty('--off', `0px`);
       el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`);
       el.style.zIndex = 10 + i;
     });
   }
-  function layoutHandSafe(){
-    layoutHand();
-    requestAnimationFrame(layoutHand);
-    setTimeout(layoutHand, 60);
-    whenImagesReady(handEl, layoutHand);
-  }
+  function layoutHandSafe(){ layoutHand(); requestAnimationFrame(layoutHand); setTimeout(layoutHand, 60); whenImagesReady(handEl, layoutHand); }
 
-  // ---------- 💥 Explosión util ----------
+  // ---------- FX ----------
   function addExplosion(slotEl){
     if(!slotEl) return;
     const ex = document.createElement('div');
@@ -149,10 +131,7 @@
     slotEl.appendChild(ex);
     setTimeout(()=> ex.remove(), 600);
   }
-
-  // ---------- Efectos ----------
   const isGuerrera = c => c && c.name === 'Guerrera';
-
   function destroyWithFX(targetSide, laneIndex, killedName){
     const slotSel = `.slot[data-side="${targetSide}"][data-lane="${laneIndex}"]`;
     const slotEl = document.querySelector(slotSel);
@@ -163,18 +142,14 @@
     const who = targetSide === 'enemy' ? '😈' : '🛡️';
     showTurnToast(`${who} ${killedName||'Carta'} destruida`, 900, 'warn');
   }
-
   function applyOnPlaceEffects(side, laneIndex, card){
-    // Guerrera: destruye la carta de enfrente si existe
     if (isGuerrera(card)) {
       const cell = state.center[laneIndex];
       if (side === 'player' && cell.e){
-        const killed = cell.e;
-        destroyWithFX('enemy', laneIndex, killed.name);
+        const killed = cell.e; destroyWithFX('enemy', laneIndex, killed.name);
         setTimeout(()=>{ cell.e = null; }, 300);
       } else if (side === 'enemy' && cell.p){
-        const killed = cell.p;
-        destroyWithFX('player', laneIndex, killed.name);
+        const killed = cell.p; destroyWithFX('player', laneIndex, killed.name);
         setTimeout(()=>{ cell.p = null; }, 300);
       }
     }
@@ -196,11 +171,8 @@
     `;
 
     let dragged = false;
-    el.addEventListener('click', ()=> {
-      if (dragged) { dragged = false; return; }
-      openZoom(card);
-    });
-    attachDragHandlers(el, () => { dragged = true; });
+    el.addEventListener('click', ()=>{ if (dragged) { dragged=false; return; } openZoom(card); });
+    attachDragHandlers(el, ()=>{ dragged = true; });
     return el;
   }
   function renderHand(){
@@ -209,7 +181,7 @@
     layoutHandSafe();
   }
 
-  // ---------- Robo (vista grande + vuelo a mano) ----------
+  // ---------- Robo animado ----------
   function showDrawLarge(card, cb){
     drawCardEl.innerHTML = `
       <div class="zoom-card" aria-label="Carta robada: ${card.name}">
@@ -218,24 +190,17 @@
         <div class="zoom-token pts">${card.pts}</div>
         <div class="name">${card.name}</div>
         <div class="desc">${card.text||''}</div>
-      </div>
-    `;
+      </div>`;
     drawOverlay.classList.add('visible');
-    setTimeout(()=>{
-      drawOverlay.classList.remove('visible');
-      if(cb) setTimeout(cb, 250);
-    }, 900);
+    setTimeout(()=>{ drawOverlay.classList.remove('visible'); cb && setTimeout(cb, 250); }, 900);
   }
-
   function flyCardToHand(card, onDone){
     const idx = state.pHand.length - 1;
     const targetEl = handEl.children[idx];
     if(!targetEl){ onDone && onDone(); return; }
 
     const r = targetEl.getBoundingClientRect();
-    const targetX = r.left + r.width/2;
-    const targetY = r.top  + r.height/2;
-
+    const targetX = r.left + r.width/2, targetY = r.top + r.height/2;
     targetEl.style.opacity = '0';
 
     const fly = document.createElement('div');
@@ -243,37 +208,24 @@
     fly.innerHTML = `<div class="art"><img src="${card.art}" alt="${card.name}"></div>`;
     document.body.appendChild(fly);
 
-    const startX = window.innerWidth/2;
-    const startY = window.innerHeight/2;
-
+    const startX = window.innerWidth/2, startY = window.innerHeight/2;
     const flyW = parseFloat(getComputedStyle(fly).width);
     const scale = r.width / flyW;
 
-    requestAnimationFrame(()=>{
-      requestAnimationFrame(()=>{
-        fly.style.transform = `translate(${targetX - startX}px, ${targetY - startY}px) scale(${scale})`;
-      });
-    });
+    requestAnimationFrame(()=>{ requestAnimationFrame(()=>{
+      fly.style.transform = `translate(${targetX - startX}px, ${targetY - startY}px) scale(${scale})`;
+    }); });
 
-    setTimeout(()=>{
-      fly.remove();
-      targetEl.style.opacity = '';
-      layoutHandSafe();
-      onDone && onDone();
-    }, 500);
+    setTimeout(()=>{ fly.remove(); targetEl.style.opacity = ''; layoutHandSafe(); onDone && onDone(); }, 500);
   }
-
   function drawOneAnimated(done){
     if(!state.pDeck.length){ done && done(); return; }
     const card = state.pDeck.pop();
-
     showDrawLarge(card, ()=>{
-      state.pHand.push(card);
-      renderHand();
+      state.pHand.push(card); renderHand();
       requestAnimationFrame(()=> flyCardToHand(card, done));
     });
   }
-
   function topUpPlayerAnimated(done){
     const step = () => {
       if(state.pHand.length >= HAND_SIZE || !state.pDeck.length){ done && done(); return; }
@@ -281,8 +233,6 @@
     };
     step();
   }
-
-  // Enemigo roba sin animación
   function topUpEnemyInstant(){
     while(state.eHand.length < HAND_SIZE && state.eDeck.length){
       state.eHand.push(state.eDeck.pop());
@@ -296,8 +246,8 @@
       const es= document.querySelector(`.slot[data-side="enemy"][data-lane="${i}"]`);
       if (!ps || !es) continue;
       ps.innerHTML=''; es.innerHTML='';
-      const p=state.center[i].p, e=state.center[i].e;
 
+      const p=state.center[i].p, e=state.center[i].e;
       ps.classList.toggle('occupied', !!p);
       es.classList.toggle('occupied', !!e);
 
@@ -360,7 +310,7 @@
       window.addEventListener('pointercancel', finish, {passive:false, capture:true});
     }
   }
-  const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
+  const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; };
   function laneUnder(x,y){
     for(let i=0;i<SLOTS;i++){
       const el = document.querySelector(`.slot[data-side="player"][data-lane="${i}"]`);
@@ -384,12 +334,9 @@
 
   // ---------- Reglas ----------
   const canAfford = c => state.pCoins>=c.cost;
-
   function insufficientFeedback(handIndex){
     const el = handEl.children[handIndex];
-    if(el){
-      el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
-    }
+    if(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
     showTurnToast('Monedas insuficientes', 900, 'warn');
   }
 
@@ -397,18 +344,16 @@
     if(handIndex<0||handIndex>=state.pHand.length) return;
     const card=state.pHand[handIndex];
 
-    if (state.center[slotIndex].p) return;
+    if (state.center[slotIndex].p) return;         // ya ocupado
     if(!canAfford(card)) { insufficientFeedback(handIndex); return; }
 
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
 
-    // Efectos al colocar (jugador)
     applyOnPlaceEffects('player', slotIndex, card);
 
     state.pHand.splice(handIndex,1);
-    renderHand(); renderBoard(); updateHUD();
-    bump(pCoinsEl);
+    renderHand(); renderBoard(); updateHUD(); bump(pCoinsEl);
 
     if(state.pDeck.length){
       drawOneAnimated(()=>{ renderHand(); updateHUD(); });
@@ -418,8 +363,7 @@
   // ---------- IA rival ----------
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false;
-    updateHUD();
-    showTurnToast('TURNO RIVAL');
+    updateHUD(); showTurnToast('TURNO RIVAL');
 
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins);
 
@@ -428,8 +372,8 @@
       state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
       return best;
     }
-
     function pickBestLane(){
+      // prioriza destruir donde haya carta del jugador
       let bestLane = -1, bestPts = -1;
       for(let i=0;i<SLOTS;i++){
         const lane = state.center[i];
@@ -444,18 +388,13 @@
 
     const tryPlayOnce=()=>{
       if(!canPlay()) return false;
-
-      const bestIdx = pickBestCardIndex();
-      if(bestIdx === -1) return false;
-
-      const target = pickBestLane();
-      if(target===-1) return false;
+      const bestIdx = pickBestCardIndex(); if(bestIdx === -1) return false;
+      const target = pickBestLane(); if(target===-1) return false;
 
       const card = state.eHand[bestIdx];
       state.eCoins -= card.cost;
       state.center[target].e = {...card};
 
-      // Efectos al colocar (rival)
       applyOnPlaceEffects('enemy', target, card);
 
       state.eHand.splice(bestIdx,1);
@@ -469,7 +408,7 @@
     loop();
   }
 
-  // ---------- Fin de partida / Puntuación ----------
+  // ---------- Puntuación / Fin ----------
   function endGame(){
     state.resolving = true;
     let title = 'Empate';
@@ -484,18 +423,12 @@
   function scoreTurn(){
     let p=0,e=0;
     state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
-    state.pScore+=p; state.eScore+=e;
-    updateHUD();
-    bump(pScoreEl); bump(eScoreEl);
+    state.pScore+=p; state.eScore+=e; updateHUD();
 
     if(state.round === MAX_ROUNDS){ setTimeout(endGame, 300); return; }
 
-    state.round+=1;
-    state.playerPassed=false; state.enemyPassed=false;
-    state.turn='player';
-
+    state.round+=1; state.playerPassed=false; state.enemyPassed=false; state.turn='player';
     state.pCoins+=1; state.eCoins+=1; updateHUD();
-    bump(pCoinsEl); bump(eCoinsEl);
 
     topUpEnemyInstant();
     topUpPlayerAnimated(()=>{
@@ -508,11 +441,8 @@
   // ---------- Nueva partida ----------
   function newGame(){
     purgeTransientNodes();
-
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
-
-    // Solo aquí se resetea el tablero
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
 
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
@@ -520,7 +450,6 @@
     state.pHand=[]; state.eHand=[];
     renderBoard(); renderHand(); updateHUD();
 
-    // Relleno inicial
     topUpEnemyInstant();
     topUpPlayerAnimated(()=>{
       renderHand(); layoutHandSafe(); updateHUD();
@@ -546,8 +475,6 @@
         startOv.classList.remove('visible');
         newGame();
       });
-    }else{
-      newGame();
-    }
+    }else{ newGame(); }
   });
 })();
