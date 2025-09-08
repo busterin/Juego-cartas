@@ -10,8 +10,8 @@
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
 
-  /* ↑ Dejamos el tamaño de carta y slots como estaba */
-  --board-h: clamp(300px, 44vh, 520px); /* altura "base" anterior para 1 fila por lado */
+  /* El tablero ya no usa una altura fija; se estira entre HUD y mano */
+  --board-h: clamp(300px, 44vh, 520px); /* (referencia; no estrictamente necesario) */
   --lanes-gap: 10px;
   --slot-inset: 6px;
   --slot-br: 12px;
@@ -30,14 +30,14 @@ html,body{
     radial-gradient(1200px 800px at 20% 0%, #1a2458 0, transparent 60%),
     radial-gradient(900px 600px at 80% 100%, #141e46 0, transparent 60%),
     linear-gradient(180deg, var(--bg1), var(--bg2));
-  overflow:hidden;
+  overflow:hidden; /* evita scroll general */
 }
 #game{
   height: 100dvh;
   max-width: var(--game-max);
   margin-inline:auto;
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto auto; /* HUD | Board | Hand | Footer */
   gap: var(--gap);
   padding: 6px 8px calc(var(--bottom-pad) + env(safe-area-inset-bottom));
   overflow:hidden;
@@ -80,17 +80,22 @@ html,body{
   100%{ transform:scale(1); box-shadow:0 0 0 rgba(255,255,255,0) }
 }
 
-/* ===== Tablero ===== */
-.board{ display:flex; flex-direction:column; justify-content:center; align-items:stretch; min-height:0; }
-.row{ width:100%; max-width:var(--game-max); margin-inline:auto; display: grid; gap: var(--lanes-gap); }
-/* Dos filas de 3 por lado */
-.row-enemy{ grid-template-rows: auto auto; }
-.row-player{ grid-template-rows: auto auto; }
-.lanes-3{
-  /* Para mantener el tamaño de cada hueco como antes,
-     cada "lanes-3" conserva la misma altura que antes tenía la mitad del tablero */
-  height: calc(var(--board-h) / 2);
-  display:grid; grid-template-columns: repeat(3, 1fr); gap: var(--lanes-gap);
+/* ===== Tablero: ocupa solo el espacio disponible entre HUD y mano ===== */
+.board{
+  display: grid;
+  grid-template-rows: 1fr 1fr;   /* mitad rival, mitad jugador */
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+  gap: var(--lanes-gap);
+}
+.row{ width:100%; max-width:var(--game-max); margin-inline:auto; min-height:0; }
+.lanes-3x2{
+  height: 100%;
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: var(--lanes-gap);
 }
 .slot{
   height: 100%;
@@ -99,7 +104,7 @@ html,body{
   display:grid; place-items:center; position:relative;
   background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
   transition: border-color .15s ease, background .15s ease;
-  overflow: hidden;
+  overflow: hidden; /* recorta explosión */
 }
 .slot.enemy{ border-color: rgba(255,108,132,.35); }
 .slot.occupied{
@@ -175,7 +180,7 @@ html,body{
   position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
 }
 
-/* ===== Score float ===== */
+/* ===== Score float (reservado por si lo usas) ===== */
 .score-float{ position:absolute; z-index:50; padding:6px 10px; border-radius:12px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.2); font-weight:900; color:#eaf2ff; left:50%; transform:translateX(-50%); animation: scoreFloat 900ms ease-out both; }
 .score-float.you{ top:10%; } .score-float.enemy{ top:20%; }
 @keyframes scoreFloat{ 0%{ opacity:0; transform:translate(-50%, 8px) scale(.9) } 15%{ opacity:1; transform:translate(-50%, 0) scale(1) } 100%{ opacity:0; transform:translate(-50%, -14px) scale(.98) } }
@@ -231,7 +236,7 @@ html,body{
   filter: drop-shadow(0 3px 8px rgba(0,0,0,.55));
 }
 
-/* ===== Toast ===== */
+/* ===== Toast de turno ===== */
 .turn-toast{
   position: fixed; left: 50%; top: 42%;
   transform: translate(-50%, -50%) scale(.96);
@@ -318,3 +323,19 @@ html,body{
 }
 .placed.destroy{ animation: popOut .32s ease-in forwards; }
 @keyframes popOut{ to{ transform: scale(.75); opacity:0; } }
+
+/* ===== Compactación extra en pantallas pequeñas ===== */
+@media (max-width: 480px){
+  :root{
+    --lanes-gap: 8px;
+    --slot-inset: 5px;
+    --slot-br: 10px;
+  }
+}
+@media (max-width: 380px){
+  :root{
+    --lanes-gap: 6px;
+    --slot-inset: 4px;
+    --slot-br: 9px;
+  }
+}
