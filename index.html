@@ -44,33 +44,20 @@
       </div>
     </header>
 
-    <!-- Tablero: ahora 2 filas x 3 columnas por lado (6 huecos por lado) -->
+    <!-- Tablero (3 huecos por lado) -->
     <section class="board" aria-label="Tablero central">
-      <!-- RIVAL (dos filas) -->
       <div class="row row-enemy">
-        <div class="lanes lanes-3 enemy" data-row="0">
-          <div class="slot enemy" data-side="enemy" data-lane="0" aria-label="Casilla rival 1-1"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="1" aria-label="Casilla rival 1-2"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="2" aria-label="Casilla rival 1-3"></div>
-        </div>
-        <div class="lanes lanes-3 enemy" data-row="1">
-          <div class="slot enemy" data-side="enemy" data-lane="3" aria-label="Casilla rival 2-1"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="4" aria-label="Casilla rival 2-2"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="5" aria-label="Casilla rival 2-3"></div>
+        <div class="lanes lanes-3 enemy">
+          <div class="slot enemy" data-side="enemy" data-lane="0" aria-label="Casilla rival 1"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="1" aria-label="Casilla rival 2"></div>
+          <div class="slot enemy" data-side="enemy" data-lane="2" aria-label="Casilla rival 3"></div>
         </div>
       </div>
-
-      <!-- JUGADOR (dos filas) -->
       <div class="row row-player">
-        <div class="lanes lanes-3" data-row="0">
-          <div class="slot" data-side="player" data-lane="0" aria-label="Tu casilla 1-1"></div>
-          <div class="slot" data-side="player" data-lane="1" aria-label="Tu casilla 1-2"></div>
-          <div class="slot" data-side="player" data-lane="2" aria-label="Tu casilla 1-3"></div>
-        </div>
-        <div class="lanes lanes-3" data-row="1">
-          <div class="slot" data-side="player" data-lane="3" aria-label="Tu casilla 2-1"></div>
-          <div class="slot" data-side="player" data-lane="4" aria-label="Tu casilla 2-2"></div>
-          <div class="slot" data-side="player" data-lane="5" aria-label="Tu casilla 2-3"></div>
+        <div class="lanes lanes-3">
+          <div class="slot" data-side="player" data-lane="0" aria-label="Tu casilla 1"></div>
+          <div class="slot" data-side="player" data-lane="1" aria-label="Tu casilla 2"></div>
+          <div class="slot" data-side="player" data-lane="2" aria-label="Tu casilla 3"></div>
         </div>
       </div>
     </section>
@@ -105,7 +92,7 @@
     </div>
   </div>
 
-  <!-- Toast de turno / avisos -->
+  <!-- Toast -->
   <div id="turnToast" class="turn-toast" aria-live="polite"></div>
 
   <!-- Overlay de robo (carta al centro) -->
@@ -113,7 +100,6 @@
     <div id="drawCard" class="draw-card"></div>
   </div>
 
-  <!-- cache-busting -->
-  <script src="script.js?v=lanes6"></script>
+  <script src="script.js?v=back3"></script>
 </body>
 </html>
