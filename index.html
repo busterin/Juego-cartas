@@ -7,14 +7,14 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Portada -->
+  <!-- Portada a pantalla completa -->
   <div id="startOverlay" class="splash visible" aria-hidden="false">
     <div class="splash-cover">
       <button id="startBtn" class="btn start">JUGAR ▶</button>
     </div>
   </div>
-  
-    <!-- Intro tipo Fire Emblem -->
+
+  <!-- Intro tipo Fire Emblem -->
   <div id="introOverlay" class="overlay intro" aria-hidden="true">
     <div class="intro-bg" aria-hidden="true"></div>
     <div class="intro-panel" role="dialog" aria-live="polite">
@@ -25,34 +25,8 @@
     </div>
   </div>
 
-  <!-- Intro / historia -->
-  <div id="introOverlay" class="overlay intro" aria-hidden="true">
-    <div class="intro-bg" aria-hidden="true"></div>
-    <div class="intro-panel" role="dialog" aria-label="Introducción">
-      <div class="intro-text">
-        <p>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sit amet
-          magna vitae sapien tristique vulputate. Nulla facilisi. Vivamus commodo
-          mi vel sapien viverra, a rutrum nulla cursus. Integer pretium arcu at
-          sem tempor, non ultricies mi vestibulum. Aenean laoreet, tortor a
-          tincidunt pretium, arcu nisl porta ligula, sit amet commodo sapien est
-          a ligula.
-        </p>
-        <p>
-          Cras varius venenatis nunc vel efficitur. Suspendisse potenti. Cras
-          porta viverra ipsum, sit amet malesuada tortor vulputate ac. Etiam
-          laoreet efficitur varius. Donec semper, turpis sed pulvinar porta,
-          est arcu vehicula neque, in condimentum est tortor id nunc.
-        </p>
-      </div>
-      <div class="intro-actions">
-        <button id="introContinue" class="btn primary">Continuar ▶</button>
-      </div>
-    </div>
-  </div>
-
   <main id="game" aria-label="Cartas de coste y puntos">
-    <!-- HUD -->
+    <!-- HUD superior -->
     <header class="top-hud">
       <div class="portrait player">
         <div class="frame hex" aria-hidden="true">🐻</div>
@@ -81,7 +55,7 @@
       </div>
     </header>
 
-    <!-- Tablero: 3 columnas × 2 filas por lado = 6 huecos -->
+    <!-- Tablero (2 filas de 3) -->
     <section class="board" aria-label="Tablero central">
       <div class="row row-enemy">
         <div class="lanes lanes-3x2 enemy">
@@ -135,10 +109,10 @@
     </div>
   </div>
 
-  <!-- Toast turno -->
+  <!-- Toast de turno -->
   <div id="turnToast" class="turn-toast" aria-live="polite"></div>
 
-  <!-- Overlay de robo -->
+  <!-- Overlay de robo (carta al centro) -->
   <div id="drawOverlay" class="draw-overlay">
     <div id="drawCard" class="draw-card"></div>
   </div>
