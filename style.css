@@ -108,8 +108,14 @@ html,body{
   box-shadow: 0 6px 24px rgba(0,0,0,.5);
   background:#0f1633; overflow:visible;
 }
-.placed .art, .placed .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit; }
-
+/* Cartas colocadas: mostrar la parte superior de la ilustración */
+.placed .art img{
+  width:100%;
+  height:100%;
+  object-fit: cover;        /* mantiene proporción, rellena el hueco */
+  object-position: top;     /* <-- alinear arriba en lugar de centrado */
+  border-radius: inherit;
+}
 /* ===== Mano ===== */
 .hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; position:relative; z-index:120; overflow:visible; }
 .hand{ position:relative; width:100%; height:100%; overflow:visible; z-index:121; }
