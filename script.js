@@ -2,11 +2,6 @@
   // ---------- Utils ----------
   const $  = s => document.querySelector(s);
   const $$ = s => Array.from(document.querySelectorAll(s));
-  const bump = (meterValueEl) => {
-    const meter = meterValueEl?.closest('.meter');
-    if(!meter) return;
-    meter.classList.remove('bump'); void meter.offsetWidth; meter.classList.add('bump');
-  };
 
   // ---------- DOM ----------
   const handEl = $('#hand');
@@ -24,7 +19,7 @@
   const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard'); const turnToast = $('#turnToast');
 
   // ---------- Estado ----------
-  const SLOTS = 6;                 // 3 columnas × 2 filas por lado
+  const SLOTS = 6;                  // 6 por lado (3x2)
   const HAND_SIZE = 4, MAX_ROUNDS = 8;
   const state = {
     round: 1, pCoins: 3, eCoins: 3, pScore: 0, eScore: 0,
@@ -75,7 +70,7 @@
     let remaining = imgs.length;
     const done = () => { remaining--; if (remaining <= 0) cb(); };
     imgs.forEach(img=>{
-      if (img.complete) { done(); }
+      if (img.complete) done();
       else { img.addEventListener('load', done, {once:true}); img.addEventListener('error', done, {once:true}); }
     });
   }
@@ -83,6 +78,7 @@
   // ---------- Layout mano ----------
   function layoutHand(){
     const n = handEl.children.length; if (!n) return;
+
     const contRect = handEl.getBoundingClientRect();
     const contW = handEl.clientWidth || contRect.width || window.innerWidth;
     const cardW = handEl.children[0]?.getBoundingClientRect().width || 0;
@@ -170,9 +166,9 @@
       <div class="desc">${card.text||''}</div>
     `;
 
-    let dragged = false;
-    el.addEventListener('click', ()=>{ if (dragged) { dragged=false; return; } openZoom(card); });
-    attachDragHandlers(el, ()=>{ dragged = true; });
+    // Restauramos comportamiento de click “tal cual estaba”
+    el.addEventListener('click', ()=> openZoom(card));
+    attachDragHandlers(el);
     return el;
   }
   function renderHand(){
@@ -279,11 +275,13 @@
 
   // ---------- Drag & drop ----------
   let ghost=null;
-  function attachDragHandlers(el, onDragMoveCb){
+  function attachDragHandlers(el){
     el.addEventListener('pointerdown', onDown, {passive:false});
     function onDown(e){
       if(state.turn!=='player'||state.resolving) return;
-      const src = e.currentTarget; src.setPointerCapture(e.pointerId); e.preventDefault();
+      const src = e.currentTarget;
+      src.setPointerCapture(e.pointerId);
+      // No hacemos preventDefault aquí para no romper el click/tap
 
       ghost = document.createElement('div');
       ghost.className = 'ghost';
@@ -291,7 +289,7 @@
       document.body.appendChild(ghost);
       moveGhost(e.clientX, e.clientY);
 
-      const move = ev => { ev.preventDefault(); moveGhost(ev.clientX, ev.clientY); onDragMoveCb && onDragMoveCb(); };
+      const move = ev => { ev.preventDefault(); moveGhost(ev.clientX, ev.clientY); };
       const finish = ev => {
         try { src.releasePointerCapture(e.pointerId); } catch(_) {}
         window.removeEventListener('pointermove', move, {passive:false});
@@ -334,9 +332,12 @@
 
   // ---------- Reglas ----------
   const canAfford = c => state.pCoins>=c.cost;
+
   function insufficientFeedback(handIndex){
     const el = handEl.children[handIndex];
-    if(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+    if(el){
+      el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+    }
     showTurnToast('Monedas insuficientes', 900, 'warn');
   }
 
@@ -344,7 +345,7 @@
     if(handIndex<0||handIndex>=state.pHand.length) return;
     const card=state.pHand[handIndex];
 
-    if (state.center[slotIndex].p) return;         // ya ocupado
+    if (state.center[slotIndex].p) return;
     if(!canAfford(card)) { insufficientFeedback(handIndex); return; }
 
     state.pCoins -= card.cost;
@@ -353,7 +354,7 @@
     applyOnPlaceEffects('player', slotIndex, card);
 
     state.pHand.splice(handIndex,1);
-    renderHand(); renderBoard(); updateHUD(); bump(pCoinsEl);
+    renderHand(); renderBoard(); updateHUD();
 
     if(state.pDeck.length){
       drawOneAnimated(()=>{ renderHand(); updateHUD(); });
@@ -373,13 +374,10 @@
       return best;
     }
     function pickBestLane(){
-      // prioriza destruir donde haya carta del jugador
       let bestLane = -1, bestPts = -1;
       for(let i=0;i<SLOTS;i++){
         const lane = state.center[i];
-        if(!lane.e && lane.p){
-          if(lane.p.pts > bestPts){ bestPts = lane.p.pts; bestLane = i; }
-        }
+        if(!lane.e && lane.p && lane.p.pts > bestPts){ bestPts = lane.p.pts; bestLane = i; }
       }
       if(bestLane !== -1) return bestLane;
       for(let i=0;i<SLOTS;i++){ if(!state.center[i].e) return i; }
@@ -388,8 +386,12 @@
 
     const tryPlayOnce=()=>{
       if(!canPlay()) return false;
-      const bestIdx = pickBestCardIndex(); if(bestIdx === -1) return false;
-      const target = pickBestLane(); if(target===-1) return false;
+
+      const bestIdx = pickBestCardIndex();
+      if(bestIdx === -1) return false;
+
+      const target = pickBestLane();
+      if(target===-1) return false;
 
       const card = state.eHand[bestIdx];
       state.eCoins -= card.cost;
@@ -400,7 +402,7 @@
       state.eHand.splice(bestIdx,1);
       if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
 
-      renderBoard(); updateHUD(); bump(eCoinsEl);
+      renderBoard(); updateHUD();
       return true;
     };
 
