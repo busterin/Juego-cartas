@@ -16,6 +16,8 @@
 
   const startOv  = $('#startOverlay'); const startBtn = $('#startBtn');
 
+  const introOv = $('#introOverlay'); const introContinue = $('#introContinue');
+
   const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard'); const turnToast = $('#turnToast');
 
   // ---------- Estado ----------
@@ -166,7 +168,6 @@
       <div class="desc">${card.text||''}</div>
     `;
 
-    // Restauramos comportamiento de click “tal cual estaba”
     el.addEventListener('click', ()=> openZoom(card));
     attachDragHandlers(el);
     return el;
@@ -281,7 +282,6 @@
       if(state.turn!=='player'||state.resolving) return;
       const src = e.currentTarget;
       src.setPointerCapture(e.pointerId);
-      // No hacemos preventDefault aquí para no romper el click/tap
 
       ghost = document.createElement('div');
       ghost.className = 'ghost';
@@ -467,16 +467,27 @@
     state.playerPassed=true; state.turn='enemy'; enemyTurn();
   });
 
+  // Portada → Intro
+  if(startBtn){
+    startBtn.addEventListener('click', ()=>{
+      startOv.classList.remove('visible');
+      introOv?.classList.add('visible');
+    });
+  }
+
+  // Intro → Juego
+  if(introContinue){
+    introContinue.addEventListener('click', ()=>{
+      introOv.classList.remove('visible');
+      newGame();
+    });
+  }
+
   window.addEventListener('resize', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
   window.addEventListener('orientationchange', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
 
-  // Arranque
+  // Arranque (si no hay portada visible por cualquier motivo)
   window.addEventListener('DOMContentLoaded', ()=>{
-    if(startBtn){
-      startBtn.addEventListener('click', ()=>{
-        startOv.classList.remove('visible');
-        newGame();
-      });
-    }else{ newGame(); }
+    if(!startBtn){ newGame(); }
   });
 })();
