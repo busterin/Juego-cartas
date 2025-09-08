@@ -170,7 +170,7 @@ html,body{
 .btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
 .btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
 
-/* ===== Zoom (sin borde negro, con leve zoom de imagen) ===== */
+/* ===== Zoom: imagen delante y marco simulado ===== */
 .overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:1000; }
 .overlay.visible{ opacity:1; pointer-events:auto; }
 
@@ -179,35 +179,53 @@ html,body{
 .zoom-card{
   width: min(92vw, calc(92vh * 5 / 7));
   aspect-ratio: 5 / 7;
+  position: relative;
   border-radius: 14px;
   overflow: hidden;
-  position: relative;
-  border: 1px solid rgba(255,255,255,.22);
-  background: none !important;  /* quita la placa negra */
+  border: none;
+  background: none;
   box-shadow: 0 18px 40px rgba(0,0,0,.6);
 }
 @supports (height: 1dvh){ .zoom-card{ width: min(92vw, calc(92dvh * 5 / 7)); } }
 @supports (height: 1svh){ .zoom-card{ width: min(92vw, calc(92svh * 5 / 7)); } }
 
-.zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
+.zoom-card .art{
+  position:absolute; inset:0;
+  z-index: 2;
+  display:grid; place-items:center;
+  border-radius: inherit;
+}
 .zoom-card .art img{
   width:100%; height:100%;
   object-fit: cover;
   object-position: top;
   display:block;
-  transform: scale(1.12);       /* zoom para rellenar */
+  transform: scale(1.08);
   transform-origin: center top;
   background:none;
 }
-.zoom-card .zoom-token{
-  position:absolute; top:10px; width:42px; height:42px;
+.zoom-card::after{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  z-index: 3;
+  border-radius: 15px;
+  pointer-events:none;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.22),
+    inset 0 0 0 2px rgba(255,255,255,.12);
+}
+
+/* Tokens y textos en zoom */
+.zoom-card .zoom-token{ position:absolute; top:10px; width:42px; height:42px;
   border-radius:50%; display:grid; place-items:center; font-weight:900; color:#101010;
   box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42);
+  z-index:4;
 }
 .zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
 .zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
-.zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
-.zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:.85rem; }
+.zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:.85rem; z-index:4; }
+.zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; z-index:4; }
 
 /* ===== Toast ===== */
 .turn-toast{
@@ -241,79 +259,3 @@ html,body{
   40%, 60% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
 }
 .card.shake{ animation: shake .45s ease; }
-
-/* ===== 💥 Explosión ===== */
-.explosion{
-  position:absolute; left:50%; top:50%;
-  width:140%; height:140%;
-  transform: translate(-50%,-50%) scale(.6);
-  border-radius:50%; pointer-events:none;
-  background: radial-gradient(circle,
-    rgba(255,255,255,.95) 0%,
-    rgba(255,230,120,.9) 22%,
-    rgba(255,160,0,.75) 42%,
-    rgba(255,60,0,.45) 58%,
-    rgba(255,0,0,0) 72%);
-  filter: blur(1px); mix-blend-mode: screen; opacity:1;
-  animation: boom .45s ease-out forwards; z-index: 200;
-}
-@keyframes boom{ to{ transform: translate(-50%,-50%) scale(1.4); opacity:0; } }
-.placed.destroy{ animation: popOut .32s ease-in forwards; }
-@keyframes popOut{ to{ transform: scale(.75); opacity:0; } }
-
-/* ===== Compactación móviles ===== */
-@media (max-width: 480px){
-  :root{ --lanes-gap: 8px; --slot-inset: 5px; --slot-br: 10px; }
-}
-@media (max-width: 380px){
-  :root{ --lanes-gap: 6px; --slot-inset: 4px; --slot-br: 9px; }
-}
-
-/* === Marcos (miniatura/mesa/zoom) === */
-.hand .card{
-  border-radius: 12px;
-  border: 1.5px solid rgba(255,255,255,.22);
-  background: #0f1633;
-  position: absolute;
-}
-.placed{ border-color: rgba(255,255,255,.28); }
-.zoom-card{ border: 1.5px solid rgba(255,255,255,.28); }
-.hand .card::before,
-.placed::before,
-.zoom-card::before{
-  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,.14), inset 0 0 0 6px rgba(255,255,255,.05);
-  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,.08) 100%);
-  mix-blend-mode: screen; z-index: 1;
-}
-.hand .card .token, .placed .token, .zoom-card .zoom-token{ position: absolute; z-index: 2; }
-
-/* ===== Intro simple ===== */
-.overlay.intro{
-  background: none;
-  opacity: 0; pointer-events: none; transition: opacity .25s ease;
-  z-index: 10000;
-}
-.overlay.intro.visible{ opacity: 1; pointer-events: auto; }
-.intro-bg{
-  position:absolute; inset:0;
-  background: url("assets/Guerrera.PNG") center center / cover no-repeat;
-  filter: brightness(.6);
-}
-.intro-panel{
-  position:absolute; left:50%; bottom:10%;
-  transform: translateX(-50%);
-  width: min(92vw, 760px);
-  background: rgba(10,15,30,.85);
-  border: 2px solid rgba(255,255,255,.3);
-  border-radius: 14px;
-  padding: 16px 20px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.55);
-}
-.intro-text{
-  font-size: .95rem; line-height: 1.5;
-  color: var(--ink);
-  max-height: 42vh; overflow-y: auto;
-  margin-bottom: 12px;
-}
-.intro-actions{ text-align: right; }
