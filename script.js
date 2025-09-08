@@ -6,7 +6,7 @@
     const meter = meterValueEl?.closest('.meter');
     if(!meter) return;
     meter.classList.remove('bump');
-    void meter.offsetWidth; // reflow para reiniciar animación
+    void meter.offsetWidth;
     meter.classList.add('bump');
   };
 
@@ -92,9 +92,11 @@
     });
   }
 
-  // ---------- Layout Mano (anclada a 🐻 y 😈) ----------
+  // ---------- Layout Mano ----------
   function layoutHand(){
-    const n = handEl.children.length; if (!n) return;
+    const n = handEl.children.length;
+    if (!n) return;
+
     const contRect = handEl.getBoundingClientRect();
     const contW = handEl.clientWidth || contRect.width || window.innerWidth;
     const cardW = handEl.children[0]?.getBoundingClientRect().width || 0;
@@ -142,27 +144,44 @@
     whenImagesReady(handEl, layoutHand);
   }
 
+  // ---------- 💥 Explosión util ----------
+  function addExplosion(slotEl){
+    if(!slotEl) return;
+    const ex = document.createElement('div');
+    ex.className = 'explosion';
+    slotEl.appendChild(ex);
+    setTimeout(()=> ex.remove(), 600);
+  }
+
   // ---------- Efectos ----------
   const isGuerrera = c => c && c.name === 'Guerrera';
 
+  function destroyWithFX(targetSide, laneIndex, killedName){
+    const slotSel = `.slot[data-side="${targetSide}"][data-lane="${laneIndex}"]`;
+    const slotEl = document.querySelector(slotSel);
+    const placed = slotEl?.querySelector('.placed');
+    if(placed){ placed.classList.add('destroy'); }
+    addExplosion(slotEl);
+    // esperar la animación antes de re-renderizar
+    setTimeout(()=>{ renderBoard(); }, 330);
+    const who = targetSide === 'enemy' ? '😈' : '🛡️';
+    showTurnToast(`${who} ${killedName||'Carta'} destruida`, 900, 'warn');
+  }
+
   function applyOnPlaceEffects(side, laneIndex, card){
-    // Efecto Guerrera: destruye la carta de enfrente si existe
+    // Efecto Guerrera: destruye la carta de enfrente si existe (con FX)
     if (isGuerrera(card)) {
       const cell = state.center[laneIndex];
-      if (side === 'player') {
-        if (cell.e) {
-          const killed = cell.e;
-          cell.e = null;
-          renderBoard();
-          showTurnToast(`⚔️ Guerrera destruye ${killed.name||'una carta'}`, 900, 'warn');
-        }
-      } else { // side === 'enemy'
-        if (cell.p) {
-          const killed = cell.p;
-          cell.p = null;
-          renderBoard();
-          showTurnToast(`😈 Guerrera rival destruye ${killed.name||'una carta'}`, 900, 'warn');
-        }
+      if (side === 'player' && cell.e){
+        const killed = cell.e;
+        // Primero aplicamos FX sobre el DOM actual...
+        destroyWithFX('enemy', laneIndex, killed.name);
+        // ...y luego mutamos el estado tras un pequeño delay
+        setTimeout(()=>{ cell.e = null; }, 300);
+      } else if (side === 'enemy' && cell.p){
+        const killed = cell.p;
+        destroyWithFX('player', laneIndex, killed.name);
+        setTimeout(()=>{ cell.p = null; }, 300);
       }
     }
   }
@@ -182,16 +201,12 @@
       <div class="desc">${card.text||''}</div>
     `;
 
-    // Evitar click fantasma tras drag
     let dragged = false;
     el.addEventListener('click', ()=> {
       if (dragged) { dragged = false; return; }
       openZoom(card);
     });
-
-    // Arrastre
     attachDragHandlers(el, () => { dragged = true; });
-
     return el;
   }
   function renderHand(){
@@ -387,28 +402,25 @@
     if(handIndex<0||handIndex>=state.pHand.length) return;
     const card=state.pHand[handIndex];
 
-    // no pisar carta ya colocada
     if (state.center[slotIndex].p) return;
-
     if(!canAfford(card)) { insufficientFeedback(handIndex); return; }
 
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
 
-    // 🔥 Efectos al colocar (jugador)
+    // Efectos al colocar (jugador)
     applyOnPlaceEffects('player', slotIndex, card);
 
     state.pHand.splice(handIndex,1);
     renderHand(); renderBoard(); updateHUD();
     bump(pCoinsEl);
 
-    // Roba 1 animada si hay cartas en mazo
     if(state.pDeck.length){
       drawOneAnimated(()=>{ renderHand(); updateHUD(); });
     }
   }
 
-  // ---------- IA rival (contrarresta tu línea más fuerte si puede) ----------
+  // ---------- IA rival ----------
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false;
     updateHUD();
@@ -448,12 +460,10 @@
       state.eCoins -= card.cost;
       state.center[target].e = {...card};
 
-      // 🔥 Efectos al colocar (rival)
+      // Efectos al colocar (rival)
       applyOnPlaceEffects('enemy', target, card);
 
       state.eHand.splice(bestIdx,1);
-
-      // Roba instant si hay
       if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
 
       renderBoard(); updateHUD(); bump(eCoinsEl);
@@ -477,7 +487,6 @@
   const bothPassed=()=> state.playerPassed && state.enemyPassed;
 
   function scoreTurn(){
-    // Sumar puntos del tablero actual (las cartas permanecen en mesa)
     let p=0,e=0;
     state.center.forEach(c=>{ if(c.p) p+=c.p.pts; if(c.e) e+=c.e.pts; });
     state.pScore+=p; state.eScore+=e;
@@ -486,16 +495,13 @@
 
     if(state.round === MAX_ROUNDS){ setTimeout(endGame, 300); return; }
 
-    // Avanzar ronda
     state.round+=1;
     state.playerPassed=false; state.enemyPassed=false;
     state.turn='player';
 
-    // +1 monedas para ambos al inicio de ronda
     state.pCoins+=1; state.eCoins+=1; updateHUD();
     bump(pCoinsEl); bump(eCoinsEl);
 
-    // Relleno manos: enemigo instantáneo, jugador animado
     topUpEnemyInstant();
     topUpPlayerAnimated(()=>{
       renderHand(); layoutHandSafe(); updateHUD();
@@ -511,7 +517,6 @@
     state.round=1; state.pCoins=3; state.eCoins=3; state.pScore=0; state.eScore=0;
     state.playerPassed=false; state.enemyPassed=false; state.turn='player';
 
-    // Solo aquí se limpia el tablero:
     state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
 
     state.pDeck = [...CARDS].sort(()=> Math.random()-0.5);
@@ -519,7 +524,6 @@
     state.pHand=[]; state.eHand=[];
     renderBoard(); renderHand(); updateHUD();
 
-    // Relleno inicial
     topUpEnemyInstant();
     topUpPlayerAnimated(()=>{
       renderHand(); layoutHandSafe(); updateHUD();
@@ -538,7 +542,7 @@
   window.addEventListener('resize', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
   window.addEventListener('orientationchange', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
 
-  // Arranque con portada
+  // Arranque
   window.addEventListener('DOMContentLoaded', ()=>{
     if(startBtn){
       startBtn.addEventListener('click', ()=>{
