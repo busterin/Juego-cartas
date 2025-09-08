@@ -173,7 +173,7 @@ html,body{
 .btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
 .btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
 
-/* ===== Zoom (sin borde negro) ===== */
+/* ===== Zoom ===== */
 .overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:1000; }
 .overlay.visible{ opacity:1; pointer-events:auto; }
 
@@ -184,7 +184,7 @@ html,body{
   aspect-ratio: 5 / 7;
   border-radius: 14px; overflow: hidden; position: relative;
   border: 1px solid rgba(255,255,255,.22);
-  background: transparent; /* eliminar fondo negro */
+  background: transparent; /* sin fondo */
   box-shadow: 0 18px 40px rgba(0,0,0,.6);
 }
 @supports (height: 1dvh){
@@ -197,9 +197,8 @@ html,body{
 .zoom-card .art img{
   width:100%; height:100%;
   object-fit:cover;
-  object-position: top;   /* evita franja arriba */
-  display:block;
-  background:none;
+  object-position: top;
+  display:block; background:none;
 }
 .zoom-card .zoom-token{
   position:absolute; top:10px; width:42px; height:42px;
@@ -270,53 +269,52 @@ html,body{
 @media (max-width: 380px){
   :root{ --lanes-gap: 6px; --slot-inset: 4px; --slot-br: 9px; }
 }
-/* === Marcos en todas las variantes de carta === */
 
-/* Miniaturas en la mano */
+/* === Marcos en todas las variantes de carta === */
 .hand .card{
   border-radius: 12px;
   border: 1.5px solid rgba(255,255,255,.22);
-  background: #0f1633;           /* se ve como un bisel fino */
-  position: absolute;             /* ya lo tienes, lo reiteramos por claridad */
+  background: #0f1633;
+  position: absolute;
 }
-
-/* Carta colocada en el tablero (ya tenía borde; lo realzamos sutilmente) */
-.placed{
-  border-color: rgba(255,255,255,.28);
-}
-
-/* Zoom: refuerzo del borde */
-.zoom-card{
-  border: 1.5px solid rgba(255,255,255,.28);
-}
-
-/* Capa de “doble marco” suave con brillo interior */
+.placed{ border-color: rgba(255,255,255,.28); }
+.zoom-card{ border: 1.5px solid rgba(255,255,255,.28); }
 .hand .card::before,
 .placed::before,
 .zoom-card::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  pointer-events:none;
-  /* doble trazo interior y leve brillo */
-  box-shadow:
-    inset 0 0 0 2px rgba(255,255,255,.14),
-    inset 0 0 0 6px rgba(255,255,255,.05);
-  background:
-    linear-gradient(180deg,
-      rgba(255,255,255,.10),
-      rgba(255,255,255,0) 40%,
-      rgba(255,255,255,0) 60%,
-      rgba(255,255,255,.08) 100%);
-  mix-blend-mode: screen; /* integra bien con artes oscuras */
-  z-index: 1;
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.14), inset 0 0 0 6px rgba(255,255,255,.05);
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,.08) 100%);
+  mix-blend-mode: screen; z-index: 1;
 }
+.hand .card .token, .placed .token, .zoom-card .zoom-token{ position: absolute; z-index: 2; }
 
-/* Asegura que los tokens quedan por encima del marco decorativo */
-.hand .card .token,
-.placed .token,
-.zoom-card .zoom-token{
-  position: absolute;
-  z-index: 2;
+/* ===== Intro (pantalla de historia) ===== */
+.overlay.intro{
+  background: none;
+  opacity: 0; pointer-events: none; transition: opacity .25s ease;
+  z-index: 10000;
 }
+.overlay.intro.visible{ opacity: 1; pointer-events: auto; }
+.intro-bg{
+  position:absolute; inset:0;
+  background: url("assets/Guerrera.PNG") center center / cover no-repeat;
+  filter: brightness(.6);
+}
+.intro-panel{
+  position:absolute; left:50%; bottom:10%;
+  transform: translateX(-50%);
+  width: min(92vw, 760px);
+  background: rgba(10,15,30,.85);
+  border: 2px solid rgba(255,255,255,.3);
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.55);
+}
+.intro-text{
+  font-size: .95rem; line-height: 1.5;
+  color: var(--ink);
+  max-height: 42vh; overflow-y: auto;
+  margin-bottom: 12px;
+}
+.intro-actions{ text-align: right; }
