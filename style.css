@@ -170,44 +170,47 @@ html,body{
 .btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
 .btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
 
-/* ===== Zoom (sin borde negro, con leve zoom de imagen) ===== */
-.overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:1000; }
-.overlay.visible{ opacity:1; pointer-events:auto; }
-
-.zoom-panel{ position: fixed; inset: 0; display: grid; place-items: center; background: transparent; border: none; padding: 0; }
-
+/* ===== Zoom (sin borde negro y con zoom sutil) ===== */
 .zoom-card{
   width: min(92vw, calc(92vh * 5 / 7));
   aspect-ratio: 5 / 7;
+  position: relative;
   border-radius: 14px;
   overflow: hidden;
-  position: relative;
   border: 1px solid rgba(255,255,255,.22);
-  background: none !important;  /* quita la placa negra */
+  background: none;                 /* sin fondo */
   box-shadow: 0 18px 40px rgba(0,0,0,.6);
 }
 @supports (height: 1dvh){ .zoom-card{ width: min(92vw, calc(92dvh * 5 / 7)); } }
 @supports (height: 1svh){ .zoom-card{ width: min(92vw, calc(92svh * 5 / 7)); } }
 
-.zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
+/* Hacemos que el contenedor del arte sangre 2px por fuera del marco */
+.zoom-card .art{
+  position:absolute;
+  left:-2px; top:-2px; right:-2px; bottom:-2px; /* <- sangrado */
+  display:grid; place-items:center;
+}
+
+/* La imagen cubre y además hace un ligero zoom, anclado arriba */
 .zoom-card .art img{
   width:100%; height:100%;
   object-fit: cover;
   object-position: top;
   display:block;
-  transform: scale(1.12);       /* zoom para rellenar */
+  transform: scale(1.06);           /* 1.04–1.10 a gusto */
   transform-origin: center top;
   background:none;
 }
-.zoom-card .zoom-token{
-  position:absolute; top:10px; width:42px; height:42px;
-  border-radius:50%; display:grid; place-items:center; font-weight:900; color:#101010;
-  box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42);
+
+/* (Opcional) si mantienes el “doble marco” global, evita sombras internas en zoom */
+.zoom-card::before{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:inherit;
+  pointer-events:none;
+  /* solo un realce suave, sin sombras que puedan parecer borde oscuro */
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.14);
 }
-.zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
-.zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
-.zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
-.zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:.85rem; }
 
 /* ===== Toast ===== */
 .turn-toast{
