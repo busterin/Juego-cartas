@@ -319,14 +319,29 @@
     drawing = false;
     return true;
   }
+
+  // ✨ Nuevo: reparto inicial con animación de zoom (4 cartas)
+  async function initialDealAnimated(){
+    renderHand(); // mano vacía visible
+    for(let k=0; k<HAND_SIZE && state.pDeck.length; k++){
+      const card = state.pDeck.pop();
+      await showDrawLarge(card);
+      state.pHand.push(card);
+      renderHand();
+      await flyCardToHand(card);
+    }
+    renderHand();
+  }
+
   async function topUpPlayerAnimated(){
-    // Robos posteriores: mantenemos animación
+    // Robos posteriores al inicio
     while(state.pHand.length < HAND_SIZE && state.pDeck.length){
       const ok = await drawOneAnimated();
       if(!ok) break;
     }
     renderHand();
   }
+
   function topUpEnemyInstant(){
     while(state.eHand.length<Math.min(HAND_SIZE,5) && state.eDeck.length){
       const c = state.eDeck.pop();
@@ -671,7 +686,7 @@
       applyDamage('enemy', Math.max(0, card.pts - defPts));
     }
 
-    // Roba 1 animada (ya no afecta al arranque)
+    // Roba 1 animada
     if(state.pDeck.length){
       await drawOneAnimated();
       renderHand(); updateHUD();
@@ -764,7 +779,7 @@
     });
   }
 
-  function newGame(){
+  async function newGame(){
     clearTimers();
     purgeTransientNodes();
 
@@ -778,18 +793,22 @@
     state.pAttacked = Array(SLOTS).fill(false);
     state.attackCtx=null; state.targeting=false; state.drawing=false;
 
-    // --- FIX: rellenar mano INSTANTÁNEO al inicio (sin animación) ---
-    while(state.pHand.length < HAND_SIZE && state.pDeck.length){
-      state.pHand.push(state.pDeck.pop());
-    }
-    renderHand(); // la mano se ve sí o sí desde el arranque
-
     renderBoard(); updateHUD();
-
-    // Relleno enemigo y luego seguimos con animaciones normales
+    // Enemigo roba inmediatamente (sin animación)
     topUpEnemyInstant();
 
-    // (No re-robar animado ahora; ya tenemos la mano completa y visible)
+    // Reparto inicial animado con failsafe
+    try{
+      await initialDealAnimated();
+    }catch(err){
+      // Fallback: llenar al instante y renderizar
+      while(state.pHand.length < HAND_SIZE && state.pDeck.length){
+        state.pHand.push(state.pDeck.pop());
+      }
+      renderHand();
+    }
+
+    layoutHandSafe(); updateHUD();
     showTurnToast('TU TURNO');
     refreshAttackButton();
   }
