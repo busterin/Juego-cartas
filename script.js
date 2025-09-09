@@ -23,7 +23,7 @@
   // Robo animado
   const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard');
 
-  // Botón ATACAR (se crea tras DOMContentLoaded para evitar nulls)
+  // Botón ATACAR (se inyecta al cargar)
   let attackBtn = document.getElementById('attackBtn');
 
   // ---------- CSS runtime para FX ----------
@@ -43,27 +43,23 @@
         90% { transform: translate(-1px, 0px) rotate(-0.1deg) }
         100%{ transform: translate(0,0) rotate(0) scale(1); filter: brightness(1); }
       }
-      /* Enemigos targeteables (rojo) */
       .slot.targetable{
         outline: 2px solid rgba(255,120,120,.95);
         outline-offset: -2px;
         box-shadow: 0 0 0 3px rgba(255,120,120,.28) inset, 0 6px 18px rgba(255,0,0,.22);
         cursor: pointer;
       }
-      /* Atacantes disponibles (verde) */
       .slot.choose-attacker{
         outline: 2px solid rgba(120,255,170,.95);
         outline-offset: -2px;
         box-shadow: 0 0 0 3px rgba(120,255,170,.28) inset, 0 6px 18px rgba(0,180,90,.22);
         cursor: pointer;
       }
-      /* Atacante ya seleccionado (verde más marcado) */
       .slot.selected-attacker{
         outline: 3px solid rgba(60,255,140,1);
         outline-offset: -2px;
         box-shadow: 0 0 0 4px rgba(60,255,140,.35) inset, 0 8px 22px rgba(0,200,110,.3);
       }
-      /* 💥 Explosión */
       .explosion{
         position:absolute; left:50%; top:50%;
         width:140%; height:140%;
@@ -100,9 +96,7 @@
     playerPassed:false, enemyPassed:false,
     resolving:false,
     drawing:false,
-    // Ataques por turno del jugador
     pAttacked: Array(SLOTS).fill(false),
-    // Targeting/ataque manual
     targeting:false,
     attackCtx: null, // { step:'chooseAttacker'|'chooseTarget', attIndex:number|null, targets:number[] }
     timers: { draw:null, toast:null, type:null }
@@ -110,7 +104,7 @@
 
   // ---------- Cartas ----------
   const BASE_CARDS = [
-    { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:5, text:"Cuando la colocas enfrente de una carta rival, la destruye automáticamente." },
+    { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:5, text:"Cuando ataca a la carta justo enfrente, la destruye automáticamente." },
     { name:'Maga',     art:'assets/Maga.PNG',      cost:2, pts:4, text:"Canaliza energías arcanas a tu favor." },
     { name:'Arquero',  art:'assets/Arquero.PNG',   cost:1, pts:3, text:"Dispara con precisión quirúrgica." },
     { name:'Sanadora', art:'assets/Sanadora.PNG',  cost:2, pts:2, text:"Restaura y protege a los tuyos." },
@@ -306,7 +300,6 @@
     const card = state.pDeck.pop();
     await showDrawLarge(card);
 
-    // Seguridad anti-duplicados
     if(state.pHand.some(c => c.id === card.id)){
       drawing = false;
       return false;
@@ -320,7 +313,6 @@
     return true;
   }
 
-  // ✨ Nuevo: reparto inicial con animación de zoom (4 cartas)
   async function initialDealAnimated(){
     renderHand(); // mano vacía visible
     for(let k=0; k<HAND_SIZE && state.pDeck.length; k++){
@@ -334,7 +326,6 @@
   }
 
   async function topUpPlayerAnimated(){
-    // Robos posteriores al inicio
     while(state.pHand.length < HAND_SIZE && state.pDeck.length){
       const ok = await drawOneAnimated();
       if(!ok) break;
@@ -434,7 +425,7 @@
     return false;
   }
 
-  // ---------- Ataque jugador (verde atacante / rojo objetivo) ----------
+  // ---------- Lógica de ATAQUE (solo con botón) ----------
   function attackersAvailable(){
     const res=[];
     for(let i=0;i<SLOTS;i++){
@@ -453,6 +444,7 @@
     if(!attackBtn) return;
     attackBtn.style.display = av.some(canAttackerDoSomething) ? 'inline-block' : 'none';
     attackBtn.disabled = false;
+    attackBtn.setAttribute('aria-pressed','false');
   }
 
   function computeTargetsFor(attIndex){
@@ -466,6 +458,7 @@
     playerSlots.forEach(el=>{
       el.classList.remove('choose-attacker','selected-attacker');
       if(el._pickAttacker){
+        el.removeEventListener('pointerup', el._pickAttacker);
         el.removeEventListener('click', el._pickAttacker);
         delete el._pickAttacker;
       }
@@ -476,6 +469,7 @@
     enemySlots.forEach(el=>{
       el.classList.remove('targetable');
       if(el._chooseHandler){
+        el.removeEventListener('pointerup', el._chooseHandler);
         el.removeEventListener('click', el._chooseHandler);
         delete el._chooseHandler;
       }
@@ -506,6 +500,8 @@
         selectAttacker(i);
       };
       el._pickAttacker = pick;
+      // usar pointerup + click para fiabilidad en táctiles/escritorio sin doble toque
+      el.addEventListener('pointerup', pick, {once:true});
       el.addEventListener('click', pick, {once:true});
     });
   }
@@ -513,13 +509,12 @@
   function selectAttacker(attIndex){
     clearAttackerHighlights();
 
-    // Marca atacante elegido (verde fuerte)
     const playerSlots = $$('.slot[data-side="player"]');
     playerSlots[attIndex]?.classList.add('selected-attacker');
 
     const { targets } = computeTargetsFor(attIndex);
     if(!targets.length){
-      // Daño directo
+      // Sin objetivos en columna: daño directo SOLO al pulsar ATACAR
       const pts = state.center[attIndex].p?.pts || 0;
       applyDamage('enemy', pts);
       state.pAttacked[attIndex]=true;
@@ -529,7 +524,7 @@
       return;
     }
 
-    // Prepara elección de objetivos (rojo)
+    // Pasamos a seleccionar objetivo (rojo)
     state.attackCtx = { step:'chooseTarget', attIndex, targets };
     enterChooseTarget();
   }
@@ -537,7 +532,7 @@
   function enterChooseTarget(){
     if(!state.attackCtx || state.attackCtx.step!=='chooseTarget') return;
 
-    clearTargetHighlights(); // por si acaso
+    clearTargetHighlights();
 
     const enemySlots = $$('.slot[data-side="enemy"]');
     state.attackCtx.targets.forEach(i=>{
@@ -549,6 +544,7 @@
         resolvePlayerAttack(state.attackCtx.attIndex, i);
       };
       el._chooseHandler = choose;
+      el.addEventListener('pointerup', choose, {once:true});
       el.addEventListener('click', choose, {once:true});
     });
   }
@@ -585,23 +581,34 @@
       return;
     }
 
-    const attPts = attacker.pts;
-    const defPts = defender.pts;
+    let attPts = attacker.pts;
+    let defPts = defender.pts;
 
-    const { es } = getSlotsEls(defIndex);
-    hitEffectOn(es);
-
-    if(attPts >= defPts){
-      const diff = attPts - defPts;
+    // Efecto de Guerrera: si ataca a la carta justo enfrente (mismo índice) la destruye
+    if(attacker.name === 'Guerrera' && attIndex === defIndex){
+      const { es } = getSlotsEls(defIndex);
       spawnExplosionOn(es);
       state.center[defIndex].e = null;
       renderBoard();
-      applyDamage('enemy', diff);
-    }else{
-      const remaining = Math.max(0, defPts - attPts);
-      state.center[defIndex].e = { ...defender, pts: remaining };
-      renderBoard();
-      updatePlacedTokenValue('enemy', defIndex, remaining);
+      // Transfiere exceso como daño a vida (como si attPts >= defPts)
+      const diff = Math.max(0, attPts - defPts);
+      if (diff>0) applyDamage('enemy', diff);
+    } else {
+      const { es } = getSlotsEls(defIndex);
+      hitEffectOn(es);
+
+      if(attPts >= defPts){
+        const diff = attPts - defPts;
+        spawnExplosionOn(es);
+        state.center[defIndex].e = null;
+        renderBoard();
+        applyDamage('enemy', diff);
+      }else{
+        const remaining = Math.max(0, defPts - attPts);
+        state.center[defIndex].e = { ...defender, pts: remaining };
+        renderBoard();
+        updatePlacedTokenValue('enemy', defIndex, remaining);
+      }
     }
 
     state.pAttacked[attIndex]=true;
@@ -662,41 +669,23 @@
       if (el){ el.classList.add('shake'); setTimeout(()=> el.classList.remove('shake'), 450); }
       return;
     }
-    // Pagar y colocar
+    // Pagar y colocar (SIN ataque automático)
     state.pCoins -= card.cost;
     state.center[slotIndex].p = {...card};
     state.pHand.splice(handIndex,1);
     renderHand(); renderBoard(); updateHUD();
     state.pAttacked[slotIndex] = false;
 
-    // Daño directo si NO hay enemigo en su columna
-    const col = columnOf(slotIndex);
-    const anyEnemyInColumn = indicesSameColumn(col).some(i => !!state.center[i].e);
-    if(!anyEnemyInColumn){
-      applyDamage('enemy', card.pts);
-    }
-
-    // Efecto Guerrera: destruye justo enfrente si hay carta
-    if(card.name==='Guerrera' && state.center[slotIndex].e){
-      const { es } = getSlotsEls(slotIndex);
-      spawnExplosionOn(es);
-      const defPts = state.center[slotIndex].e.pts;
-      state.center[slotIndex].e = null;
-      renderBoard();
-      applyDamage('enemy', Math.max(0, card.pts - defPts));
-    }
-
+    // (Se elimina daño directo y efecto inmediato de Guerrera al colocar)
     // Roba 1 animada
     if(state.pDeck.length){
       await drawOneAnimated();
       renderHand(); updateHUD();
     }
-
-    // Tras colocar, el jugador puede atacar: muestra botón
     refreshAttackButton();
   }
 
-  // ---------- IA rival (simple) ----------
+  // ---------- IA rival (solo coloca cartas; SIN ataques automáticos) ----------
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     showTurnToast('TURNO RIVAL');
@@ -716,35 +705,7 @@
       state.eHand.splice(best,1); if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
       renderBoard(); updateHUD();
 
-      // Si no hay jugador en la columna -> daño directo
-      const col = columnOf(target);
-      const anyPlayerInColumn = indicesSameColumn(col).some(i => !!state.center[i].p);
-      if(!anyPlayerInColumn){
-        applyDamage('player', card.pts);
-      }else{
-        // Confrontación simple mismo índice
-        const pair = state.center[target];
-        if(pair.p && pair.e){
-          const { ps } = getSlotsEls(target);
-          hitEffectOn(ps);
-          if(pair.e.pts >= pair.p.pts){
-            const diff = pair.e.pts - pair.p.pts;
-            const { ps:psEl } = getSlotsEls(target);
-            spawnExplosionOn(psEl);
-            pair.p = null;
-            renderBoard();
-            applyDamage('player', diff);
-          }else{
-            const rem = Math.max(0, pair.p.pts - pair.e.pts);
-            pair.p = { ...pair.p, pts: rem };
-            renderBoard();
-            updatePlacedTokenValue('player', target, rem);
-            const { ps:psEl2 } = getSlotsEls(target);
-            hitEffectOn(psEl2);
-          }
-        }
-      }
-
+      // (Se elimina cualquier daño directo o confrontación automática)
       return true;
     };
 
@@ -794,14 +755,11 @@
     state.attackCtx=null; state.targeting=false; state.drawing=false;
 
     renderBoard(); updateHUD();
-    // Enemigo roba inmediatamente (sin animación)
     topUpEnemyInstant();
 
-    // Reparto inicial animado con failsafe
     try{
       await initialDealAnimated();
     }catch(err){
-      // Fallback: llenar al instante y renderizar
       while(state.pHand.length < HAND_SIZE && state.pDeck.length){
         state.pHand.push(state.pDeck.pop());
       }
@@ -839,7 +797,7 @@
 
     if (introNext){
       introNext.disabled = false;
-      introNext.textContent = 'SALTAR';  // durante escritura
+      introNext.textContent = 'SALTAR';
     }
 
     const speed = 22;
@@ -860,20 +818,29 @@
     if(!introOv) return;
 
     if (typingRunning){
-      // Saltar escritura
       clearTimeout(state.timers.type);
       introTextEl && (introTextEl.textContent = INTRO_TEXT);
       typingRunning = false;
       if (introNext) introNext.textContent = 'CONTINUAR';
       return;
     }
-    // Continuar al juego
     introOv.classList.remove('visible');
     introOv.setAttribute('aria-hidden','true');
     newGame();
   }
 
   // ---------- Eventos / Arranque ----------
+  function startTargetingFromButton(e){
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    // Quita el foco para evitar "primer clic sólo enfoca"
+    attackBtn && attackBtn.blur();
+    if(state.resolving || state.turn!=='player') return;
+    clearAttackerHighlights(); clearTargetHighlights();
+    state.attackCtx = null; state.targeting = false;
+    enterChooseAttacker();
+  }
+
   window.addEventListener('DOMContentLoaded', ()=>{
     // Crear ATACAR con la barra ya montada
     const bottomBar = document.querySelector('.bottom-bar');
@@ -884,13 +851,10 @@
       attackBtn.textContent = 'ATACAR';
       attackBtn.style.display = 'none';
       bottomBar.insertBefore(attackBtn, passBtn);
-      // Handler: un solo clic
-      attackBtn.addEventListener('click', ()=>{
-        if(state.resolving || state.turn!=='player') return;
-        clearAttackerHighlights(); clearTargetHighlights();
-        state.attackCtx = null; state.targeting = false;
-        enterChooseAttacker(); // verde
-      });
+
+      // 🔧 Manejo robusto para evitar el "doble clic"
+      attackBtn.addEventListener('pointerup', startTargetingFromButton);
+      attackBtn.addEventListener('click', startTargetingFromButton);
     }
 
     if(startBtn){
