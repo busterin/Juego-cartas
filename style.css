@@ -377,3 +377,8 @@ html,body{
   40%{ background: radial-gradient(#ffc1c1, #e64545); }
   100%{ transform: translateY(0) scale(1); }
 }
+/* Zoom: descripción más grande (el nombre se queda igual) */
+.zoom-card .desc{
+  font-size: 1.15rem; /* subir más si lo quieres aún mayor */
+  line-height: 1.35;
+}
