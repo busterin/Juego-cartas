@@ -4,12 +4,11 @@
   const $$ = s => Array.from(document.querySelectorAll(s));
   const uid = (()=>{ let n=1; return ()=> n++; })();
 
-  // ---------- DOM ----------
+  // ---------- DOM (referencias básicas) ----------
   const handEl = $('#hand');
   const roundNoEl = $('#roundNo');
   const pCoinsEl = $('#pCoins'), eCoinsEl = $('#eCoins');
   const pScoreEl = $('#pScore'), eScoreEl = $('#eScore'); // VIDA
-
   const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
   const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
 
@@ -24,17 +23,8 @@
   // Robo animado
   const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard');
 
-  // Botón ATACAR dinámico (jugador)
-  const bottomBar = document.querySelector('.bottom-bar');
+  // Botón ATACAR (se crea tras DOMContentLoaded)
   let attackBtn = document.getElementById('attackBtn');
-  if(!attackBtn && bottomBar){
-    attackBtn = document.createElement('button');
-    attackBtn.id = 'attackBtn';
-    attackBtn.className = 'btn primary';
-    attackBtn.textContent = 'ATACAR';
-    attackBtn.style.display = 'none';
-    bottomBar.insertBefore(attackBtn, passBtn);
-  }
 
   // Inyecta CSS para efectos / resaltados si no existe
   (function injectFXCSS(){
@@ -53,7 +43,6 @@
         90% { transform: translate(-1px, 0px) rotate(-0.1deg) }
         100%{ transform: translate(0,0) rotate(0) scale(1); filter: brightness(1); }
       }
-
       /* Enemigos targeteables (rojo) */
       .slot.targetable{
         outline: 2px solid rgba(255,120,120,.95);
@@ -61,7 +50,6 @@
         box-shadow: 0 0 0 3px rgba(255,120,120,.28) inset, 0 6px 18px rgba(255,0,0,.22);
         cursor: pointer;
       }
-
       /* Atacantes disponibles (verde) */
       .slot.choose-attacker{
         outline: 2px solid rgba(120,255,170,.95);
@@ -69,14 +57,12 @@
         box-shadow: 0 0 0 3px rgba(120,255,170,.28) inset, 0 6px 18px rgba(0,180,90,.22);
         cursor: pointer;
       }
-
       /* Atacante ya seleccionado (verde más marcado) */
       .slot.selected-attacker{
         outline: 3px solid rgba(60,255,140,1);
         outline-offset: -2px;
         box-shadow: 0 0 0 4px rgba(60,255,140,.35) inset, 0 8px 22px rgba(0,200,110,.3);
       }
-
       /* 💥 Explosión */
       .explosion{
         position:absolute; left:50%; top:50%;
@@ -122,7 +108,7 @@
     timers: { draw:null, toast:null, type:null }
   };
 
-  // ---------- Definición base de cartas ----------
+  // ---------- Cartas ----------
   const BASE_CARDS = [
     { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:5, text:"Cuando la colocas enfrente de una carta rival, la destruye automáticamente." },
     { name:'Maga',     art:'assets/Maga.PNG',      cost:2, pts:4, text:"Canaliza energías arcanas a tu favor." },
@@ -130,7 +116,7 @@
     { name:'Sanadora', art:'assets/Sanadora.PNG',  cost:2, pts:2, text:"Restaura y protege a los tuyos." },
     { name:'Bardo',    art:'assets/Bardo.PNG',     cost:1, pts:2, text:"Inspira y desarma con melodías." }
   ];
-  function makeDeck(){ return BASE_CARDS.map(c => ({...c, id: uid()})).sort(()=> Math.random()-0.5); }
+  const makeDeck = () => BASE_CARDS.map(c => ({...c, id: uid()})).sort(()=> Math.random()-0.5);
 
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
@@ -251,6 +237,7 @@
   // ---------- Robo (vista grande + vuelo a mano) ----------
   function showDrawLarge(card){
     return new Promise(resolve=>{
+      if(!drawOverlay || !drawCardEl){ resolve(); return; } // seguridad
       drawCardEl.innerHTML = `
         <div class="zoom-card">
           <div class="art"><img src="${card.art}" alt="${card.name}"></div>
@@ -329,10 +316,13 @@
     return true;
   }
   async function topUpPlayerAnimated(){
+    // Seguridad: si algo falla, al menos verás la mano actual
+    renderHand();
     while(state.pHand.length < HAND_SIZE && state.pDeck.length){
       const ok = await drawOneAnimated();
       if(!ok) break;
     }
+    renderHand(); // asegura render final
   }
   function topUpEnemyInstant(){
     while(state.eHand.length<Math.min(HAND_SIZE,5) && state.eDeck.length){
@@ -426,7 +416,7 @@
     return false;
   }
 
-  // ---------- Ataque jugador ----------
+  // ---------- Ataque jugador (verde atacante / rojo objetivo) ----------
   function attackersAvailable(){
     const res=[];
     for(let i=0;i<SLOTS;i++){
@@ -440,13 +430,13 @@
     return !!state.center[attIndex].p && !state.pAttacked[attIndex];
   }
   function refreshAttackButton(){
-    if(state.turn!=='player' || state.resolving) { attackBtn.style.display='none'; return; }
+    if(state.turn!=='player' || state.resolving) { attackBtn && (attackBtn.style.display='none'); return; }
     const av = attackersAvailable();
+    if(!attackBtn) return;
     attackBtn.style.display = av.some(canAttackerDoSomething) ? 'inline-block' : 'none';
     attackBtn.disabled = false;
   }
 
-  // Calcular objetivos en la columna del atacante
   function computeTargetsFor(attIndex){
     const col = columnOf(attIndex);
     const targets = indicesSameColumn(col).filter(i => state.center[i].e);
@@ -474,7 +464,6 @@
     });
   }
 
-  // Mostrar selección de atacante (verde)
   function enterChooseAttacker(){
     state.targeting = true;
     state.attackCtx = { step:'chooseAttacker', attIndex:null, targets:[] };
@@ -486,7 +475,6 @@
     const available = attackersAvailable();
 
     if(!available.length){
-      // Nada que atacar
       state.attackCtx = null; state.targeting = false;
       refreshAttackButton();
       return;
@@ -494,7 +482,7 @@
 
     available.forEach(i=>{
       const el = playerSlots[i];
-      el.classList.add('choose-attacker');
+      el.classList.add('choose-attacker'); // verde
       const pick = (evt)=>{
         evt.stopPropagation(); evt.preventDefault();
         selectAttacker(i);
@@ -507,16 +495,17 @@
   function selectAttacker(attIndex){
     clearAttackerHighlights();
 
-    // Marca atacante elegido (verde más fuerte)
+    // Marca atacante elegido (verde fuerte)
     const playerSlots = $$('.slot[data-side="player"]');
     playerSlots[attIndex]?.classList.add('selected-attacker');
 
     const { targets } = computeTargetsFor(attIndex);
     if(!targets.length){
-      // Daño directo si no hay rivales en su columna
+      // Daño directo
       const pts = state.center[attIndex].p?.pts || 0;
       applyDamage('enemy', pts);
       state.pAttacked[attIndex]=true;
+      playerSlots[attIndex]?.classList.remove('selected-attacker');
       state.attackCtx = null; state.targeting=false;
       refreshAttackButton();
       return;
@@ -527,7 +516,6 @@
     enterChooseTarget();
   }
 
-  // Elegir objetivo enemigo (rojo)
   function enterChooseTarget(){
     if(!state.attackCtx || state.attackCtx.step!=='chooseTarget') return;
 
@@ -537,7 +525,7 @@
     state.attackCtx.targets.forEach(i=>{
       const el = enemySlots[i];
       if(!el) return;
-      el.classList.add('targetable');
+      el.classList.add('targetable'); // rojo
       const choose = (evt) => {
         evt.stopPropagation(); evt.preventDefault();
         resolvePlayerAttack(state.attackCtx.attIndex, i);
@@ -559,7 +547,6 @@
   }
 
   function resolvePlayerAttack(attIndex, defIndex){
-    // Limpia resaltados de objetivos
     clearTargetHighlights();
 
     const pairA = state.center[attIndex];
@@ -567,7 +554,6 @@
     const attacker = pairA?.p;
     const defender = pairD?.e;
 
-    // Limpia marca de atacante
     const playerSlots = $$('.slot[data-side="player"]');
     playerSlots[attIndex]?.classList.remove('selected-attacker');
 
@@ -575,7 +561,6 @@
       state.attackCtx=null; state.targeting=false; refreshAttackButton(); return;
     }
     if(!defender){
-      // si ya no hay defensor, daño directo
       applyDamage('enemy', attacker.pts);
       state.pAttacked[attIndex]=true;
       state.attackCtx=null; state.targeting=false; refreshAttackButton();
@@ -605,21 +590,6 @@
     state.attackCtx = null; state.targeting=false;
     refreshAttackButton();
   }
-
-  // BOTÓN ATACAR: 1 solo clic
-  attackBtn?.addEventListener('click', ()=>{
-    if(state.resolving || state.turn!=='player') return;
-
-    // Si estaba en mitad de algo, limpia para evitar la "doble pulsación"
-    clearAttackerHighlights();
-    clearTargetHighlights();
-
-    state.attackCtx = null;
-    state.targeting = false;
-
-    // Entra directamente a seleccionar atacante (verde)
-    enterChooseAttacker();
-  });
 
   // ---------- Drag & drop ----------
   let ghost=null;
@@ -679,16 +649,16 @@
     state.center[slotIndex].p = {...card};
     state.pHand.splice(handIndex,1);
     renderHand(); renderBoard(); updateHUD();
-    state.pAttacked[slotIndex] = false; // nueva carta aún no ha atacado este turno
+    state.pAttacked[slotIndex] = false;
 
-    // 1) Daño directo si NO hay cartas enemigas en la misma columna
+    // Daño directo si NO hay enemigo en su columna
     const col = columnOf(slotIndex);
     const anyEnemyInColumn = indicesSameColumn(col).some(i => !!state.center[i].e);
     if(!anyEnemyInColumn){
       applyDamage('enemy', card.pts);
     }
 
-    // 2) Efecto Guerrera: si hay carta justo enfrente (mismo índice), destruye antes
+    // Efecto Guerrera: destruye justo enfrente si hay carta
     if(card.name==='Guerrera' && state.center[slotIndex].e){
       const { es } = getSlotsEls(slotIndex);
       spawnExplosionOn(es);
@@ -698,17 +668,17 @@
       applyDamage('enemy', Math.max(0, card.pts - defPts));
     }
 
-    // 3) Roba 1 animada si hay mazo
+    // Roba 1 animada
     if(state.pDeck.length){
       await drawOneAnimated();
       renderHand(); updateHUD();
     }
 
-    // Mostrar el botón por si quieres atacar ya
+    // Tras colocar, el jugador puede atacar: muestra botón
     refreshAttackButton();
   }
 
-  // ---------- IA rival (básica, sin fase de ataques múltiple) ----------
+  // ---------- IA rival (simple) ----------
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     showTurnToast('TURNO RIVAL');
@@ -728,13 +698,13 @@
       state.eHand.splice(best,1); if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
       renderBoard(); updateHUD();
 
-      // Si no hay carta del jugador en la columna -> daño directo
+      // Si no hay jugador en la columna -> daño directo
       const col = columnOf(target);
       const anyPlayerInColumn = indicesSameColumn(col).some(i => !!state.center[i].p);
       if(!anyPlayerInColumn){
         applyDamage('player', card.pts);
       }else{
-        // Confrontación simple automática contra el mismo índice si hay carta
+        // Confrontación simple mismo índice
         const pair = state.center[target];
         if(pair.p && pair.e){
           const { ps } = getSlotsEls(target);
@@ -772,8 +742,6 @@
     state.playerPassed=false; state.enemyPassed=false;
     state.turn='player';
     state.pCoins+=1;
-
-    // Resetea ataques por turno de tus cartas
     state.pAttacked = Array(SLOTS).fill(false);
 
     topUpEnemyInstant();
@@ -874,24 +842,27 @@
     if(e.target.closest('.intro-panel')) skipOrContinueIntro();
   });
 
-  // ---------- Eventos ----------
-  againBtn?.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
-  resetBtn?.addEventListener('click', ()=> newGame());
-  passBtn?.addEventListener('click', ()=>{
-    if(state.turn!=='player'||state.resolving||state.targeting) return;
-    state.playerPassed=true; state.turn='enemy';
-    attackBtn && (attackBtn.style.display='none');
-    // limpieza por si estabas en targeting
-    clearAttackerHighlights(); clearTargetHighlights();
-    state.attackCtx=null; state.targeting=false;
-    enemyTurn();
-  });
-
-  window.addEventListener('resize', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
-  window.addEventListener('orientationchange', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
-
-  // Arranque
+  // ---------- Eventos / Arranque ----------
   window.addEventListener('DOMContentLoaded', ()=>{
+    // Crear ATACAR con la barra ya montada
+    const bottomBar = document.querySelector('.bottom-bar');
+    if(!attackBtn && bottomBar && passBtn){
+      attackBtn = document.createElement('button');
+      attackBtn.id = 'attackBtn';
+      attackBtn.className = 'btn primary';
+      attackBtn.textContent = 'ATACAR';
+      attackBtn.style.display = 'none';
+      bottomBar.insertBefore(attackBtn, passBtn);
+      // Asociar handler aquí (ya tenemos el botón seguro)
+      attackBtn.addEventListener('click', ()=>{
+        if(state.resolving || state.turn!=='player') return;
+        // limpieza para evitar “doble clic”
+        clearAttackerHighlights(); clearTargetHighlights();
+        state.attackCtx = null; state.targeting = false;
+        enterChooseAttacker();
+      });
+    }
+
     if(startBtn){
       startBtn.addEventListener('click', ()=>{
         startOv.classList.remove('visible');
@@ -900,5 +871,21 @@
     }else{
       newGame();
     }
+
+    // Botones secundarios
+    againBtn?.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
+    resetBtn?.addEventListener('click', ()=> newGame());
+    passBtn?.addEventListener('click', ()=>{
+      if(state.turn!=='player'||state.resolving||state.targeting) return;
+      state.playerPassed=true; state.turn='enemy';
+      attackBtn && (attackBtn.style.display='none');
+      clearAttackerHighlights(); clearTargetHighlights();
+      state.attackCtx=null; state.targeting=false;
+      enemyTurn();
+    });
   });
+
+  // Resize
+  window.addEventListener('resize', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
+  window.addEventListener('orientationchange', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
 })();
