@@ -92,10 +92,7 @@
       }
 
       /* Aumento del tamaño de texto SOLO en zoom (desc) */
-      .zoom-card .desc{
-        font-size: 1.15rem; /* antes ~0.85rem */
-        line-height: 1.35;
-      }
+      .zoom-card .desc{ font-size: 1.15rem; line-height: 1.35; }
     `;
     const st = document.createElement('style');
     st.id = 'fxCSS';
@@ -118,28 +115,26 @@
     resolving:false,
     drawing:false,
     pAttacked: Array(SLOTS).fill(false),
+    eAttacked: Array(SLOTS).fill(false),   // 👈 ataques IA por turno
     targeting:false,
-    attackCtx: null, // { step:'chooseAttacker'|'chooseTarget', attIndex:number|null, targets:number[] }
+    attackCtx: null,
     timers: { draw:null, toast:null, type:null }
   };
 
   // ---------- Cartas ----------
   const BASE_CARDS = [
-    // Guerrera: coste 3, poder 2 (máximo 2)
     { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:2,
       text:"Cuando ataca a la carta justo enfrente, la destruye automáticamente." },
     { name:'Maga',     art:'assets/Maga.PNG',      cost:2, pts:4,
       text:"Canaliza energías arcanas a tu favor." },
     { name:'Arquero',  art:'assets/Arquero.PNG',   cost:1, pts:3,
       text:"Dispara con precisión quirúrgica." },
-    // Sanadora: texto nuevo (efecto al entrar)
     { name:'Sanadora', art:'assets/Sanadora.PNG',  cost:2, pts:2,
       text:"En cuanto entra en juego, cura completamente a todos los personajes aliados del tablero." },
     { name:'Bardo',    art:'assets/Bardo.PNG',     cost:1, pts:2,
       text:"Inspira y desarma con melodías." }
   ];
 
-  // Cada copia en los mazos lleva maxPts para poder curar hasta su tope
   const makeDeck = () =>
     BASE_CARDS.map(c => ({...c, id: uid(), maxPts: c.pts})).sort(()=> Math.random()-0.5);
 
@@ -155,7 +150,7 @@
 
   // ---------- Zoom ----------
   function openZoom(card){
-    if(state.targeting) return; // no zoom mientras seleccionas
+    if(state.targeting) return;
     zoomWrap.innerHTML = `
       <div class="zoom-card">
         <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
@@ -439,7 +434,6 @@
     updateHUD();
     checkDefeat();
   }
-
   function checkDefeat(){
     if(state.eScore<=0 || state.pScore<=0){
       state.resolving = true;
@@ -452,10 +446,26 @@
     return false;
   }
 
-  // ---------- Lógica de ATAQUE (solo con botón) ----------
+  // ---------- Utilidades comunes ----------
   const columnOf = idx => idx % 3; // 3 columnas
   const indicesSameColumn = (col) => [0,1,2,3,4,5].filter(i => i%3===col);
+  function getSlotsEls(index){
+    const playerSlots = $$('.slot[data-side="player"]');
+    const enemySlots  = $$('.slot[data-side="enemy"]');
+    return { ps: playerSlots[index], es: enemySlots[index] };
+  }
+  function updatePlacedTokenValue(side, slotIndex, newPts){
+    const slots = $$(side==='enemy' ? '.slot[data-side="enemy"]' : '.slot[data-side="player"]');
+    const s = slots[slotIndex];
+    const token = s?.querySelector('.token.t-pts');
+    if(token){
+      token.textContent = newPts;
+      token.classList.add('damage');
+      setTimeout(()=> token.classList.remove('damage'), 600);
+    }
+  }
 
+  // ---------- Lógica de ATAQUE del jugador (botón) ----------
   function attackersAvailable(){
     const res=[];
     for(let i=0;i<SLOTS;i++){
@@ -476,19 +486,11 @@
     attackBtn.disabled = false;
     attackBtn.setAttribute('aria-pressed','false');
   }
-
   function computeTargetsFor(attIndex){
     const col = columnOf(attIndex);
     const targets = indicesSameColumn(col).filter(i => state.center[i].e);
     return { col, targets };
   }
-
-  function getSlotsEls(index){
-    const playerSlots = $$('.slot[data-side="player"]');
-    const enemySlots  = $$('.slot[data-side="enemy"]');
-    return { ps: playerSlots[index], es: enemySlots[index] };
-  }
-
   function clearAttackerHighlights(){
     const playerSlots = $$('.slot[data-side="player"]');
     playerSlots.forEach(el=>{
@@ -511,23 +513,17 @@
       }
     });
   }
-
   function enterChooseAttacker(){
     state.targeting = true;
     state.attackCtx = { step:'chooseAttacker', attIndex:null, targets:[] };
-
-    clearAttackerHighlights();
-    clearTargetHighlights();
-
+    clearAttackerHighlights(); clearTargetHighlights();
     const playerSlots = $$('.slot[data-side="player"]');
     const available = attackersAvailable();
-
     if(!available.length){
       state.attackCtx = null; state.targeting = false;
       refreshAttackButton();
       return;
     }
-
     available.forEach(i=>{
       const el = playerSlots[i];
       el.classList.add('choose-attacker'); // verde
@@ -540,27 +536,13 @@
       el.addEventListener('click', pick, {once:true});
     });
   }
-
-  function updatePlacedTokenValue(side, slotIndex, newPts){
-    const slots = $$(side==='enemy' ? '.slot[data-side="enemy"]' : '.slot[data-side="player"]');
-    const s = slots[slotIndex];
-    const token = s?.querySelector('.token.t-pts');
-    if(token){
-      token.textContent = newPts;
-      token.classList.add('damage');
-      setTimeout(()=> token.classList.remove('damage'), 600);
-    }
-  }
-
   function selectAttacker(attIndex){
     clearAttackerHighlights();
-
     const playerSlots = $$('.slot[data-side="player"]');
     playerSlots[attIndex]?.classList.add('selected-attacker');
 
     const { targets } = computeTargetsFor(attIndex);
     if(!targets.length){
-      // Daño directo (no hay objetivos en la columna)
       const pts = state.center[attIndex].p?.pts || 0;
       applyDamage('enemy', pts);
       state.pAttacked[attIndex]=true;
@@ -569,17 +551,12 @@
       refreshAttackButton();
       return;
     }
-
-    // Elegir objetivo (rojo)
     state.attackCtx = { step:'chooseTarget', attIndex, targets };
     enterChooseTarget();
   }
-
   function enterChooseTarget(){
     if(!state.attackCtx || state.attackCtx.step!=='chooseTarget') return;
-
     clearTargetHighlights();
-
     const enemySlots = $$('.slot[data-side="enemy"]');
     state.attackCtx.targets.forEach(i=>{
       const el = enemySlots[i];
@@ -594,15 +571,12 @@
       el.addEventListener('click', choose, {once:true});
     });
   }
-
   function resolvePlayerAttack(attIndex, defIndex){
     clearTargetHighlights();
-
     const pairA = state.center[attIndex];
     const pairD = state.center[defIndex];
     const attacker = pairA?.p;
     const defender = pairD?.e;
-
     const playerSlots = $$('.slot[data-side="player"]');
     playerSlots[attIndex]?.classList.remove('selected-attacker');
 
@@ -619,7 +593,6 @@
     let attPts = attacker.pts;
     let defPts = defender.pts;
 
-    // Efecto de Guerrera: si ataca a la carta justo enfrente (mismo índice), la destruye
     if(attacker.name === 'Guerrera' && attIndex === defIndex){
       const { es } = getSlotsEls(defIndex);
       spawnExplosionOn(es);
@@ -630,7 +603,6 @@
     } else {
       const { es } = getSlotsEls(defIndex);
       hitEffectOn(es);
-
       if(attPts >= defPts){
         const diff = attPts - defPts;
         spawnExplosionOn(es);
@@ -644,7 +616,6 @@
         updatePlacedTokenValue('enemy', defIndex, remaining);
       }
     }
-
     state.pAttacked[attIndex]=true;
     state.attackCtx = null; state.targeting=false;
     refreshAttackButton();
@@ -692,7 +663,7 @@
     return -1;
   }
 
-  // ---------- Reglas de juego ----------
+  // ---------- Colocar cartas (entradas en juego) ----------
   const canAfford = c => state.pCoins>=c.cost;
 
   async function tryPlayFromHandToSlot(handIndex, slotIndex){
@@ -703,34 +674,26 @@
       if (el){ el.classList.add('shake'); setTimeout(()=> el.classList.remove('shake'), 450); }
       return;
     }
-    // Pagar y colocar (SIN ataque automático)
     state.pCoins -= card.cost;
-    const placedCopy = {...card}; // conserva maxPts
+    const placedCopy = {...card};
     state.center[slotIndex].p = placedCopy;
     state.pHand.splice(handIndex,1);
     renderHand(); renderBoard(); updateHUD();
     state.pAttacked[slotIndex] = false;
 
-    // ✨ Efecto Sanadora: curación completa de aliados al ENTRAR
+    // Sanadora (jugador) — cura aliados del jugador
     if(placedCopy.name === 'Sanadora'){
       let anyHealed = false;
       for(let i=0;i<SLOTS;i++){
         const pc = state.center[i].p;
         if(pc){
           const max = (typeof pc.maxPts === 'number') ? pc.maxPts : pc.pts;
-          if(pc.pts < max){
-            pc.pts = max;
-            anyHealed = true;
-          }
+          if(pc.pts < max){ pc.pts = max; anyHealed = true; }
         }
       }
-      if(anyHealed){
-        showGoldenFlash();
-        renderBoard(); // refresca tokens con valores curados
-      }
+      if(anyHealed){ showGoldenFlash(); renderBoard(); }
     }
 
-    // Roba 1 animada
     if(state.pDeck.length){
       await drawOneAnimated();
       renderHand(); updateHUD();
@@ -738,10 +701,11 @@
     refreshAttackButton();
   }
 
-  // ---------- IA rival (solo coloca cartas; sin ataques automáticos) ----------
+  // ---------- IA rival (coloca + habilidades al entrar + FASE DE ATAQUE) ----------
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     showTurnToast('TURNO RIVAL');
+
     const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins);
 
     const tryPlayOnce=()=>{
@@ -755,19 +719,106 @@
       if(target===-1) return false;
 
       state.eCoins-=card.cost;
-      const placedEnemy = {...card}; // conserva maxPts también
+      const placedEnemy = {...card};
       state.center[target].e = placedEnemy;
       state.eHand.splice(best,1);
       if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
       renderBoard(); updateHUD();
 
-      // (La Sanadora enemiga NO cura a tus cartas; si la implementas para IA, cura a sus aliados.
-      // Por coherencia, también podría aplicarse aquí. Si lo quieres, me dices y lo activo.)
+      // Sanadora (enemigo) — cura aliados enemigos
+      if(placedEnemy.name === 'Sanadora'){
+        let anyHealed = false;
+        for(let i=0;i<SLOTS;i++){
+          const ec = state.center[i].e;
+          if(ec){
+            const max = (typeof ec.maxPts === 'number') ? ec.maxPts : ec.pts;
+            if(ec.pts < max){ ec.pts = max; anyHealed = true; }
+          }
+        }
+        if(anyHealed){ showGoldenFlash(); renderBoard(); }
+      }
+
       return true;
     };
 
-    const loop=()=>{ if(!tryPlayOnce()){ state.enemyPassed=true; setTimeout(()=>{state.resolving=false; checkBothPassedThenNextRound();},400); return; } setTimeout(loop,220); };
+    const afterPlays = ()=>{
+      // Fase de ataque automática de la IA (1 vez por carta)
+      enemyAttackPhase(()=>{
+        state.enemyPassed=true;
+        setTimeout(()=>{state.resolving=false; checkBothPassedThenNextRound();},400);
+      });
+    };
+
+    const loop=()=>{ if(!tryPlayOnce()){ afterPlays(); return; } setTimeout(loop,220); };
     loop();
+  }
+
+  function enemyAttackPhase(done){
+    // Recorre todas las cartas enemigas y ataca una vez si no atacó este turno
+    let i = 0;
+    const step = ()=>{
+      while(i < SLOTS){
+        const ec = state.center[i].e;
+        if(ec && !state.eAttacked[i]){
+          resolveEnemyAttackFrom(i, ec);
+          state.eAttacked[i] = true;
+          i++;
+          setTimeout(step, 260); // pequeño ritmo visual
+          return;
+        }
+        i++;
+      }
+      done && done();
+    };
+    step();
+  }
+
+  function resolveEnemyAttackFrom(attIndex, attacker){
+    // Objetivos del jugador en la misma columna
+    const col = columnOf(attIndex);
+    const candidates = indicesSameColumn(col).filter(j => state.center[j].p);
+    if(candidates.length === 0){
+      // Daño directo
+      applyDamage('player', attacker.pts);
+      return;
+    }
+    // Elegir objetivo "sencillo": el de menor pts (remate) y si hay empate, el mismo índice si existe
+    let defIndex = candidates[0];
+    let bestPts = state.center[defIndex].p.pts;
+    for(const j of candidates){
+      const ppts = state.center[j].p.pts;
+      if(ppts < bestPts || (ppts===bestPts && j===attIndex)){ defIndex=j; bestPts=ppts; }
+    }
+
+    const defender = state.center[defIndex].p;
+    const { ps } = getSlotsEls(defIndex);
+    hitEffectOn(ps);
+
+    const attPts = attacker.pts;
+    const defPts = defender.pts;
+
+    // Guerrera enemiga: si ataca justo enfrente, destruye
+    if(attacker.name === 'Guerrera' && attIndex === defIndex){
+      spawnExplosionOn(ps);
+      state.center[defIndex].p = null;
+      renderBoard();
+      const diff = Math.max(0, attPts - defPts);
+      if(diff>0) applyDamage('player', diff);
+      return;
+    }
+
+    if(attPts >= defPts){
+      const diff = attPts - defPts;
+      spawnExplosionOn(ps);
+      state.center[defIndex].p = null;
+      renderBoard();
+      applyDamage('player', diff);
+    }else{
+      const remaining = Math.max(0, defPts - attPts);
+      state.center[defIndex].p = { ...defender, pts: remaining };
+      renderBoard();
+      updatePlacedTokenValue('player', defIndex, remaining);
+    }
   }
 
   // ---------- Rondas ----------
@@ -779,6 +830,7 @@
     state.turn='player';
     state.pCoins+=1;
     state.pAttacked = Array(SLOTS).fill(false);
+    state.eAttacked = Array(SLOTS).fill(false);   // reset IA
 
     topUpEnemyInstant();
     topUpPlayerAnimated().then(()=>{
@@ -809,6 +861,7 @@
     state.eDeck = makeDeck();
     state.pHand=[]; state.eHand=[];
     state.pAttacked = Array(SLOTS).fill(false);
+    state.eAttacked = Array(SLOTS).fill(false);
     state.attackCtx=null; state.targeting=false; state.drawing=false;
 
     renderBoard(); updateHUD();
@@ -898,7 +951,7 @@
   }
 
   window.addEventListener('DOMContentLoaded', ()=>{
-    // Crear ATACAR con la barra ya montada
+    // Crear ATACAR en la barra
     const bottomBar = document.querySelector('.bottom-bar');
     if(!attackBtn && bottomBar && passBtn){
       attackBtn = document.createElement('button');
@@ -907,7 +960,6 @@
       attackBtn.textContent = 'ATACAR';
       attackBtn.style.display = 'none';
       bottomBar.insertBefore(attackBtn, passBtn);
-
       attackBtn.addEventListener('pointerup', startTargetingFromButton);
       attackBtn.addEventListener('click', startTargetingFromButton);
     }
