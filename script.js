@@ -4,7 +4,7 @@
   const $$ = s => Array.from(document.querySelectorAll(s));
   const uid = (()=>{ let n=1; return ()=> n++; })();
 
-  // ---------- DOM (referencias básicas) ----------
+  // ---------- DOM ----------
   const handEl = $('#hand');
   const roundNoEl = $('#roundNo');
   const pCoinsEl = $('#pCoins'), eCoinsEl = $('#eCoins');
@@ -26,7 +26,7 @@
   // Botón ATACAR (se crea tras DOMContentLoaded)
   let attackBtn = document.getElementById('attackBtn');
 
-  // Inyecta CSS para efectos / resaltados si no existe
+  // ---------- CSS runtime para FX ----------
   (function injectFXCSS(){
     if(document.getElementById('fxCSS')) return;
     const css = `
@@ -43,27 +43,23 @@
         90% { transform: translate(-1px, 0px) rotate(-0.1deg) }
         100%{ transform: translate(0,0) rotate(0) scale(1); filter: brightness(1); }
       }
-      /* Enemigos targeteables (rojo) */
       .slot.targetable{
         outline: 2px solid rgba(255,120,120,.95);
         outline-offset: -2px;
         box-shadow: 0 0 0 3px rgba(255,120,120,.28) inset, 0 6px 18px rgba(255,0,0,.22);
         cursor: pointer;
       }
-      /* Atacantes disponibles (verde) */
       .slot.choose-attacker{
         outline: 2px solid rgba(120,255,170,.95);
         outline-offset: -2px;
         box-shadow: 0 0 0 3px rgba(120,255,170,.28) inset, 0 6px 18px rgba(0,180,90,.22);
         cursor: pointer;
       }
-      /* Atacante ya seleccionado (verde más marcado) */
       .slot.selected-attacker{
         outline: 3px solid rgba(60,255,140,1);
         outline-offset: -2px;
         box-shadow: 0 0 0 4px rgba(60,255,140,.35) inset, 0 8px 22px rgba(0,200,110,.3);
       }
-      /* 💥 Explosión */
       .explosion{
         position:absolute; left:50%; top:50%;
         width:140%; height:140%;
@@ -161,8 +157,8 @@
 
   // ---------- Layout Mano ----------
   function layoutHand(){
-    const n = handEl.children.length;
-    if (!n) return;
+    const n = handEl?.children.length || 0;
+    if (!n || !handEl) return;
 
     const contRect = handEl.getBoundingClientRect();
     const contW = handEl.clientWidth || contRect.width || window.innerWidth;
@@ -229,6 +225,8 @@
     return el;
   }
   function renderHand(){
+    if(!handEl) return;
+    handEl.style.display = '';        // asegúrate de que no esté oculto
     handEl.innerHTML='';
     state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i)));
     layoutHandSafe();
@@ -258,6 +256,7 @@
 
   function flyCardToHand(card){
     return new Promise(resolve=>{
+      if(!handEl){ resolve(); return; }
       const idx = state.pHand.length - 1;
       const targetEl = handEl.children[idx];
       if(!targetEl){ resolve(); return; }
@@ -315,15 +314,28 @@
     drawing = false;
     return true;
   }
+
   async function topUpPlayerAnimated(){
-    // Seguridad: si algo falla, al menos verás la mano actual
+    // 1) render inmediato (si ya hay algo)
     renderHand();
+
+    // 2) intenta llenar con animación
     while(state.pHand.length < HAND_SIZE && state.pDeck.length){
       const ok = await drawOneAnimated();
       if(!ok) break;
     }
-    renderHand(); // asegura render final
+
+    // 3) failsafe: si por cualquier motivo seguimos con mano vacía, rellenar instantáneo
+    if(state.pHand.length === 0 && state.pDeck.length){
+      while(state.pHand.length < HAND_SIZE && state.pDeck.length){
+        state.pHand.push(state.pDeck.pop());
+      }
+    }
+
+    // 4) render final garantizado
+    renderHand();
   }
+
   function topUpEnemyInstant(){
     while(state.eHand.length<Math.min(HAND_SIZE,5) && state.eDeck.length){
       const c = state.eDeck.pop();
@@ -779,7 +791,14 @@
 
     topUpEnemyInstant();
     topUpPlayerAnimated().then(()=>{
-      renderHand(); layoutHandSafe(); updateHUD();
+      // Failsafe extra por si quedó vacía
+      if(state.pHand.length === 0){
+        while(state.pHand.length < HAND_SIZE && state.pDeck.length){
+          state.pHand.push(state.pDeck.pop());
+        }
+        renderHand();
+      }
+      layoutHandSafe(); updateHUD();
       showTurnToast('TU TURNO');
       refreshAttackButton();
     });
@@ -837,11 +856,6 @@
     newGame();
   }
 
-  introNext?.addEventListener('click', skipOrContinueIntro);
-  introOv?.addEventListener('click', (e)=>{
-    if(e.target.closest('.intro-panel')) skipOrContinueIntro();
-  });
-
   // ---------- Eventos / Arranque ----------
   window.addEventListener('DOMContentLoaded', ()=>{
     // Crear ATACAR con la barra ya montada
@@ -853,12 +867,13 @@
       attackBtn.textContent = 'ATACAR';
       attackBtn.style.display = 'none';
       bottomBar.insertBefore(attackBtn, passBtn);
-      // Asociar handler aquí (ya tenemos el botón seguro)
+      // Handler: un solo clic
       attackBtn.addEventListener('click', ()=>{
         if(state.resolving || state.turn!=='player') return;
         // limpieza para evitar “doble clic”
         clearAttackerHighlights(); clearTargetHighlights();
         state.attackCtx = null; state.targeting = false;
+        // Selección de atacante (verde)
         enterChooseAttacker();
       });
     }
@@ -872,7 +887,6 @@
       newGame();
     }
 
-    // Botones secundarios
     againBtn?.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
     resetBtn?.addEventListener('click', ()=> newGame());
     passBtn?.addEventListener('click', ()=>{
