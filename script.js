@@ -23,10 +23,10 @@
   // Robo animado
   const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard');
 
-  // Botón ATACAR (se inyecta al cargar)
+  // Botón ATACAR
   let attackBtn = document.getElementById('attackBtn');
 
-  // ---------- CSS runtime para FX ----------
+  // ---------- CSS runtime para FX + zoom text boost ----------
   (function injectFXCSS(){
     if(document.getElementById('fxCSS')) return;
     const css = `
@@ -75,6 +75,27 @@
         animation: boom .45s ease-out forwards; z-index: 200;
       }
       @keyframes boom{ to{ transform: translate(-50%,-50%) scale(1.4); opacity:0; } }
+
+      /* ✨ Destello dorado de sanación */
+      .gold-flash{
+        position: fixed; inset: 0; pointer-events:none; z-index: 2000;
+        background:
+          radial-gradient(60% 60% at 50% 40%, rgba(255,245,200,.9), rgba(255,215,120,.55) 40%, rgba(255,200,60,.25) 60%, rgba(255,180,0,0) 75%);
+        mix-blend-mode: screen; opacity:0; transform: scale(1);
+        animation: goldPulse .75s ease-out forwards;
+      }
+      @keyframes goldPulse{
+        0%{ opacity: 0; transform: scale(1.03); }
+        15%{ opacity: .95; transform: scale(1); }
+        60%{ opacity: .55; }
+        100%{ opacity: 0; }
+      }
+
+      /* Aumento del tamaño de texto SOLO en zoom (desc) */
+      .zoom-card .desc{
+        font-size: 1.15rem; /* antes ~0.85rem */
+        line-height: 1.35;
+      }
     `;
     const st = document.createElement('style');
     st.id = 'fxCSS';
@@ -104,13 +125,23 @@
 
   // ---------- Cartas ----------
   const BASE_CARDS = [
-    { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:5, text:"Cuando ataca a la carta justo enfrente, la destruye automáticamente." },
-    { name:'Maga',     art:'assets/Maga.PNG',      cost:2, pts:4, text:"Canaliza energías arcanas a tu favor." },
-    { name:'Arquero',  art:'assets/Arquero.PNG',   cost:1, pts:3, text:"Dispara con precisión quirúrgica." },
-    { name:'Sanadora', art:'assets/Sanadora.PNG',  cost:2, pts:2, text:"Restaura y protege a los tuyos." },
-    { name:'Bardo',    art:'assets/Bardo.PNG',     cost:1, pts:2, text:"Inspira y desarma con melodías." }
+    // Guerrera: coste 3, poder 2 (máximo 2)
+    { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:2,
+      text:"Cuando ataca a la carta justo enfrente, la destruye automáticamente." },
+    { name:'Maga',     art:'assets/Maga.PNG',      cost:2, pts:4,
+      text:"Canaliza energías arcanas a tu favor." },
+    { name:'Arquero',  art:'assets/Arquero.PNG',   cost:1, pts:3,
+      text:"Dispara con precisión quirúrgica." },
+    // Sanadora: texto nuevo (efecto al entrar)
+    { name:'Sanadora', art:'assets/Sanadora.PNG',  cost:2, pts:2,
+      text:"En cuanto entra en juego, cura completamente a todos los personajes aliados del tablero." },
+    { name:'Bardo',    art:'assets/Bardo.PNG',     cost:1, pts:2,
+      text:"Inspira y desarma con melodías." }
   ];
-  const makeDeck = () => BASE_CARDS.map(c => ({...c, id: uid()})).sort(()=> Math.random()-0.5);
+
+  // Cada copia en los mazos lleva maxPts para poder curar hasta su tope
+  const makeDeck = () =>
+    BASE_CARDS.map(c => ({...c, id: uid(), maxPts: c.pts})).sort(()=> Math.random()-0.5);
 
   const tokenCost = v => `<div class="token t-cost">${v}</div>`;
   const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
@@ -375,16 +406,7 @@
     pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore; // VIDA
   }
 
-  // ---------- Utilidades combate ----------
-  const columnOf = idx => idx % 3; // 3 columnas
-  const indicesSameColumn = (col) => [0,1,2,3,4,5].filter(i => i%3===col);
-
-  function getSlotsEls(index){
-    const playerSlots = $$('.slot[data-side="player"]');
-    const enemySlots  = $$('.slot[data-side="enemy"]');
-    return { ps: playerSlots[index], es: enemySlots[index] };
-  }
-
+  // ---------- FX helpers ----------
   function spawnExplosionOn(el){
     if(!el) return;
     const placed = el.querySelector('.placed');
@@ -394,17 +416,22 @@
     placed.appendChild(boom);
     setTimeout(()=> boom.remove(), 500);
   }
-
   function hitEffectOn(el){
     if(!el) return;
     const placed = el.querySelector('.placed');
     if(!placed) return;
-    placed.classList.add('hit');
-    placed.classList.add('shake-hard');
+    placed.classList.add('hit','shake-hard');
     setTimeout(()=> placed.classList.remove('hit'), 360);
     setTimeout(()=> placed.classList.remove('shake-hard'), 500);
   }
+  function showGoldenFlash(){
+    const f = document.createElement('div');
+    f.className = 'gold-flash';
+    document.body.appendChild(f);
+    setTimeout(()=> f.remove(), 800);
+  }
 
+  // ---------- Vida & daño ----------
   function applyDamage(to, amount){
     if(amount<=0) return;
     if(to==='enemy'){ state.eScore = Math.max(0, state.eScore - amount); }
@@ -426,6 +453,9 @@
   }
 
   // ---------- Lógica de ATAQUE (solo con botón) ----------
+  const columnOf = idx => idx % 3; // 3 columnas
+  const indicesSameColumn = (col) => [0,1,2,3,4,5].filter(i => i%3===col);
+
   function attackersAvailable(){
     const res=[];
     for(let i=0;i<SLOTS;i++){
@@ -451,6 +481,12 @@
     const col = columnOf(attIndex);
     const targets = indicesSameColumn(col).filter(i => state.center[i].e);
     return { col, targets };
+  }
+
+  function getSlotsEls(index){
+    const playerSlots = $$('.slot[data-side="player"]');
+    const enemySlots  = $$('.slot[data-side="enemy"]');
+    return { ps: playerSlots[index], es: enemySlots[index] };
   }
 
   function clearAttackerHighlights(){
@@ -500,10 +536,20 @@
         selectAttacker(i);
       };
       el._pickAttacker = pick;
-      // usar pointerup + click para fiabilidad en táctiles/escritorio sin doble toque
       el.addEventListener('pointerup', pick, {once:true});
       el.addEventListener('click', pick, {once:true});
     });
+  }
+
+  function updatePlacedTokenValue(side, slotIndex, newPts){
+    const slots = $$(side==='enemy' ? '.slot[data-side="enemy"]' : '.slot[data-side="player"]');
+    const s = slots[slotIndex];
+    const token = s?.querySelector('.token.t-pts');
+    if(token){
+      token.textContent = newPts;
+      token.classList.add('damage');
+      setTimeout(()=> token.classList.remove('damage'), 600);
+    }
   }
 
   function selectAttacker(attIndex){
@@ -514,7 +560,7 @@
 
     const { targets } = computeTargetsFor(attIndex);
     if(!targets.length){
-      // Sin objetivos en columna: daño directo SOLO al pulsar ATACAR
+      // Daño directo (no hay objetivos en la columna)
       const pts = state.center[attIndex].p?.pts || 0;
       applyDamage('enemy', pts);
       state.pAttacked[attIndex]=true;
@@ -524,7 +570,7 @@
       return;
     }
 
-    // Pasamos a seleccionar objetivo (rojo)
+    // Elegir objetivo (rojo)
     state.attackCtx = { step:'chooseTarget', attIndex, targets };
     enterChooseTarget();
   }
@@ -547,17 +593,6 @@
       el.addEventListener('pointerup', choose, {once:true});
       el.addEventListener('click', choose, {once:true});
     });
-  }
-
-  function updatePlacedTokenValue(side, slotIndex, newPts){
-    const slots = $$(side==='enemy' ? '.slot[data-side="enemy"]' : '.slot[data-side="player"]');
-    const s = slots[slotIndex];
-    const token = s?.querySelector('.token.t-pts');
-    if(token){
-      token.textContent = newPts;
-      token.classList.add('damage');
-      setTimeout(()=> token.classList.remove('damage'), 600);
-    }
   }
 
   function resolvePlayerAttack(attIndex, defIndex){
@@ -584,13 +619,12 @@
     let attPts = attacker.pts;
     let defPts = defender.pts;
 
-    // Efecto de Guerrera: si ataca a la carta justo enfrente (mismo índice) la destruye
+    // Efecto de Guerrera: si ataca a la carta justo enfrente (mismo índice), la destruye
     if(attacker.name === 'Guerrera' && attIndex === defIndex){
       const { es } = getSlotsEls(defIndex);
       spawnExplosionOn(es);
       state.center[defIndex].e = null;
       renderBoard();
-      // Transfiere exceso como daño a vida (como si attPts >= defPts)
       const diff = Math.max(0, attPts - defPts);
       if (diff>0) applyDamage('enemy', diff);
     } else {
@@ -671,12 +705,31 @@
     }
     // Pagar y colocar (SIN ataque automático)
     state.pCoins -= card.cost;
-    state.center[slotIndex].p = {...card};
+    const placedCopy = {...card}; // conserva maxPts
+    state.center[slotIndex].p = placedCopy;
     state.pHand.splice(handIndex,1);
     renderHand(); renderBoard(); updateHUD();
     state.pAttacked[slotIndex] = false;
 
-    // (Se elimina daño directo y efecto inmediato de Guerrera al colocar)
+    // ✨ Efecto Sanadora: curación completa de aliados al ENTRAR
+    if(placedCopy.name === 'Sanadora'){
+      let anyHealed = false;
+      for(let i=0;i<SLOTS;i++){
+        const pc = state.center[i].p;
+        if(pc){
+          const max = (typeof pc.maxPts === 'number') ? pc.maxPts : pc.pts;
+          if(pc.pts < max){
+            pc.pts = max;
+            anyHealed = true;
+          }
+        }
+      }
+      if(anyHealed){
+        showGoldenFlash();
+        renderBoard(); // refresca tokens con valores curados
+      }
+    }
+
     // Roba 1 animada
     if(state.pDeck.length){
       await drawOneAnimated();
@@ -685,7 +738,7 @@
     refreshAttackButton();
   }
 
-  // ---------- IA rival (solo coloca cartas; SIN ataques automáticos) ----------
+  // ---------- IA rival (solo coloca cartas; sin ataques automáticos) ----------
   function enemyTurn(){
     state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
     showTurnToast('TURNO RIVAL');
@@ -701,11 +754,15 @@
       for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
       if(target===-1) return false;
 
-      state.eCoins-=card.cost; state.center[target].e={...card};
-      state.eHand.splice(best,1); if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
+      state.eCoins-=card.cost;
+      const placedEnemy = {...card}; // conserva maxPts también
+      state.center[target].e = placedEnemy;
+      state.eHand.splice(best,1);
+      if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
       renderBoard(); updateHUD();
 
-      // (Se elimina cualquier daño directo o confrontación automática)
+      // (La Sanadora enemiga NO cura a tus cartas; si la implementas para IA, cura a sus aliados.
+      // Por coherencia, también podría aplicarse aquí. Si lo quieres, me dices y lo activo.)
       return true;
     };
 
@@ -833,7 +890,6 @@
   function startTargetingFromButton(e){
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    // Quita el foco para evitar "primer clic sólo enfoca"
     attackBtn && attackBtn.blur();
     if(state.resolving || state.turn!=='player') return;
     clearAttackerHighlights(); clearTargetHighlights();
@@ -852,7 +908,6 @@
       attackBtn.style.display = 'none';
       bottomBar.insertBefore(attackBtn, passBtn);
 
-      // 🔧 Manejo robusto para evitar el "doble clic"
       attackBtn.addEventListener('pointerup', startTargetingFromButton);
       attackBtn.addEventListener('click', startTargetingFromButton);
     }
@@ -860,7 +915,7 @@
     if(startBtn){
       startBtn.addEventListener('click', ()=>{
         startOv.classList.remove('visible');
-        startIntro(); // Intro antes del juego
+        startIntro();
       });
     }else{
       newGame();
