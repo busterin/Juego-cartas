@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <title>Cartas — Coste & Puntos</title>
+  <title>Cartas — Coste & Vida</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -14,18 +14,23 @@
     </div>
   </div>
 
-  <!-- Intro tipo Fire Emblem -->
-  <div id="introOverlay" class="overlay intro" aria-hidden="true">
-    <div class="intro-bg" aria-hidden="true"></div>
-    <div class="intro-panel" role="dialog" aria-live="polite">
+  <!-- INTRO estilo Fire Emblem -->
+  <div id="introOverlay" class="overlay intro-overlay" aria-hidden="true">
+    <!-- Fondo a pantalla completa -->
+    <div class="intro-bg" aria-hidden="true">
+      <!-- La imagen se define por CSS con Guerrera.PNG para cubrir toda la pantalla -->
+    </div>
+
+    <!-- Cuadro de texto -->
+    <div class="intro-panel" role="dialog" aria-live="polite" aria-label="Introducción">
       <div id="introText" class="intro-text"></div>
       <div class="intro-actions">
-        <button id="introNext" class="btn primary" disabled>Continuar ▶</button>
+        <button id="introNext" class="btn primary">SALTAR</button>
       </div>
     </div>
   </div>
 
-  <main id="game" aria-label="Cartas de coste y puntos">
+  <main id="game" aria-label="Cartas de coste y vida">
     <!-- HUD superior -->
     <header class="top-hud">
       <div class="portrait player">
@@ -34,7 +39,8 @@
           <div class="name">JUGADOR</div>
           <div class="meters">
             <span class="meter coin"><span class="value" id="pCoins">3</span></span>
-            <span class="meter pts"><span class="value" id="pScore">0</span></span>
+            <!-- Vida (antes puntos), ahora en rojo se gestiona por CSS -->
+            <span class="meter pts"><span class="value" id="pScore">10</span></span>
           </div>
         </div>
       </div>
@@ -49,16 +55,17 @@
           <div class="name">RIVAL</div>
           <div class="meters">
             <span class="meter coin"><span class="value" id="eCoins">3</span></span>
-            <span class="meter pts"><span class="value" id="eScore">0</span></span>
+            <!-- Vida rival -->
+            <span class="meter pts"><span class="value" id="eScore">10</span></span>
           </div>
         </div>
       </div>
     </header>
 
-    <!-- Tablero (2 filas de 3) -->
+    <!-- Tablero (6 huecos por lado: 3 columnas x 2 filas) -->
     <section class="board" aria-label="Tablero central">
       <div class="row row-enemy">
-        <div class="lanes lanes-3x2 enemy">
+        <div class="lanes-3x2 enemy">
           <div class="slot enemy" data-side="enemy" data-lane="0"></div>
           <div class="slot enemy" data-side="enemy" data-lane="1"></div>
           <div class="slot enemy" data-side="enemy" data-lane="2"></div>
@@ -68,7 +75,7 @@
         </div>
       </div>
       <div class="row row-player">
-        <div class="lanes lanes-3x2">
+        <div class="lanes-3x2">
           <div class="slot" data-side="player" data-lane="0"></div>
           <div class="slot" data-side="player" data-lane="1"></div>
           <div class="slot" data-side="player" data-lane="2"></div>
@@ -86,6 +93,7 @@
 
     <!-- Barra inferior -->
     <footer class="bottom-bar">
+      <!-- El botón ATACAR se inyecta por JS antes de PASAR -->
       <button id="passBtn" class="btn primary">PASAR TURNO</button>
       <button id="resetBtn" class="btn">Reiniciar</button>
     </footer>
