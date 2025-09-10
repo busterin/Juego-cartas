@@ -1,1049 +1,369 @@
-(() => {
-  // ---------- Utils ----------
-  const $  = s => document.querySelector(s);
-  const $$ = s => Array.from(document.querySelectorAll(s));
-  const uid = (()=>{ let n=1; return ()=> n++; })();
+:root{
+  --bg1:#0b0f1e; --bg2:#151b36; --ink:#eaf2ff; --muted:#a5b3cc;
+  --panel:rgba(255,255,255,.06); --panel-br:rgba(255,255,255,.14);
+  --glow:0 10px 30px rgba(0,0,0,.45), inset 0 0 40px rgba(255,255,255,.035);
 
-  // ---------- DOM ----------
-  const handEl = $('#hand');
-  const roundNoEl = $('#roundNo');
-  const pCoinsEl = $('#pCoins'), eCoinsEl = $('#eCoins');
-  const pScoreEl = $('#pScore'), eScoreEl = $('#eScore'); // VIDA
-  const endOverlay = $('#endOverlay'); const endTitle = $('#endTitle'); const endLine = $('#endLine');
-  const zoomOverlay = $('#zoomOverlay'); const zoomWrap = $('#zoomCardWrap');
+  --game-max:760px;
+  --gap:10px;
 
-  const againBtn = $('#againBtn');
-  const passBtn = $('#passBtn');
-  const resetBtn = $('#resetBtn');
+  --hex: 56px; --round-sz: 48px; --meter-sz: 26px;
+  --card-w: clamp(72px, 16vw, 110px);
+  --card-h: calc(var(--card-w) * 1.42);
 
-  // Portada + Intro
-  const startOv  = $('#startOverlay'); const startBtn = $('#startBtn');
-  const introOv = $('#introOverlay'); const introTextEl = $('#introText'); const introNext = $('#introNext');
+  --lanes-gap: 10px;
+  --slot-inset: 6px;
+  --slot-br: 12px;
 
-  // Robo animado
-  const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard');
+  --bottom-pad: 10px;
+}
 
-  // Botón ATACAR
-  let attackBtn = document.getElementById('attackBtn');
+/* ===== Base ===== */
+*{ box-sizing:border-box }
+html,body{
+  height:100%;
+  margin:0;
+  color:var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  background:
+    radial-gradient(1200px 800px at 20% 0%, #1a2458 0, transparent 60%),
+    radial-gradient(900px 600px at 80% 100%, #141e46 0, transparent 60%),
+    linear-gradient(180deg, var(--bg1), var(--bg2));
+  overflow:hidden;
+}
+#game{
+  height: 100dvh;
+  max-width: var(--game-max);
+  margin-inline:auto;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto; /* HUD | Board | Hand | Footer */
+  gap: var(--gap);
+  padding: 6px 8px calc(var(--bottom-pad) + env(safe-area-inset-bottom));
+  overflow:hidden;
+}
 
-  // ---------- CSS runtime para FX + zoom text boost ----------
-  (function injectFXCSS(){
-    if(document.getElementById('fxCSS')) return;
-    const css = `
-      .placed.shake-hard{ animation: shakeHard .48s cubic-bezier(.36,.07,.19,.97) both; }
-      @keyframes shakeHard {
-        10% { transform: translate(-1px, -2px) rotate(-0.5deg) scale(1.02); filter: brightness(1.1); }
-        20% { transform: translate(3px, 0px) rotate(0.6deg) scale(1.03); }
-        30% { transform: translate(-5px, 2px) rotate(-0.8deg) }
-        40% { transform: translate(4px, -1px) rotate(0.6deg) }
-        50% { transform: translate(-3px, 1px) rotate(-0.6deg) }
-        60% { transform: translate(3px, 1px) rotate(0.4deg) }
-        70% { transform: translate(-2px, -1px) rotate(-0.3deg) }
-        80% { transform: translate(1px, 1px) rotate(0.2deg) }
-        90% { transform: translate(-1px, 0px) rotate(-0.1deg) }
-        100%{ transform: translate(0,0) rotate(0) scale(1); filter: brightness(1); }
-      }
-      .slot.targetable{
-        outline: 2px solid rgba(255,120,120,.95);
-        outline-offset: -2px;
-        box-shadow: 0 0 0 3px rgba(255,120,120,.28) inset, 0 6px 18px rgba(255,0,0,.22);
-        cursor: pointer;
-      }
-      .slot.choose-attacker{
-        outline: 2px solid rgba(120,255,170,.95);
-        outline-offset: -2px;
-        box-shadow: 0 0 0 3px rgba(120,255,170,.28) inset, 0 6px 18px rgba(0,180,90,.22);
-        cursor: pointer;
-      }
-      .slot.selected-attacker{
-        outline: 3px solid rgba(60,255,140,1);
-        outline-offset: -2px;
-        box-shadow: 0 0 0 4px rgba(60,255,140,.35) inset, 0 8px 22px rgba(0,200,110,.3);
-      }
-      .explosion{
-        position:absolute; left:50%; top:50%;
-        width:140%; height:140%;
-        transform: translate(-50%,-50%) scale(.6);
-        border-radius:50%; pointer-events:none;
-        background: radial-gradient(circle,
-          rgba(255,255,255,.95) 0%,
-          rgba(255,230,120,.9) 22%,
-          rgba(255,160,0,.75) 42%,
-          rgba(255,60,0,.45) 58%,
-          rgba(255,0,0,0) 72%);
-        filter: blur(1px); mix-blend-mode: screen; opacity:1;
-        animation: boom .45s ease-out forwards; z-index: 200;
-      }
-      @keyframes boom{ to{ transform: translate(-50%,-50%) scale(1.4); opacity:0; } }
+/* ===== HUD ===== */
+.top-hud{
+  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center; gap:6px; padding-inline:2px;
+  position:relative; z-index:300;
+}
+.portrait{ display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; min-width:0; }
+.portrait.enemy{ justify-self:end; }
+.frame.hex{ width:var(--hex); height:var(--hex); display:grid; place-items:center; font-size:calc(var(--hex)*.7); background:transparent; border:none; }
+.info{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.info .name{ font-weight:900; font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.meters{ display:flex; gap:6px; flex-wrap:wrap; }
+.round-display{ display:flex; align-items:center; justify-content:center; }
+.round-no{
+  width:var(--round-sz); height:var(--round-sz); border-radius:50%; display:grid; place-items:center;
+  font-weight:900; font-size:calc(var(--round-sz)*.22 + .7rem); color:#061018;
+  background: radial-gradient(60% 60% at 50% 40%, #baf3ff 0, #6be2ff 55%, #3b8cff 100%);
+  box-shadow:0 0 16px rgba(107,226,255,.5), inset 0 4px 15px rgba(255,255,255,.45), inset 0 -6px 20px rgba(0,0,0,.25);
+  border:1px solid rgba(255,255,255,.5);
+}
+.meter{
+  width:var(--meter-sz); height:var(--meter-sz); border-radius:50%;
+  display:grid; place-items:center; font-weight:900; color:#101010;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.18), 0 3px 8px rgba(0,0,0,.35);
+  font-size:.85rem;
+}
+.meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
+/* VIDA (antes verde): ahora rojo */
+.meter.pts { background:radial-gradient(60% 60% at 30% 30%, #ffd1d1 0, #ff8b8b 60%, #ff5a5a 100%); }
 
-      /* ✨ Destello dorado (sanación) */
-      .gold-flash{
-        position: fixed; inset: 0; pointer-events:none; z-index: 2000;
-        background:
-          radial-gradient(60% 60% at 50% 40%, rgba(255,245,200,.9), rgba(255,215,120,.55) 40%, rgba(255,200,60,.25) 60%, rgba(255,180,0,0) 75%);
-        mix-blend-mode: screen; opacity:0; transform: scale(1);
-        animation: goldPulse .75s ease-out forwards;
-      }
-      @keyframes goldPulse{
-        0%{ opacity: 0; transform: scale(1.03); }
-        15%{ opacity: .95; transform: scale(1); }
-        60%{ opacity: .55; }
-        100%{ opacity: 0; }
-      }
+/* ===== Tablero (6 huecos por lado) ===== */
+.board{
+  display:grid;
+  grid-template-rows: 1fr 1fr;
+  gap: var(--lanes-gap);
+  min-height:0; height:100%;
+}
+.row{ width:100%; max-width:var(--game-max); margin-inline:auto; min-height:0; }
+.lanes-3x2{
+  height:100%;
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: var(--lanes-gap);
+}
+.slot{
+  height:100%;
+  border:2px dashed rgba(105,240,255,.35);
+  border-radius:var(--slot-br);
+  display:grid; place-items:center; position:relative;
+  background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
+  overflow:hidden; transition: border-color .15s ease, background .15s ease;
+}
+.slot.enemy{ border-color: rgba(255,108,132,.35); }
+.slot.occupied{
+  border-style: solid;
+  border-color: rgba(255,255,255,.28);
+  background: linear-gradient(180deg, rgba(34,48,88,.45), rgba(34,48,88,.25));
+}
 
-      /* Overlay del impacto (flash + anillo) */
-      .hit-overlay{
-        position:absolute; inset:-10%;
-        border-radius: inherit;
-        pointer-events:none;
-        z-index: 5;
-        background:
-          radial-gradient(circle at 50% 50%,
-            rgba(255,255,255,.85) 0%,
-            rgba(255,140,140,.75) 22%,
-            rgba(255,70,70,.35) 48%,
-            rgba(255,0,0,0) 62%);
-        animation: impactFlash .28s ease-out forwards, impactRingParent .35s ease-out forwards;
-      }
-      @keyframes impactFlash{
-        0%{ opacity:0; transform: scale(.85); }
-        30%{ opacity:1; }
-        100%{ opacity:0; transform: scale(1.25); }
-      }
-      @keyframes impactRingParent{
-        0%{ box-shadow: 0 0 0 0 rgba(255,200,200,.95), inset 0 0 0 0 rgba(255,200,200,0); }
-        100%{ box-shadow: 0 0 0 22px rgba(255,200,200,0), inset 0 0 0 0 rgba(255,200,200,0); }
-      }
+/* Cartas colocadas (mesa) */
+.placed{
+  position:absolute; inset:var(--slot-inset);
+  border-radius:calc(var(--slot-br) - 2px);
+  border:1.5px solid rgba(255,255,255,.28);
+  box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  background:#0f1633; overflow:visible;
+}
+.placed .art, .placed .art img{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover;
+  object-position: top;   /* mostrar la parte superior de la carta */
+  border-radius:inherit;
+}
 
-      /* Token de puntos: rebote + rojo temporal cuando recibe daño */
-      .token.t-pts.damage{
-        animation: dmgBounce .35s ease, dmgColor .6s ease;
-      }
-      @keyframes dmgBounce{
-        0%{ transform: translateY(0) scale(1); }
-        30%{ transform: translateY(-3px) scale(1.15); }
-        100%{ transform: translateY(0) scale(1); }
-      }
-      @keyframes dmgColor{
-        0%{
-          background: radial-gradient(60% 60% at 30% 30%, #ffd6d6 0, #ff7373 60%, #ff3030 100%);
-        }
-        100%{
-          background: radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%);
-        }
-      }
+/* ===== Mano ===== */
+.hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; position:relative; z-index:120; overflow:visible; }
+.hand{ position:relative; width:100%; height:100%; overflow:visible; z-index:121; }
+.hand .card{
+  position:absolute; bottom:0; left:50%;
+  width:var(--card-w); height:var(--card-h);
+  transform-origin: bottom center;
+  transition: transform .18s ease, filter .18s ease;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45);
+  transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot));
+  overflow: visible; touch-action: none;
 
-      /* Zoom: descripción más grande */
-      .zoom-card .desc{ font-size: 1.15rem; line-height: 1.35; }
-    `;
-    const st = document.createElement('style');
-    st.id = 'fxCSS';
-    st.textContent = css;
-    document.head.appendChild(st);
-  })();
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,.22);
+  background: #0f1633;
+}
+.hand .card:hover{ transform: translateX(calc(var(--x) + var(--off, 0px))) translateY(-6px) rotate(0deg) scale(1.06); z-index:40; }
+.card .art, .ghost .art{ position:absolute; inset:0; }
+.card .art img, .ghost .art img{ width:100%; height:100%; object-fit:cover; border-radius:inherit; }
 
-  // ---------- Estado ----------
-  const SLOTS = 6;         // 3 columnas x 2 filas por lado
-  const HAND_SIZE = 4;
+/* ===== Tokens ===== */
+.token{ position:absolute; top:5px; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:.9rem; font-weight:900; z-index:2; color:#101010; box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.4); }
+.t-cost{ left:6px; background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
+.t-pts { right:6px; background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 
-  const state = {
-    round: 1,
-    pCoins: 3, eCoins: 3,
-    pScore: 10, eScore: 10,       // VIDA inicial 10
-    pDeck: [], eDeck: [], pHand: [], eHand: [],
-    center: Array.from({length:SLOTS},()=>({p:null,e:null})),
-    turn: 'player',
-    playerPassed:false, enemyPassed:false,
-    resolving:false,
-    drawing:false,
-    pAttacked: Array(SLOTS).fill(false),
-    eAttacked: Array(SLOTS).fill(false),
-    targeting:false,
-    attackCtx: null,
-    timers: { draw:null, toast:null, type:null }
-  };
+/* Tokens en la mano: sobresalen hacia arriba y molestan menos */
+.hand .card .token{
+  top: -14px;        /* subir por encima del borde */
+  width: 24px;
+  height: 24px;
+  font-size: .75rem;
+}
+.hand .card .t-cost{ left:4px; }
+.hand .card .t-pts { right:4px; }
 
-  // ---------- Cartas ----------
-  const BASE_CARDS = [
-    { name:'Guerrera', art:'assets/Guerrera.PNG',  cost:3, pts:2,
-      text:"Cuando ataca a la carta justo enfrente, la destruye automáticamente." },
-    { name:'Maga',     art:'assets/Maga.PNG',      cost:2, pts:4,
-      text:"Canaliza energías arcanas a tu favor." },
-    { name:'Arquero',  art:'assets/Arquero.PNG',   cost:1, pts:3,
-      text:"Dispara con precisión quirúrgica." },
-    { name:'Sanadora', art:'assets/Sanadora.PNG',  cost:2, pts:2,
-      text:"En cuanto entra en juego, cura completamente a todos los personajes aliados del tablero." },
-    { name:'Bardo',    art:'assets/Bardo.PNG',     cost:1, pts:2,
-      text:"Inspira y desarma con melodías." }
-  ];
+.name-top{ position:absolute; left:6px; right:6px; top:6px; text-align:center; font-weight:900; font-size:.75rem; color:#eaf2ff; background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:3px 6px; }
+.desc{ position:absolute; left:6px; right:6px; bottom:6px; font-size:.68rem; color:#d9e6ff; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.14); border-radius:10px; padding:4px 6px; }
 
-  const makeDeck = () =>
-    BASE_CARDS.map(c => ({...c, id: uid(), maxPts: c.pts})).sort(()=> Math.random()-0.5);
+/* Ocultar nombre/desc en miniaturas y mesa */
+.hand .card .name-top, .hand .card .desc,
+.placed .name-top, .placed .desc{ display:none; }
 
-  const tokenCost = v => `<div class="token t-cost">${v}</div>`;
-  const tokenPts  = v => `<div class="token t-pts">${v}</div>`;
-  const artHTML   = src => `<div class="art">${src?`<img src="${src}" alt="">`:''}</div>`;
+/* ===== Ghost arrastre ===== */
+.ghost{ position:fixed; z-index:9999; pointer-events:none; width:var(--card-w); height:var(--card-h); transform: translate(-50%, -50%) scale(1.06); border:1px solid rgba(255,255,255,.35); border-radius:12px; overflow:visible; }
+.ghost .art img{ border-radius:inherit; }
 
-  // ---------- Limpieza de nodos temporales ----------
-  function purgeTransientNodes(){
-    document.querySelectorAll('.fly-card, .ghost').forEach(n=>n.remove());
-    drawOverlay?.classList.remove('visible');
+/* ===== Carta voladora del robo ===== */
+.fly-card{
+  position: fixed; left: 50%; top: 50%;
+  width: var(--card-w); height: var(--card-h);
+  transform: translate(-50%, -50%) scale(1);
+  border-radius: 12px; overflow: hidden; z-index: 1500;
+  transition: transform .45s cubic-bezier(.2,.8,.2,1);
+  box-shadow: 0 10px 30px rgba(0,0,0,.55);
+}
+.fly-card .art, .fly-card .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+
+/* ===== Botones ===== */
+.bottom-bar{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; padding:8px 8px var(--bottom-pad); background: linear-gradient(180deg, rgba(5,8,18,0), rgba(5,8,18,.55)); }
+.btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
+.btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
+
+/* ===== Zoom (sin borde negro) ===== */
+.overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:1000; }
+.overlay.visible{ opacity:1; pointer-events:auto; }
+
+.zoom-panel{ position: fixed; inset: 0; display: grid; place-items: center; background: transparent; border: none; padding: 0; }
+
+.zoom-card{
+  width: min(92vw, calc(92vh * 5 / 7));
+  aspect-ratio: 5 / 7;
+  border-radius: 14px; overflow: hidden; position: relative;
+  border: 1.5px solid rgba(255,255,255,.28);
+  background: transparent; /* eliminar fondo negro */
+  box-shadow: 0 18px 40px rgba(0,0,0,.6);
+}
+@supports (height: 1dvh){
+  .zoom-card{ width: min(92vw, calc(92dvh * 5 / 7)); }
+}
+@supports (height: 1svh){
+  .zoom-card{ width: min(92vw, calc(92svh * 5 / 7)); }
+}
+.zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
+.zoom-card .art img{
+  width:100%; height:100%;
+  object-fit:cover;
+  object-position: top;   /* evita franja arriba */
+  display:block;
+  background:none;
+}
+.zoom-card .zoom-token{
+  position:absolute; top:10px; width:42px; height:42px;
+  border-radius:50%; display:grid; place-items:center; font-weight:900; color:#101010;
+  box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42);
+}
+.zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
+.zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
+.zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
+.zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:1.15rem; line-height:1.35; }
+
+/* ===== Toast ===== */
+.turn-toast{
+  position: fixed; left: 50%; top: 42%;
+  transform: translate(-50%, -50%) scale(.96);
+  padding: 10px 14px; border-radius: 14px;
+  font-weight: 900; letter-spacing: .5px; color: #061018;
+  background: radial-gradient(60% 60% at 50% 40%, #baf3ff 0, #6be2ff 55%, #3b8cff 100%);
+  border:1px solid rgba(255,255,255,.6); box-shadow: 0 12px 30px rgba(0,0,0,.45);
+  opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease;
+  z-index: 120;
+}
+.turn-toast.show{ opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.turn-toast.warn{ background: radial-gradient(60% 60% at 50% 40%, #ffd1d1 0, #ff8b8b 55%, #ff5a5a 100%); color:#3c0d0d; }
+
+/* ===== Splash portada ===== */
+.splash{ position: fixed; inset: 0; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+.splash.visible{ opacity: 1; pointer-events: auto; }
+.splash-cover{ position:absolute; inset:0; background: url("assets/Portadacartas.PNG") center center / cover no-repeat; display:flex; align-items:flex-end; justify-content:center; padding-bottom: 12%; }
+.btn.start{ font-size:1.2rem; padding:14px 22px; border-radius:14px; font-weight:900; background: linear-gradient(180deg, rgba(108,80,255,.55), rgba(108,80,255,.25)); border: 2px solid rgba(255,255,255,.4); box-shadow:0 6px 20px rgba(0,0,0,.55); }
+
+/* ===== Overlay robo ===== */
+.draw-overlay{ position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.55); opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 1100; }
+.draw-overlay.visible{ opacity: 1; pointer-events: auto; }
+
+/* ===== Shake coste insuficiente ===== */
+@keyframes shake{
+  10%, 90% { transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot)) translateY(0) }
+  20%, 80% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
+  30%, 50%, 70% { transform: translateX(calc(var(--x) + var(--off, 0px) + 3px)) rotate(var(--rot)) }
+  40%, 60% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
+}
+.card.shake{ animation: shake .45s ease; }
+
+/* ===== 💥 Explosión al destruir ===== */
+.explosion{
+  position:absolute; left:50%; top:50%;
+  width:140%; height:140%;
+  transform: translate(-50%,-50%) scale(.6);
+  border-radius:50%; pointer-events:none;
+  background: radial-gradient(circle,
+    rgba(255,255,255,.95) 0%,
+    rgba(255,230,120,.9) 22%,
+    rgba(255,160,0,.75) 42%,
+    rgba(255,60,0,.45) 58%,
+    rgba(255,0,0,0) 72%);
+  filter: blur(1px); mix-blend-mode: screen; opacity:1;
+  animation: boom .45s ease-out forwards; z-index: 200;
+}
+@keyframes boom{ to{ transform: translate(-50%,-50%) scale(1.4); opacity:0; } }
+
+/* ===== Impact overlay ===== */
+.hit-overlay{
+  position:absolute; inset:-10%;
+  border-radius: inherit;
+  pointer-events:none;
+  z-index: 5;
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(255,255,255,.85) 0%,
+      rgba(255,140,140,.75) 22%,
+      rgba(255,70,70,.35) 48%,
+      rgba(255,0,0,0) 62%);
+  animation: impactFlash .28s ease-out forwards, impactRingParent .35s ease-out forwards;
+}
+@keyframes impactFlash{
+  0%{ opacity:0; transform: scale(.85); }
+  30%{ opacity:1; }
+  100%{ opacity:0; transform: scale(1.25); }
+}
+@keyframes impactRingParent{
+  0%{ box-shadow: 0 0 0 0 rgba(255,200,200,.95), inset 0 0 0 0 rgba(255,200,200,0); }
+  100%{ box-shadow: 0 0 0 22px rgba(255,200,200,0), inset 0 0 0 0 rgba(255,200,200,0); }
+}
+
+/* Token de puntos: rebote + rojo temporal en daño */
+.token.t-pts.damage{
+  animation: dmgBounce .35s ease, dmgColor .6s ease;
+}
+@keyframes dmgBounce{
+  0%{ transform: translateY(0) scale(1); }
+  30%{ transform: translateY(-3px) scale(1.15); }
+  100%{ transform: translateY(0) scale(1); }
+}
+@keyframes dmgColor{
+  0%{
+    background: radial-gradient(60% 60% at 30% 30%, #ffd6d6 0, #ff7373 60%, #ff3030 100%);
   }
-
-  // ---------- Zoom ----------
-  function openZoom(card){
-    if(state.targeting) return; // no zoom mientras seleccionas
-    zoomWrap.innerHTML = `
-      <div class="zoom-card">
-        <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
-        <div class="zoom-token cost">${card.cost}</div>
-        <div class="zoom-token pts">${card.pts}</div>
-        <div class="name">${card.name}</div>
-        <div class="desc">${card.text||''}</div>
-      </div>`;
-    zoomOverlay.classList.add('visible');
+  100%{
+    background: radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%);
   }
-  const closeZoom = ()=> zoomOverlay.classList.remove('visible');
-  zoomOverlay?.addEventListener('click', e=>{ if(!e.target.closest('.zoom-card')) closeZoom(); });
-
-  // ---------- Espera imágenes ----------
-  function whenImagesReady(root, cb){
-    const imgs = Array.from(root.querySelectorAll('img'));
-    if (imgs.length === 0){ cb(); return; }
-    let remaining = imgs.length;
-    const done = () => { remaining--; if (remaining <= 0) cb(); };
-    imgs.forEach(img=>{
-      if (img.complete) { done(); }
-      else {
-        img.addEventListener('load', done, {once:true});
-        img.addEventListener('error', done, {once:true});
-      }
-    });
-  }
-
-  // ---------- Layout Mano ----------
-  function layoutHand(){
-    const n = handEl?.children.length || 0;
-    if (!n || !handEl) return;
-
-    const contRect = handEl.getBoundingClientRect();
-    const contW = handEl.clientWidth || contRect.width || window.innerWidth;
-    const cardW = handEl.children[0]?.getBoundingClientRect().width || 0;
-    if (!contW || !cardW) return;
-
-    const EDGE = 8;
-    const bearEl  = document.querySelector('.portrait.player .frame.hex');
-    const demonEl = document.querySelector('.portrait.enemy  .frame.hex');
-
-    let startCenter = EDGE + cardW/2;
-    if (bearEl){
-      const bearLeftInHand = bearEl.getBoundingClientRect().left - contRect.left;
-      startCenter = Math.max(EDGE + cardW/2, bearLeftInHand + cardW/2);
-    }
-
-    let endCenter = contW - EDGE - cardW/2;
-    if (demonEl){
-      const demonRightInHand = demonEl.getBoundingClientRect().right - contRect.left;
-      endCenter = Math.min(contW - EDGE - cardW/2, demonRightInHand - cardW/2);
-    }
-    if (endCenter < startCenter) endCenter = startCenter;
-
-    const centers = [];
-    if (n === 1){
-      centers.push((startCenter + endCenter)/2);
-    } else {
-      const step = (endCenter - startCenter) / (n - 1);
-      for (let i=0;i<n;i++) centers.push(startCenter + i*step);
-    }
-
-    const mid = (n - 1) / 2;
-    [...handEl.children].forEach((el, i) => {
-      const cx = centers[i];
-      const tx = Math.round(cx - contW/2);
-      el.style.setProperty('--x', `${tx}px`);
-      el.style.setProperty('--off', `0px`);
-      el.style.setProperty('--rot', `${(i - mid) * 1.2}deg`);
-      el.style.zIndex = 10 + i;
-    });
-  }
-  function layoutHandSafe(){
-    layoutHand();
-    requestAnimationFrame(layoutHand);
-    setTimeout(layoutHand, 60);
-    whenImagesReady(handEl, layoutHand);
-  }
-
-  // ---------- Mano ----------
-  function createHandCardEl(card,i){
-    const el=document.createElement('div');
-    el.className='card';
-    el.dataset.index=i; el.dataset.id=card.id;
-    el.dataset.cost=card.cost; el.dataset.pts=card.pts;
-    el.dataset.name=card.name||''; el.dataset.art=card.art||''; el.dataset.text=card.text||'';
-    el.innerHTML=`
-      ${artHTML(card.art)}
-      ${tokenCost(card.cost)}${tokenPts(card.pts)}
-      <div class="name-top">${card.name||''}</div>
-      <div class="desc">${card.text||''}</div>
-    `;
-    el.addEventListener('click', ()=> openZoom(card));
-    attachDragHandlers(el);
-    return el;
-  }
-  function renderHand(){
-    if(!handEl) return;
-    handEl.style.display = '';
-    handEl.innerHTML='';
-    state.pHand.forEach((c,i)=> handEl.appendChild(createHandCardEl(c,i)));
-    layoutHandSafe();
-  }
-
-  // ---------- Robo (vista grande + vuelo a mano) ----------
-  function showDrawLarge(card){
-    return new Promise(resolve=>{
-      if(!drawOverlay || !drawCardEl){ resolve(); return; }
-      drawCardEl.innerHTML = `
-        <div class="zoom-card">
-          <div class="art"><img src="${card.art}" alt="${card.name}"></div>
-          <div class="zoom-token cost">${card.cost}</div>
-          <div class="zoom-token pts">${card.pts}</div>
-          <div class="name">${card.name}</div>
-          <div class="desc">${card.text||''}</div>
-        </div>
-      `;
-      drawOverlay.classList.add('visible');
-      state.timers.draw && clearTimeout(state.timers.draw);
-      state.timers.draw = setTimeout(()=>{
-        drawOverlay.classList.remove('visible');
-        setTimeout(resolve, 250);
-      }, 900);
-    });
-  }
-
-  function flyCardToHand(card){
-    return new Promise(resolve=>{
-      if(!handEl){ resolve(); return; }
-      const idx = state.pHand.length - 1;
-      const targetEl = handEl.children[idx];
-      if(!targetEl){ resolve(); return; }
-
-      const r = targetEl.getBoundingClientRect();
-      const targetX = r.left + r.width/2;
-      const targetY = r.top  + r.height/2;
-
-      targetEl.style.opacity = '0';
-
-      const fly = document.createElement('div');
-      fly.className = 'fly-card';
-      fly.innerHTML = `<div class="art"><img src="${card.art}" alt=""></div>`;
-      document.body.appendChild(fly);
-
-      const startX = window.innerWidth/2;
-      const startY = window.innerHeight/2;
-
-      const flyW = parseFloat(getComputedStyle(fly).width);
-      const scale = r.width / flyW;
-
-      requestAnimationFrame(()=>{
-        requestAnimationFrame(()=>{
-          fly.style.transform = `translate(${targetX - startX}px, ${targetY - startY}px) scale(${scale})`;
-        });
-      });
-
-      setTimeout(()=>{
-        fly.remove();
-        targetEl.style.opacity = '';
-        layoutHandSafe();
-        resolve();
-      }, 500);
-    });
-  }
-
-  let drawing=false;
-  async function drawOneAnimated(){
-    if(drawing) return false;
-    if(!state.pDeck.length) return false;
-    drawing = true;
-
-    const card = state.pDeck.pop();
-    await showDrawLarge(card);
-
-    if(state.pHand.some(c => c.id === card.id)){
-      drawing = false;
-      return false;
-    }
-
-    state.pHand.push(card);
-    renderHand();
-    await flyCardToHand(card);
-
-    drawing = false;
-    return true;
-  }
-
-  async function initialDealAnimated(){
-    renderHand(); // mano vacía visible
-    for(let k=0; k<HAND_SIZE && state.pDeck.length; k++){
-      const card = state.pDeck.pop();
-      await showDrawLarge(card);
-      state.pHand.push(card);
-      renderHand();
-      await flyCardToHand(card);
-    }
-    renderHand();
-  }
-
-  async function topUpPlayerAnimated(){
-    while(state.pHand.length < HAND_SIZE && state.pDeck.length){
-      const ok = await drawOneAnimated();
-      if(!ok) break;
-    }
-    renderHand();
-  }
-
-  function topUpEnemyInstant(){
-    while(state.eHand.length<Math.min(HAND_SIZE,5) && state.eDeck.length){
-      const c = state.eDeck.pop();
-      state.eHand.push(c);
-    }
-  }
-
-  // ---------- Tablero ----------
-  function renderBoard(){
-    const playerSlots = $$('.slot[data-side="player"]');
-    const enemySlots  = $$('.slot[data-side="enemy"]');
-    for(let i=0;i<SLOTS;i++){
-      const ps=playerSlots[i], es=enemySlots[i];
-      if (!ps || !es) continue;
-      ps.innerHTML=''; es.innerHTML='';
-      const p=state.center[i].p, e=state.center[i].e;
-      if(p){
-        const d=document.createElement('div');
-        d.className='placed';
-        d.innerHTML = `${artHTML(p.art)}${tokenPts(p.pts)}<div class="name-top">${p.name}</div><div class="desc">${p.text}</div>`;
-        d.addEventListener('click', ()=> openZoom(p));
-        ps.appendChild(d);
-        ps.classList.add('occupied');
-      }else ps.classList.remove('occupied');
-      if(e){
-        const d=document.createElement('div');
-        d.className='placed enemy';
-        d.innerHTML = `${artHTML(e.art)}${tokenPts(e.pts)}<div class="name-top">${e.name}</div><div class="desc">${e.text}</div>`;
-        d.addEventListener('click', ()=> openZoom(e));
-        es.appendChild(d);
-        es.classList.add('occupied');
-      }else es.classList.remove('occupied');
-    }
-  }
-
-  // ---------- HUD ----------
-  function updateHUD(){
-    roundNoEl.textContent=state.round;
-    pCoinsEl.textContent=state.pCoins; eCoinsEl.textContent=state.eCoins;
-    pScoreEl.textContent=state.pScore; eScoreEl.textContent=state.eScore; // VIDA
-  }
-
-  // ---------- FX helpers ----------
-  function spawnExplosionOn(slotEl){
-    if(!slotEl) return;
-    const placed = slotEl.querySelector('.placed');
-    if(!placed) return;
-    const boom = document.createElement('div');
-    boom.className = 'explosion';
-    placed.appendChild(boom);
-    setTimeout(()=> boom.remove(), 500);
-  }
-
-  // NUEVO: overlay de impacto + shake; no depende de ::before/::after
-  function hitEffectOn(slotEl){
-    if(!slotEl) return;
-    const placed = slotEl.querySelector('.placed');
-    if(!placed) return;
-
-    placed.classList.add('shake-hard');
-    const ov = document.createElement('div');
-    ov.className = 'hit-overlay';
-    placed.appendChild(ov);
-    setTimeout(()=>{
-      ov.remove();
-      placed.classList.remove('shake-hard');
-    }, 500);
-  }
-
-  function showGoldenFlash(){
-    const f = document.createElement('div');
-    f.className = 'gold-flash';
-    document.body.appendChild(f);
-    setTimeout(()=> f.remove(), 800);
-  }
-
-  // ---------- Vida & daño ----------
-  function applyDamage(to, amount){
-    if(amount<=0) return;
-    if(to==='enemy'){ state.eScore = Math.max(0, state.eScore - amount); }
-    else { state.pScore = Math.max(0, state.pScore - amount); }
-    updateHUD();
-    checkDefeat();
-  }
-  function checkDefeat(){
-    if(state.eScore<=0 || state.pScore<=0){
-      state.resolving = true;
-      let title = state.eScore<=0 ? '¡Victoria!' : 'Derrota';
-      endTitle.textContent = title;
-      endLine.textContent = `Vida — Tú: ${state.pScore} · Rival: ${state.eScore}`;
-      endOverlay.classList.add('visible');
-      return true;
-    }
-    return false;
-  }
-
-  // ---------- Utilidades comunes ----------
-  const columnOf = idx => idx % 3; // 3 columnas
-  const indicesSameColumn = (col) => [0,1,2,3,4,5].filter(i => i%3===col);
-  function getSlotsEls(index){
-    const playerSlots = $$('.slot[data-side="player"]');
-    const enemySlots  = $$('.slot[data-side="enemy"]');
-    return { ps: playerSlots[index], es: enemySlots[index] };
-  }
-  function updatePlacedTokenValue(side, slotIndex, newPts){
-    const slots = $$(side==='enemy' ? '.slot[data-side="enemy"]' : '.slot[data-side="player"]');
-    const s = slots[slotIndex];
-    const token = s?.querySelector('.token.t-pts');
-    if(token){
-      token.textContent = newPts;
-      token.classList.add('damage');
-      setTimeout(()=> token.classList.remove('damage'), 600);
-    }
-  }
-
-  // ---------- Lógica de ATAQUE del jugador (botón) ----------
-  function attackersAvailable(){
-    const res=[];
-    for(let i=0;i<SLOTS;i++){
-      const pc = state.center[i].p;
-      if(!pc || state.pAttacked[i]) continue;
-      res.push(i);
-    }
-    return res;
-  }
-  function canAttackerDoSomething(attIndex){
-    return !!state.center[attIndex].p && !state.pAttacked[attIndex];
-  }
-  function refreshAttackButton(){
-    if(state.turn!=='player' || state.resolving) { attackBtn && (attackBtn.style.display='none'); return; }
-    const av = attackersAvailable();
-    if(!attackBtn) return;
-    attackBtn.style.display = av.some(canAttackerDoSomething) ? 'inline-block' : 'none';
-    attackBtn.disabled = false;
-    attackBtn.setAttribute('aria-pressed','false');
-  }
-  function computeTargetsFor(attIndex){
-    const col = columnOf(attIndex);
-    const targets = indicesSameColumn(col).filter(i => state.center[i].e);
-    return { col, targets };
-  }
-  function clearAttackerHighlights(){
-    const playerSlots = $$('.slot[data-side="player"]');
-    playerSlots.forEach(el=>{
-      el.classList.remove('choose-attacker','selected-attacker');
-      if(el._pickAttacker){
-        el.removeEventListener('pointerup', el._pickAttacker);
-        el.removeEventListener('click', el._pickAttacker);
-        delete el._pickAttacker;
-      }
-    });
-  }
-  function clearTargetHighlights(){
-    const enemySlots = $$('.slot[data-side="enemy"]');
-    enemySlots.forEach(el=>{
-      el.classList.remove('targetable');
-      if(el._chooseHandler){
-        el.removeEventListener('pointerup', el._chooseHandler);
-        el.removeEventListener('click', el._chooseHandler);
-        delete el._chooseHandler;
-      }
-    });
-  }
-  function enterChooseAttacker(){
-    state.targeting = true;
-    state.attackCtx = { step:'chooseAttacker', attIndex:null, targets:[] };
-    clearAttackerHighlights(); clearTargetHighlights();
-    const playerSlots = $$('.slot[data-side="player"]');
-    const available = attackersAvailable();
-    if(!available.length){
-      state.attackCtx = null; state.targeting = false;
-      refreshAttackButton();
-      return;
-    }
-    available.forEach(i=>{
-      const el = playerSlots[i];
-      el.classList.add('choose-attacker'); // verde
-      const pick = (evt)=>{
-        evt.stopPropagation(); evt.preventDefault();
-        selectAttacker(i);
-      };
-      el._pickAttacker = pick;
-      el.addEventListener('pointerup', pick, {once:true});
-      el.addEventListener('click', pick, {once:true});
-    });
-  }
-  function selectAttacker(attIndex){
-    clearAttackerHighlights();
-    const playerSlots = $$('.slot[data-side="player"]');
-    playerSlots[attIndex]?.classList.add('selected-attacker');
-
-    const { targets } = computeTargetsFor(attIndex);
-    if(!targets.length){
-      const pts = state.center[attIndex].p?.pts || 0;
-      applyDamage('enemy', pts);
-      state.pAttacked[attIndex]=true;
-      playerSlots[attIndex]?.classList.remove('selected-attacker');
-      state.attackCtx = null; state.targeting=false;
-      refreshAttackButton();
-      return;
-    }
-    state.attackCtx = { step:'chooseTarget', attIndex, targets };
-    enterChooseTarget();
-  }
-  function enterChooseTarget(){
-    if(!state.attackCtx || state.attackCtx.step!=='chooseTarget') return;
-    clearTargetHighlights();
-    const enemySlots = $$('.slot[data-side="enemy"]');
-    state.attackCtx.targets.forEach(i=>{
-      const el = enemySlots[i];
-      if(!el) return;
-      el.classList.add('targetable'); // rojo
-      const choose = (evt) => {
-        evt.stopPropagation(); evt.preventDefault();
-        resolvePlayerAttack(state.attackCtx.attIndex, i);
-      };
-      el._chooseHandler = choose;
-      el.addEventListener('pointerup', choose, {once:true});
-      el.addEventListener('click', choose, {once:true});
-    });
-  }
-
-  function resolvePlayerAttack(attIndex, defIndex){
-    clearTargetHighlights();
-    const pairA = state.center[attIndex];
-    const pairD = state.center[defIndex];
-    const attacker = pairA?.p;
-    const defender = pairD?.e;
-    const playerSlots = $$('.slot[data-side="player"]');
-    playerSlots[attIndex]?.classList.remove('selected-attacker');
-
-    if(!attacker){
-      state.attackCtx=null; state.targeting=false; refreshAttackButton(); return;
-    }
-    if(!defender){
-      applyDamage('enemy', attacker.pts);
-      state.pAttacked[attIndex]=true;
-      state.attackCtx=null; state.targeting=false; refreshAttackButton();
-      return;
-    }
-
-    const attPts = attacker.pts;
-    const defPts = defender.pts;
-
-    // Guerrera: si ataca justo enfrente, destruye
-    if(attacker.name === 'Guerrera' && attIndex === defIndex){
-      const { es } = getSlotsEls(defIndex);
-      spawnExplosionOn(es);
-      state.center[defIndex].e = null;
-      // pequeño retardo para que la explosión se vea
-      setTimeout(()=>{ renderBoard(); }, 160);
-      const diff = Math.max(0, attPts - defPts);
-      if (diff>0) applyDamage('enemy', diff);
-    } else {
-      const { es } = getSlotsEls(defIndex);
-      hitEffectOn(es);
-      if(attPts >= defPts){
-        const diff = attPts - defPts;
-        spawnExplosionOn(es);
-        state.center[defIndex].e = null;
-        setTimeout(()=>{ renderBoard(); }, 160);
-        applyDamage('enemy', diff);
-      }else{
-        const remaining = Math.max(0, defPts - attPts);
-        state.center[defIndex].e = { ...defender, pts: remaining };
-        // ❌ no renderBoard() aquí => preserva la animación
-        updatePlacedTokenValue('enemy', defIndex, remaining);
-      }
-    }
-    state.pAttacked[attIndex]=true;
-    state.attackCtx = null; state.targeting=false;
-    refreshAttackButton();
-  }
-
-  // ---------- Drag & drop ----------
-  let ghost=null;
-  function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
-  function onDown(e){
-    if(state.turn!=='player'||state.resolving||state.targeting) return;
-    const src = e.currentTarget; src.setPointerCapture(e.pointerId); e.preventDefault();
-
-    ghost = document.createElement('div');
-    ghost.className = 'ghost';
-    ghost.innerHTML = `${artHTML(src.dataset.art)}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="name-top">${src.dataset.name||''}</div><div class="desc">${src.dataset.text||''}</div>`;
-    document.body.appendChild(ghost);
-    moveGhost(e.clientX, e.clientY);
-
-    const move = ev => { ev.preventDefault(); moveGhost(ev.clientX, ev.clientY); };
-    const finish = ev => {
-      try { src.releasePointerCapture(e.pointerId); } catch(_) {}
-      window.removeEventListener('pointermove', move, {passive:false});
-      window.removeEventListener('pointerup', finish, true);
-      window.removeEventListener('pointercancel', finish, true);
-
-      const lane = laneUnder(ev.clientX, ev.clientY);
-      if(lane !== -1) tryPlayFromHandToSlot(+src.dataset.index, lane);
-
-      if (ghost) { ghost.remove(); ghost = null; }
-      layoutHandSafe();
-    };
-
-    window.addEventListener('pointermove', move, {passive:false});
-    window.addEventListener('pointerup', finish, {passive:false, capture:true});
-    window.addEventListener('pointercancel', finish, {passive:false, capture:true});
-  }
-  const moveGhost=(x,y)=>{ if(!ghost) return; ghost.style.left=x+'px'; ghost.style.top=y+'px'; }
-  function laneUnder(x,y){
-    const playerSlots = $$('.slot[data-side="player"]');
-    for(let i=0;i<playerSlots.length;i++){
-      const el = playerSlots[i];
-      const r = el.getBoundingClientRect();
-      if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return i;
-    }
-    return -1;
-  }
-
-  // ---------- Colocar cartas (entradas en juego) ----------
-  const canAfford = c => state.pCoins>=c.cost;
-
-  async function tryPlayFromHandToSlot(handIndex, slotIndex){
-    if(handIndex<0||handIndex>=state.pHand.length) return;
-    const card=state.pHand[handIndex];
-    if(!canAfford(card)){
-      const el = handEl.children[handIndex];
-      if (el){ el.classList.add('shake'); setTimeout(()=> el.classList.remove('shake'), 450); }
-      return;
-    }
-    state.pCoins -= card.cost;
-    const placedCopy = {...card};
-    state.center[slotIndex].p = placedCopy;
-    state.pHand.splice(handIndex,1);
-    renderHand(); renderBoard(); updateHUD();
-    state.pAttacked[slotIndex] = false;
-
-    // Sanadora (jugador) — cura aliados del jugador
-    if(placedCopy.name === 'Sanadora'){
-      let anyHealed = false;
-      for(let i=0;i<SLOTS;i++){
-        const pc = state.center[i].p;
-        if(pc){
-          const max = (typeof pc.maxPts === 'number') ? pc.maxPts : pc.pts;
-          if(pc.pts < max){ pc.pts = max; anyHealed = true; }
-        }
-      }
-      if(anyHealed){ showGoldenFlash(); renderBoard(); }
-    }
-
-    if(state.pDeck.length){
-      await drawOneAnimated();
-      renderHand(); updateHUD();
-    }
-    refreshAttackButton();
-  }
-
-  // ---------- IA rival (coloca + habilidades al entrar + FASE DE ATAQUE) ----------
-  function enemyTurn(){
-    state.resolving=true; state.enemyPassed=false; state.eCoins+=1; updateHUD();
-    showTurnToast('TURNO RIVAL');
-
-    const canPlay=()=> state.eHand.some(c=>c.cost<=state.eCoins);
-
-    const tryPlayOnce=()=>{
-      if(!canPlay()) return false;
-      let best=-1,score=-1;
-      state.eHand.forEach((c,i)=>{ if(c.cost<=state.eCoins){ const s=c.pts*2-c.cost; if(s>score){score=s; best=i;} }});
-      const card=state.eHand[best];
-
-      let target=-1;
-      for(let i=0;i<SLOTS;i++){ if(!state.center[i].e){ target=i; break; } }
-      if(target===-1) return false;
-
-      state.eCoins-=card.cost;
-      const placedEnemy = {...card};
-      state.center[target].e = placedEnemy;
-      state.eHand.splice(best,1);
-      if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
-      renderBoard(); updateHUD();
-
-      // Sanadora (enemigo) — cura aliados enemigos
-      if(placedEnemy.name === 'Sanadora'){
-        let anyHealed = false;
-        for(let i=0;i<SLOTS;i++){
-          const ec = state.center[i].e;
-          if(ec){
-            const max = (typeof ec.maxPts === 'number') ? ec.maxPts : ec.pts;
-            if(ec.pts < max){ ec.pts = max; anyHealed = true; }
-          }
-        }
-        if(anyHealed){ showGoldenFlash(); renderBoard(); }
-      }
-
-      return true;
-    };
-
-    const afterPlays = ()=>{
-      // Fase de ataque automática de la IA (1 vez por carta)
-      enemyAttackPhase(()=>{
-        state.enemyPassed=true;
-        setTimeout(()=>{state.resolving=false; checkBothPassedThenNextRound();},400);
-      });
-    };
-
-    const loop=()=>{ if(!tryPlayOnce()){ afterPlays(); return; } setTimeout(loop,220); };
-    loop();
-  }
-
-  function enemyAttackPhase(done){
-    let i = 0;
-    const step = ()=>{
-      while(i < SLOTS){
-        const ec = state.center[i].e;
-        if(ec && !state.eAttacked[i]){
-          resolveEnemyAttackFrom(i, ec);
-          state.eAttacked[i] = true;
-          i++;
-          setTimeout(step, 260);
-          return;
-        }
-        i++;
-      }
-      done && done();
-    };
-    step();
-  }
-
-  function resolveEnemyAttackFrom(attIndex, attacker){
-    // Objetivos del jugador en la misma columna
-    const col = columnOf(attIndex);
-    const candidates = indicesSameColumn(col).filter(j => state.center[j].p);
-    if(candidates.length === 0){
-      // Daño directo
-      applyDamage('player', attacker.pts);
-      return;
-    }
-    // Elegir objetivo sencillo: el de menor pts; empate prioriza mismo índice
-    let defIndex = candidates[0];
-    let bestPts = state.center[defIndex].p.pts;
-    for(const j of candidates){
-      const ppts = state.center[j].p.pts;
-      if(ppts < bestPts || (ppts===bestPts && j===attIndex)){ defIndex=j; bestPts=ppts; }
-    }
-
-    const defender = state.center[defIndex].p;
-    const { ps } = getSlotsEls(defIndex);
-    const attPts = attacker.pts;
-    const defPts = defender.pts;
-
-    // Guerrera enemiga: si ataca justo enfrente, destruye
-    if(attacker.name === 'Guerrera' && attIndex === defIndex){
-      spawnExplosionOn(ps);
-      state.center[defIndex].p = null;
-      setTimeout(()=>{ renderBoard(); }, 160);
-      const diff = Math.max(0, attPts - defPts);
-      if(diff>0) applyDamage('player', diff);
-      return;
-    }
-
-    hitEffectOn(ps);
-
-    if(attPts >= defPts){
-      const diff = attPts - defPts;
-      spawnExplosionOn(ps);
-      state.center[defIndex].p = null;
-      setTimeout(()=>{ renderBoard(); }, 160);
-      applyDamage('player', diff);
-    }else{
-      const remaining = Math.max(0, defPts - attPts);
-      state.center[defIndex].p = { ...defender, pts: remaining };
-      // ❌ no renderBoard() aquí => preserva la animación
-      updatePlacedTokenValue('player', defIndex, remaining);
-    }
-  }
-
-  // ---------- Rondas ----------
-  const bothPassed=()=> state.playerPassed && state.enemyPassed;
-
-  function nextRound(){
-    state.round+=1;
-    state.playerPassed=false; state.enemyPassed=false;
-    state.turn='player';
-    state.pCoins+=1;
-    state.pAttacked = Array(SLOTS).fill(false);
-    state.eAttacked = Array(SLOTS).fill(false);
-
-    topUpEnemyInstant();
-    topUpPlayerAnimated().then(()=>{
-      renderHand(); layoutHandSafe(); updateHUD();
-      setTimeout(()=> showTurnToast('TU TURNO'), 200);
-      refreshAttackButton();
-    });
-  }
-  function checkBothPassedThenNextRound(){ if(!checkDefeat() && bothPassed()) nextRound(); }
-
-  // ---------- Nueva partida ----------
-  function clearTimers(){
-    Object.keys(state.timers).forEach(k=>{
-      if(state.timers[k]) clearTimeout(state.timers[k]);
-      state.timers[k]=null;
-    });
-  }
-
-  async function newGame(){
-    clearTimers();
-    purgeTransientNodes();
-
-    state.round=1; state.pCoins=3; state.eCoins=3;
-    state.pScore=10; state.eScore=10;
-    state.playerPassed=false; state.enemyPassed=false; state.turn='player';
-    state.center=Array.from({length:SLOTS},()=>({p:null,e:null}));
-    state.pDeck = makeDeck();
-    state.eDeck = makeDeck();
-    state.pHand=[]; state.eHand=[];
-    state.pAttacked = Array(SLOTS).fill(false);
-    state.eAttacked = Array(SLOTS).fill(false);
-    state.attackCtx=null; state.targeting=false; state.drawing=false;
-
-    renderBoard(); updateHUD();
-    topUpEnemyInstant();
-
-    try{
-      await initialDealAnimated();
-    }catch(err){
-      while(state.pHand.length < HAND_SIZE && state.pDeck.length){
-        state.pHand.push(state.pDeck.pop());
-      }
-      renderHand();
-    }
-
-    layoutHandSafe(); updateHUD();
-    showTurnToast('TU TURNO');
-    refreshAttackButton();
-  }
-
-  // ---------- Toast ----------
-  function showTurnToast(text, ms=1200){
-    const el = document.getElementById('turnToast');
-    if(!el) return;
-    el.textContent = text;
-    el.classList.add('show');
-    state.timers.toast && clearTimeout(state.timers.toast);
-    state.timers.toast = setTimeout(()=> el.classList.remove('show'), ms);
-  }
-
-  // ---------- Intro ----------
-  const INTRO_TEXT = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a diam lectus.";
-  let typingIdx = 0;
-  let typingRunning = false;
-
-  function startIntro(){
-    if(!introOv) { newGame(); return; }
-    introTextEl && (introTextEl.textContent = "");
-    introOv.classList.add('visible');
-    introOv.setAttribute('aria-hidden','false');
-
-    typingIdx = 0;
-    typingRunning = true;
-
-    if (introNext){
-      introNext.disabled = false;
-      introNext.textContent = 'SALTAR';
-    }
-
-    const speed = 22;
-    const run = () => {
-      if (typingIdx < INTRO_TEXT.length){
-        introTextEl && (introTextEl.textContent = INTRO_TEXT.slice(0, typingIdx+1));
-        typingIdx++;
-        state.timers.type = setTimeout(run, speed);
-      } else {
-        typingRunning = false;
-        if (introNext) introNext.textContent = 'CONTINUAR';
-      }
-    };
-    run();
-  }
-
-  function onIntroNextClick(){
-    if(!introOv) return;
-
-    if (typingRunning){
-      clearTimeout(state.timers.type);
-      introTextEl && (introTextEl.textContent = INTRO_TEXT);
-      typingRunning = false;
-      if (introNext) introNext.textContent = 'CONTINUAR';
-      return;
-    }
-    introOv.classList.remove('visible');
-    introOv.setAttribute('aria-hidden','true');
-    newGame();
-  }
-
-  // ---------- Eventos / Arranque ----------
-  function startTargetingFromButton(e){
-    e?.preventDefault?.();
-    e?.stopPropagation?.();
-    attackBtn && attackBtn.blur();
-    if(state.resolving || state.turn!=='player') return;
-    clearAttackerHighlights(); clearTargetHighlights();
-    state.attackCtx = null; state.targeting = false;
-    enterChooseAttacker();
-  }
-
-  window.addEventListener('DOMContentLoaded', ()=>{
-    // Crear ATACAR en la barra
-    const bottomBar = document.querySelector('.bottom-bar');
-    if(!attackBtn && bottomBar && passBtn){
-      attackBtn = document.createElement('button');
-      attackBtn.id = 'attackBtn';
-      attackBtn.className = 'btn primary';
-      attackBtn.textContent = 'ATACAR';
-      attackBtn.style.display = 'none';
-      bottomBar.insertBefore(attackBtn, passBtn);
-      attackBtn.addEventListener('pointerup', startTargetingFromButton);
-      attackBtn.addEventListener('click', startTargetingFromButton);
-    }
-
-    if(startBtn){
-      startBtn.addEventListener('click', ()=>{
-        startOv.classList.remove('visible');
-        startIntro();
-      });
-    }else{
-      newGame();
-    }
-
-    introNext?.addEventListener('click', onIntroNextClick);
-    introOv?.addEventListener('click', (e)=>{
-      if(!e.target.closest('.intro-panel')) onIntroNextClick();
-    });
-
-    againBtn?.addEventListener('click', ()=>{ endOverlay.classList.remove('visible'); newGame(); });
-    resetBtn?.addEventListener('click', ()=> newGame());
-    passBtn?.addEventListener('click', ()=>{
-      if(state.turn!=='player'||state.resolving||state.targeting) return;
-      state.playerPassed=true; state.turn='enemy';
-      attackBtn && (attackBtn.style.display='none');
-      clearAttackerHighlights(); clearTargetHighlights();
-      state.attackCtx=null; state.targeting=false;
-      enemyTurn();
-    });
-  });
-
-  // Resize
-  window.addEventListener('resize', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
-  window.addEventListener('orientationchange', ()=>{ layoutHandSafe(); purgeTransientNodes(); });
-})();
+}
+
+/* ===== Compactación móviles ===== */
+@media (max-width: 480px){
+  :root{ --lanes-gap: 8px; --slot-inset: 5px; --slot-br: 10px; }
+}
+@media (max-width: 380px){
+  :root{ --lanes-gap: 6px; --slot-inset: 4px; --slot-br: 9px; }
+}
+
+/* === Marcos: miniatura, tablero y zoom === */
+.hand .card::before,
+.placed::before,
+.zoom-card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  pointer-events:none;
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,.14),
+    inset 0 0 0 6px rgba(255,255,255,.05);
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,.10),
+      rgba(255,255,255,0) 40%,
+      rgba(255,255,255,0) 60%,
+      rgba(255,255,255,.08) 100%);
+  mix-blend-mode: screen;
+  z-index: 1;
+}
+.hand .card .token,
+.placed .token,
+.zoom-card .zoom-token{
+  position: absolute;
+  z-index: 2;
+}
+
+/* ===== Intro estilo Fire Emblem ===== */
+.intro-screen{
+  position: fixed; inset:0; z-index: 9000;
+  display: grid; place-items: end center;
+  background: url("assets/Guerrera.PNG") center top / cover no-repeat fixed;
+  opacity:0; pointer-events:none; transition:opacity .25s ease;
+}
+.intro-screen.visible{ opacity:1; pointer-events:auto; }
+.intro-panel{
+  width:min(820px, 92vw);
+  margin: 0 auto 4vh auto;
+  background: linear-gradient(180deg, rgba(10,14,24,.65), rgba(10,14,24,.85));
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:14px; padding:14px 16px 16px;
+  box-shadow:0 12px 30px rgba(0,0,0,.5);
+}
+.intro-text{
+  font-size: clamp(1rem, 2.4vw, 1.25rem);
+  line-height: 1.5;
+  color:#eef4ff;
+  min-height: 3lh;
+}
+.intro-actions{ display:flex; justify-content:flex-end; margin-top:10px; }
