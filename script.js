@@ -23,10 +23,10 @@
   // Robo animado
   const drawOverlay = $('#drawOverlay'); const drawCardEl  = $('#drawCard');
 
-  // Botón ATACAR
+  // Botón ATACAR (se crea en DOMContentLoaded)
   let attackBtn = document.getElementById('attackBtn');
 
-  // ---------- CSS runtime para FX + zoom text boost ----------
+  // ---------- CSS runtime solo para estilos NO duplicados en style.css ----------
   (function injectFXCSS(){
     if(document.getElementById('fxCSS')) return;
     const css = `
@@ -60,22 +60,6 @@
         outline-offset: -2px;
         box-shadow: 0 0 0 4px rgba(60,255,140,.35) inset, 0 8px 22px rgba(0,200,110,.3);
       }
-      .explosion{
-        position:absolute; left:50%; top:50%;
-        width:140%; height:140%;
-        transform: translate(-50%,-50%) scale(.6);
-        border-radius:50%; pointer-events:none;
-        background: radial-gradient(circle,
-          rgba(255,255,255,.95) 0%,
-          rgba(255,230,120,.9) 22%,
-          rgba(255,160,0,.75) 42%,
-          rgba(255,60,0,.45) 58%,
-          rgba(255,0,0,0) 72%);
-        filter: blur(1px); mix-blend-mode: screen; opacity:1;
-        animation: boom .45s ease-out forwards; z-index: 200;
-      }
-      @keyframes boom{ to{ transform: translate(-50%,-50%) scale(1.4); opacity:0; } }
-
       /* ✨ Destello dorado (sanación) */
       .gold-flash{
         position: fixed; inset: 0; pointer-events:none; z-index: 2000;
@@ -90,51 +74,6 @@
         60%{ opacity: .55; }
         100%{ opacity: 0; }
       }
-
-      /* Overlay del impacto (flash + anillo) */
-      .hit-overlay{
-        position:absolute; inset:-10%;
-        border-radius: inherit;
-        pointer-events:none;
-        z-index: 5;
-        background:
-          radial-gradient(circle at 50% 50%,
-            rgba(255,255,255,.85) 0%,
-            rgba(255,140,140,.75) 22%,
-            rgba(255,70,70,.35) 48%,
-            rgba(255,0,0,0) 62%);
-        animation: impactFlash .28s ease-out forwards, impactRingParent .35s ease-out forwards;
-      }
-      @keyframes impactFlash{
-        0%{ opacity:0; transform: scale(.85); }
-        30%{ opacity:1; }
-        100%{ opacity:0; transform: scale(1.25); }
-      }
-      @keyframes impactRingParent{
-        0%{ box-shadow: 0 0 0 0 rgba(255,200,200,.95), inset 0 0 0 0 rgba(255,200,200,0); }
-        100%{ box-shadow: 0 0 0 22px rgba(255,200,200,0), inset 0 0 0 0 rgba(255,200,200,0); }
-      }
-
-      /* Token de puntos: rebote + rojo temporal cuando recibe daño */
-      .token.t-pts.damage{
-        animation: dmgBounce .35s ease, dmgColor .6s ease;
-      }
-      @keyframes dmgBounce{
-        0%{ transform: translateY(0) scale(1); }
-        30%{ transform: translateY(-3px) scale(1.15); }
-        100%{ transform: translateY(0) scale(1); }
-      }
-      @keyframes dmgColor{
-        0%{
-          background: radial-gradient(60% 60% at 30% 30%, #ffd6d6 0, #ff7373 60%, #ff3030 100%);
-        }
-        100%{
-          background: radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%);
-        }
-      }
-
-      /* Zoom: descripción más grande */
-      .zoom-card .desc{ font-size: 1.15rem; line-height: 1.35; }
     `;
     const st = document.createElement('style');
     st.id = 'fxCSS';
@@ -286,7 +225,7 @@
       <div class="name-top">${card.name||''}</div>
       <div class="desc">${card.text||''}</div>
     `;
-    el.addEventListener('click', ()=> openZoom(card));
+    // Quitamos el click directo: ahora el zoom se abre con TAP (ver handler pointer)
     attachDragHandlers(el);
     return el;
   }
@@ -402,9 +341,8 @@
   }
 
   function topUpEnemyInstant(){
-    while(state.eHand.length<Math.min(HAND_SIZE,5) && state.eDeck.length){
-      const c = state.eDeck.pop();
-      state.eHand.push(c);
+    while(state.eHand.length < HAND_SIZE && state.eDeck.length){
+      state.eHand.push(state.eDeck.pop());
     }
   }
 
@@ -454,7 +392,6 @@
     setTimeout(()=> boom.remove(), 500);
   }
 
-  // NUEVO: overlay de impacto + shake; no depende de ::before/::after
   function hitEffectOn(slotEl){
     if(!slotEl) return;
     const placed = slotEl.querySelector('.placed');
@@ -564,6 +501,16 @@
       }
     });
   }
+
+  function cancelTargeting(){
+    clearAttackerHighlights();
+    clearTargetHighlights();
+    state.attackCtx = null;
+    state.targeting = false;
+    attackBtn?.setAttribute('aria-pressed','false');
+    refreshAttackButton();
+  }
+
   function enterChooseAttacker(){
     state.targeting = true;
     state.attackCtx = { step:'chooseAttacker', attIndex:null, targets:[] };
@@ -571,7 +518,12 @@
     const playerSlots = $$('.slot[data-side="player"]');
     const available = attackersAvailable();
     if(!available.length){
+      // Aviso si no hay atacantes
+      showTurnToast('No tienes cartas que puedan atacar', 900);
+      const el = document.getElementById('turnToast'); el?.classList.add('warn');
+      setTimeout(()=> el?.classList.remove('warn'), 920);
       state.attackCtx = null; state.targeting = false;
+      attackBtn?.setAttribute('aria-pressed','false');
       refreshAttackButton();
       return;
     }
@@ -599,6 +551,7 @@
       state.pAttacked[attIndex]=true;
       playerSlots[attIndex]?.classList.remove('selected-attacker');
       state.attackCtx = null; state.targeting=false;
+      attackBtn?.setAttribute('aria-pressed','false');
       refreshAttackButton();
       return;
     }
@@ -633,12 +586,12 @@
     playerSlots[attIndex]?.classList.remove('selected-attacker');
 
     if(!attacker){
-      state.attackCtx=null; state.targeting=false; refreshAttackButton(); return;
+      state.attackCtx=null; state.targeting=false; attackBtn?.setAttribute('aria-pressed','false'); refreshAttackButton(); return;
     }
     if(!defender){
       applyDamage('enemy', attacker.pts);
       state.pAttacked[attIndex]=true;
-      state.attackCtx=null; state.targeting=false; refreshAttackButton();
+      state.attackCtx=null; state.targeting=false; attackBtn?.setAttribute('aria-pressed','false'); refreshAttackButton();
       return;
     }
 
@@ -650,7 +603,6 @@
       const { es } = getSlotsEls(defIndex);
       spawnExplosionOn(es);
       state.center[defIndex].e = null;
-      // pequeño retardo para que la explosión se vea
       setTimeout(()=>{ renderBoard(); }, 160);
       const diff = Math.max(0, attPts - defPts);
       if (diff>0) applyDamage('enemy', diff);
@@ -666,37 +618,61 @@
       }else{
         const remaining = Math.max(0, defPts - attPts);
         state.center[defIndex].e = { ...defender, pts: remaining };
-        // ❌ no renderBoard() aquí => preserva la animación
         updatePlacedTokenValue('enemy', defIndex, remaining);
       }
     }
     state.pAttacked[attIndex]=true;
     state.attackCtx = null; state.targeting=false;
+    attackBtn?.setAttribute('aria-pressed','false');
     refreshAttackButton();
   }
 
-  // ---------- Drag & drop ----------
+  // ---------- Drag & drop con TAP/DRAG ----------
   let ghost=null;
   function attachDragHandlers(el){ el.addEventListener('pointerdown', onDown, {passive:false}); }
   function onDown(e){
     if(state.turn!=='player'||state.resolving||state.targeting) return;
-    const src = e.currentTarget; src.setPointerCapture(e.pointerId); e.preventDefault();
+    const src = e.currentTarget;
+    src.setPointerCapture?.(e.pointerId);
 
-    ghost = document.createElement('div');
-    ghost.className = 'ghost';
-    ghost.innerHTML = `${artHTML(src.dataset.art)}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="name-top">${src.dataset.name||''}</div><div class="desc">${src.dataset.text||''}</div>`;
-    document.body.appendChild(ghost);
-    moveGhost(e.clientX, e.clientY);
+    const startX = e.clientX, startY = e.clientY;
+    let moved = false;
 
-    const move = ev => { ev.preventDefault(); moveGhost(ev.clientX, ev.clientY); };
+    const startDrag = ()=>{
+      if(ghost) return;
+      ghost = document.createElement('div');
+      ghost.className = 'ghost';
+      ghost.innerHTML = `${artHTML(src.dataset.art)}${tokenCost(src.dataset.cost)}${tokenPts(src.dataset.pts)}<div class="name-top">${src.dataset.name||''}</div><div class="desc">${src.dataset.text||''}</div>`;
+      document.body.appendChild(ghost);
+      moveGhost(startX, startY);
+    };
+
+    const move = ev => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if (!moved && Math.hypot(dx,dy) > 6){ moved = true; startDrag(); }
+      if (ghost) moveGhost(ev.clientX, ev.clientY);
+    };
+
     const finish = ev => {
-      try { src.releasePointerCapture(e.pointerId); } catch(_) {}
+      try { src.releasePointerCapture?.(e.pointerId); } catch(_) {}
       window.removeEventListener('pointermove', move, {passive:false});
       window.removeEventListener('pointerup', finish, true);
       window.removeEventListener('pointercancel', finish, true);
 
-      const lane = laneUnder(ev.clientX, ev.clientY);
-      if(lane !== -1) tryPlayFromHandToSlot(+src.dataset.index, lane);
+      if (!moved){
+        // TAP → abrir zoom
+        openZoom({
+          name: src.dataset.name,
+          art: src.dataset.art,
+          cost: +src.dataset.cost,
+          pts: +src.dataset.pts,
+          text: src.dataset.text
+        });
+      } else {
+        // DRAG → intentar jugar
+        const lane = laneUnder(ev.clientX, ev.clientY);
+        if(lane !== -1) tryPlayFromHandToSlot(+src.dataset.index, lane);
+      }
 
       if (ghost) { ghost.remove(); ghost = null; }
       layoutHandSafe();
@@ -779,7 +755,7 @@
       if(state.eDeck.length) state.eHand.push(state.eDeck.pop());
       renderBoard(); updateHUD();
 
-      // Sanadora (enemigo) — cura aliados enemigos
+      // Sanadora (enemigo)
       if(placedEnemy.name === 'Sanadora'){
         let anyHealed = false;
         for(let i=0;i<SLOTS;i++){
@@ -827,15 +803,12 @@
   }
 
   function resolveEnemyAttackFrom(attIndex, attacker){
-    // Objetivos del jugador en la misma columna
     const col = columnOf(attIndex);
     const candidates = indicesSameColumn(col).filter(j => state.center[j].p);
     if(candidates.length === 0){
-      // Daño directo
       applyDamage('player', attacker.pts);
       return;
     }
-    // Elegir objetivo sencillo: el de menor pts; empate prioriza mismo índice
     let defIndex = candidates[0];
     let bestPts = state.center[defIndex].p.pts;
     for(const j of candidates){
@@ -848,7 +821,6 @@
     const attPts = attacker.pts;
     const defPts = defender.pts;
 
-    // Guerrera enemiga: si ataca justo enfrente, destruye
     if(attacker.name === 'Guerrera' && attIndex === defIndex){
       spawnExplosionOn(ps);
       state.center[defIndex].p = null;
@@ -869,7 +841,6 @@
     }else{
       const remaining = Math.max(0, defPts - attPts);
       state.center[defIndex].p = { ...defender, pts: remaining };
-      // ❌ no renderBoard() aquí => preserva la animación
       updatePlacedTokenValue('player', defIndex, remaining);
     }
   }
@@ -998,8 +969,13 @@
     e?.stopPropagation?.();
     attackBtn && attackBtn.blur();
     if(state.resolving || state.turn!=='player') return;
+
+    // toggle si ya estaba activo
+    if(state.targeting){ cancelTargeting(); return; }
+
     clearAttackerHighlights(); clearTargetHighlights();
     state.attackCtx = null; state.targeting = false;
+    attackBtn?.setAttribute('aria-pressed','true');
     enterChooseAttacker();
   }
 
@@ -1012,10 +988,17 @@
       attackBtn.className = 'btn primary';
       attackBtn.textContent = 'ATACAR';
       attackBtn.style.display = 'none';
+      attackBtn.setAttribute('aria-pressed','false');
       bottomBar.insertBefore(attackBtn, passBtn);
       attackBtn.addEventListener('pointerup', startTargetingFromButton);
       attackBtn.addEventListener('click', startTargetingFromButton);
     }
+
+    // Tap fuera de slots cancela el targeting
+    document.addEventListener('click', (ev)=>{
+      if(!state.targeting) return;
+      if(!ev.target.closest('.slot')) cancelTargeting();
+    });
 
     if(startBtn){
       startBtn.addEventListener('click', ()=>{
@@ -1037,8 +1020,7 @@
       if(state.turn!=='player'||state.resolving||state.targeting) return;
       state.playerPassed=true; state.turn='enemy';
       attackBtn && (attackBtn.style.display='none');
-      clearAttackerHighlights(); clearTargetHighlights();
-      state.attackCtx=null; state.targeting=false;
+      cancelTargeting();
       enemyTurn();
     });
   });
