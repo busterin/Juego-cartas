@@ -76,7 +76,7 @@
       }
       @keyframes boom{ to{ transform: translate(-50%,-50%) scale(1.4); opacity:0; } }
 
-      /* ✨ Destello dorado de sanación */
+      /* ✨ Destello dorado (sanación) */
       .gold-flash{
         position: fixed; inset: 0; pointer-events:none; z-index: 2000;
         background:
@@ -91,7 +91,49 @@
         100%{ opacity: 0; }
       }
 
-      /* Aumento del tamaño de texto SOLO en zoom (desc) */
+      /* Overlay del impacto (flash + anillo) */
+      .hit-overlay{
+        position:absolute; inset:-10%;
+        border-radius: inherit;
+        pointer-events:none;
+        z-index: 5;
+        background:
+          radial-gradient(circle at 50% 50%,
+            rgba(255,255,255,.85) 0%,
+            rgba(255,140,140,.75) 22%,
+            rgba(255,70,70,.35) 48%,
+            rgba(255,0,0,0) 62%);
+        animation: impactFlash .28s ease-out forwards, impactRingParent .35s ease-out forwards;
+      }
+      @keyframes impactFlash{
+        0%{ opacity:0; transform: scale(.85); }
+        30%{ opacity:1; }
+        100%{ opacity:0; transform: scale(1.25); }
+      }
+      @keyframes impactRingParent{
+        0%{ box-shadow: 0 0 0 0 rgba(255,200,200,.95), inset 0 0 0 0 rgba(255,200,200,0); }
+        100%{ box-shadow: 0 0 0 22px rgba(255,200,200,0), inset 0 0 0 0 rgba(255,200,200,0); }
+      }
+
+      /* Token de puntos: rebote + rojo temporal cuando recibe daño */
+      .token.t-pts.damage{
+        animation: dmgBounce .35s ease, dmgColor .6s ease;
+      }
+      @keyframes dmgBounce{
+        0%{ transform: translateY(0) scale(1); }
+        30%{ transform: translateY(-3px) scale(1.15); }
+        100%{ transform: translateY(0) scale(1); }
+      }
+      @keyframes dmgColor{
+        0%{
+          background: radial-gradient(60% 60% at 30% 30%, #ffd6d6 0, #ff7373 60%, #ff3030 100%);
+        }
+        100%{
+          background: radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%);
+        }
+      }
+
+      /* Zoom: descripción más grande */
       .zoom-card .desc{ font-size: 1.15rem; line-height: 1.35; }
     `;
     const st = document.createElement('style');
@@ -115,7 +157,7 @@
     resolving:false,
     drawing:false,
     pAttacked: Array(SLOTS).fill(false),
-    eAttacked: Array(SLOTS).fill(false),   // 👈 ataques IA por turno
+    eAttacked: Array(SLOTS).fill(false),
     targeting:false,
     attackCtx: null,
     timers: { draw:null, toast:null, type:null }
@@ -150,7 +192,7 @@
 
   // ---------- Zoom ----------
   function openZoom(card){
-    if(state.targeting) return;
+    if(state.targeting) return; // no zoom mientras seleccionas
     zoomWrap.innerHTML = `
       <div class="zoom-card">
         <div class="art">${card.art?`<img src="${card.art}" alt="${card.name}">`:''}</div>
@@ -402,23 +444,32 @@
   }
 
   // ---------- FX helpers ----------
-  function spawnExplosionOn(el){
-    if(!el) return;
-    const placed = el.querySelector('.placed');
+  function spawnExplosionOn(slotEl){
+    if(!slotEl) return;
+    const placed = slotEl.querySelector('.placed');
     if(!placed) return;
     const boom = document.createElement('div');
     boom.className = 'explosion';
     placed.appendChild(boom);
     setTimeout(()=> boom.remove(), 500);
   }
-  function hitEffectOn(el){
-    if(!el) return;
-    const placed = el.querySelector('.placed');
+
+  // NUEVO: overlay de impacto + shake; no depende de ::before/::after
+  function hitEffectOn(slotEl){
+    if(!slotEl) return;
+    const placed = slotEl.querySelector('.placed');
     if(!placed) return;
-    placed.classList.add('hit','shake-hard');
-    setTimeout(()=> placed.classList.remove('hit'), 360);
-    setTimeout(()=> placed.classList.remove('shake-hard'), 500);
+
+    placed.classList.add('shake-hard');
+    const ov = document.createElement('div');
+    ov.className = 'hit-overlay';
+    placed.appendChild(ov);
+    setTimeout(()=>{
+      ov.remove();
+      placed.classList.remove('shake-hard');
+    }, 500);
   }
+
   function showGoldenFlash(){
     const f = document.createElement('div');
     f.className = 'gold-flash';
@@ -571,6 +622,7 @@
       el.addEventListener('click', choose, {once:true});
     });
   }
+
   function resolvePlayerAttack(attIndex, defIndex){
     clearTargetHighlights();
     const pairA = state.center[attIndex];
@@ -590,14 +642,16 @@
       return;
     }
 
-    let attPts = attacker.pts;
-    let defPts = defender.pts;
+    const attPts = attacker.pts;
+    const defPts = defender.pts;
 
+    // Guerrera: si ataca justo enfrente, destruye
     if(attacker.name === 'Guerrera' && attIndex === defIndex){
       const { es } = getSlotsEls(defIndex);
       spawnExplosionOn(es);
       state.center[defIndex].e = null;
-      renderBoard();
+      // pequeño retardo para que la explosión se vea
+      setTimeout(()=>{ renderBoard(); }, 160);
       const diff = Math.max(0, attPts - defPts);
       if (diff>0) applyDamage('enemy', diff);
     } else {
@@ -607,12 +661,12 @@
         const diff = attPts - defPts;
         spawnExplosionOn(es);
         state.center[defIndex].e = null;
-        renderBoard();
+        setTimeout(()=>{ renderBoard(); }, 160);
         applyDamage('enemy', diff);
       }else{
         const remaining = Math.max(0, defPts - attPts);
         state.center[defIndex].e = { ...defender, pts: remaining };
-        renderBoard();
+        // ❌ no renderBoard() aquí => preserva la animación
         updatePlacedTokenValue('enemy', defIndex, remaining);
       }
     }
@@ -754,7 +808,6 @@
   }
 
   function enemyAttackPhase(done){
-    // Recorre todas las cartas enemigas y ataca una vez si no atacó este turno
     let i = 0;
     const step = ()=>{
       while(i < SLOTS){
@@ -763,7 +816,7 @@
           resolveEnemyAttackFrom(i, ec);
           state.eAttacked[i] = true;
           i++;
-          setTimeout(step, 260); // pequeño ritmo visual
+          setTimeout(step, 260);
           return;
         }
         i++;
@@ -782,7 +835,7 @@
       applyDamage('player', attacker.pts);
       return;
     }
-    // Elegir objetivo "sencillo": el de menor pts (remate) y si hay empate, el mismo índice si existe
+    // Elegir objetivo sencillo: el de menor pts; empate prioriza mismo índice
     let defIndex = candidates[0];
     let bestPts = state.center[defIndex].p.pts;
     for(const j of candidates){
@@ -792,8 +845,6 @@
 
     const defender = state.center[defIndex].p;
     const { ps } = getSlotsEls(defIndex);
-    hitEffectOn(ps);
-
     const attPts = attacker.pts;
     const defPts = defender.pts;
 
@@ -801,22 +852,24 @@
     if(attacker.name === 'Guerrera' && attIndex === defIndex){
       spawnExplosionOn(ps);
       state.center[defIndex].p = null;
-      renderBoard();
+      setTimeout(()=>{ renderBoard(); }, 160);
       const diff = Math.max(0, attPts - defPts);
       if(diff>0) applyDamage('player', diff);
       return;
     }
 
+    hitEffectOn(ps);
+
     if(attPts >= defPts){
       const diff = attPts - defPts;
       spawnExplosionOn(ps);
       state.center[defIndex].p = null;
-      renderBoard();
+      setTimeout(()=>{ renderBoard(); }, 160);
       applyDamage('player', diff);
     }else{
       const remaining = Math.max(0, defPts - attPts);
       state.center[defIndex].p = { ...defender, pts: remaining };
-      renderBoard();
+      // ❌ no renderBoard() aquí => preserva la animación
       updatePlacedTokenValue('player', defIndex, remaining);
     }
   }
@@ -830,7 +883,7 @@
     state.turn='player';
     state.pCoins+=1;
     state.pAttacked = Array(SLOTS).fill(false);
-    state.eAttacked = Array(SLOTS).fill(false);   // reset IA
+    state.eAttacked = Array(SLOTS).fill(false);
 
     topUpEnemyInstant();
     topUpPlayerAnimated().then(()=>{
