@@ -1,83 +1,63 @@
-* { box-sizing: border-box; }
-html, body { height: 100%; }
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: sans-serif;
   background: #222;
   color: #fff;
   overflow: hidden;
 }
 
-/* Botones / HUD */
-.btn { padding: .7em 1em; border: 0; border-radius: 8px; cursor: pointer; }
-.btn.small { padding: .4em .7em; }
-.hud {
-  position: fixed; top: 0; left: 0; right: 0; height: 56px;
-  display: flex; align-items: center; gap: 1rem; padding: .5rem 1rem;
-  background: linear-gradient(to bottom, rgba(0,0,0,.8), rgba(0,0,0,.2));
-  z-index: 30;
-}
-.hud.hidden { display: none; }
-.hint { opacity: .85; }
-
 /* Splash */
-.splash { position: fixed; inset: 0; display: grid; place-items: center; background: #000; z-index: 40; }
+.splash {
+  position: fixed; inset: 0;
+  display: flex; justify-content: center; align-items: center;
+  background: #000;
+}
 .splash.hidden { display: none; }
 
 /* Fire Emblem dialogue */
 .dialogue {
-  position: fixed; inset: 0; background: rgba(0,0,0,.7);
-  display: flex; align-items: flex-end; justify-content: center; z-index: 35;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: flex-end; justify-content: center;
 }
 .dialogue.hidden { display: none; }
 .dialogue img.portrait {
   position: absolute; bottom: 0; left: 5%;
-  max-height: 90%; z-index: 1; user-select: none; pointer-events: none; display:block;
+  max-height: 90%;
 }
 .dialogue-box {
-  position: relative; z-index: 2; color: #fff;
-  background: rgba(0,0,0,.85); padding: 1em 1.2em; margin: 2em; border-radius: 12px;
-  width: min(900px, 90vw);
+  background: rgba(0,0,0,0.8);
+  padding: 1em; margin: 2em; border-radius: 8px;
 }
-#dialogueText { margin: 0 0 .5em; line-height: 1.3; }
 
 /* Tablero */
 #gameBoard {
-  position: relative; display: flex; flex-direction: column;
-  height: 100vh; justify-content: space-between; padding-top: 56px;
+  display: flex; flex-direction: column;
+  height: 100vh; justify-content: space-between;
 }
 .zone {
-  display: flex; justify-content: center; gap: 1em; padding: 1em;
+  display: flex; justify-content: center; gap: 1em;
+  padding: 1em;
 }
-
-/* Carta */
 .card {
-  width: 80px; height: 120px; border-radius: 10px; position: relative; cursor: pointer;
-  background: #fff; color: #111; overflow: hidden;
-  /* Evitar “borde negro” y artefactos de AA */
-  border: none; outline: 1px solid rgba(0,0,0,0); /* outline transparente evita líneas de AA */
-  box-shadow: 0 2px 8px rgba(0,0,0,.35); /* usaremos shadow en vez de border */
-  backface-visibility: hidden; -webkit-backface-visibility: hidden;
-  transform: translateZ(0); will-change: transform;
-  transition: transform .25s ease, box-shadow .25s ease;
+  width: 80px; height: 120px;
+  background: #fff; border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.3s;
 }
-.card > img { width: 100%; height: 100%; object-fit: cover; display:block; }
 .card.zoom {
-  transform: scale(1.8) translateZ(0);
+  transform: scale(1.8);
   z-index: 10;
-  box-shadow: 0 8px 24px rgba(0,0,0,.5);
-  border: none; outline: 1px solid rgba(0,0,0,0);
+  border: none; /* sin borde negro */
 }
-
-/* Selección en modo Atacar */
-.selectable { box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 6px 14px rgba(0,0,0,.5); cursor: crosshair; }
-.selected  { box-shadow: 0 0 0 3px #4caf50, 0 6px 14px rgba(0,0,0,.6); }
-
-/* Efecto golpe */
 .hit-effect {
-  position: absolute; inset: 0; background: rgba(255,0,0,.3); animation: flash .28s ease-out;
+  position: absolute; inset: 0;
+  background: rgba(255,0,0,0.3);
+  animation: flash 0.3s;
 }
-@keyframes flash { 0%{opacity:1;} 100%{opacity:0;} }
-
-/* Utilidades */
-.hidden { display: none !important; }
+@keyframes flash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
