@@ -7,119 +7,33 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Portada a pantalla completa -->
-  <div id="startOverlay" class="splash visible" aria-hidden="false">
+  <!-- Portada -->
+  <div id="startOverlay" class="splash visible">
     <div class="splash-cover">
-      <button id="startBtn" class="btn start">JUGAR ▶</button>
+      <button id="startBtn" class="btn">JUGAR</button>
     </div>
   </div>
 
-  <!-- INTRO estilo Fire Emblem -->
-  <div id="introOverlay" class="overlay intro-overlay" aria-hidden="true">
-    <!-- Fondo a pantalla completa -->
-    <div class="intro-bg" aria-hidden="true"></div>
-
-    <!-- Cuadro de texto -->
-    <div class="intro-panel" role="dialog" aria-live="polite" aria-label="Introducción">
-      <div id="introText" class="intro-text"></div>
-      <div class="intro-actions">
-        <button id="introNext" class="btn primary">SALTAR</button>
-      </div>
+  <!-- Pantalla estilo Fire Emblem -->
+  <div id="dialogue" class="dialogue hidden">
+    <img src="Guerrera.PNG" alt="Guerrera" class="portrait" />
+    <div class="dialogue-box">
+      <p id="dialogueText"></p>
+      <button id="nextDialogue" class="btn small">▶</button>
     </div>
   </div>
 
-  <main id="game" aria-label="Cartas de coste y vida">
-    <!-- HUD superior -->
-    <header class="top-hud">
-      <div class="portrait player">
-        <div class="frame hex" aria-hidden="true">🐻</div>
-        <div class="info">
-          <div class="name">JUGADOR</div>
-          <div class="meters">
-            <span class="meter coin"><span class="value" id="pCoins">3</span></span>
-            <span class="meter pts"><span class="value" id="pScore">10</span></span>
-          </div>
-        </div>
-      </div>
+  <!-- UI principal -->
+  <header class="hud hidden" id="hud">
+    <button id="attackBtn" class="btn">ATACAR</button>
+    <span id="hint" class="hint"></span>
+  </header>
 
-      <div class="round-display">
-        <div id="roundNo" class="round-no">1</div>
-      </div>
-
-      <div class="portrait enemy">
-        <div class="frame hex" aria-hidden="true">😈</div>
-        <div class="info">
-          <div class="name">RIVAL</div>
-          <div class="meters">
-            <span class="meter coin"><span class="value" id="eCoins">3</span></span>
-            <span class="meter pts"><span class="value" id="eScore">10</span></span>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Tablero (6 huecos por lado: 3 columnas x 2 filas) -->
-    <section class="board" aria-label="Tablero central">
-      <div class="row row-enemy">
-        <div class="lanes-3x2 enemy">
-          <div class="slot enemy" data-side="enemy" data-lane="0"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="1"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="2"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="3"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="4"></div>
-          <div class="slot enemy" data-side="enemy" data-lane="5"></div>
-        </div>
-      </div>
-      <div class="row row-player">
-        <div class="lanes-3x2">
-          <div class="slot" data-side="player" data-lane="0"></div>
-          <div class="slot" data-side="player" data-lane="1"></div>
-          <div class="slot" data-side="player" data-lane="2"></div>
-          <div class="slot" data-side="player" data-lane="3"></div>
-          <div class="slot" data-side="player" data-lane="4"></div>
-          <div class="slot" data-side="player" data-lane="5"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Mano -->
-    <section class="hand-zone">
-      <div id="hand" class="hand" role="list"></div>
-    </section>
-
-    <!-- Barra inferior -->
-    <footer class="bottom-bar">
-      <!-- El botón ATACAR se inyecta por JS antes de PASAR -->
-      <button id="passBtn" class="btn primary">PASAR TURNO</button>
-      <button id="resetBtn" class="btn">Reiniciar</button>
-    </footer>
+  <!-- Tablero de cartas -->
+  <main id="gameBoard" class="hidden">
+    <section id="playerZone" class="zone"></section>
+    <section id="enemyZone" class="zone"></section>
   </main>
-
-  <!-- Fin de partida -->
-  <div id="endOverlay" class="overlay" role="dialog" aria-live="polite">
-    <div class="panel">
-      <h2 id="endTitle">Resultado</h2>
-      <p id="endLine" class="muted"></p>
-      <div class="row-btns">
-        <button id="againBtn" class="btn">Jugar de nuevo</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Zoom carta -->
-  <div id="zoomOverlay" class="overlay" role="dialog" aria-modal="true">
-    <div class="zoom-panel">
-      <div id="zoomCardWrap"></div>
-    </div>
-  </div>
-
-  <!-- Toast de turno -->
-  <div id="turnToast" class="turn-toast" aria-live="polite"></div>
-
-  <!-- Overlay de robo (carta al centro) -->
-  <div id="drawOverlay" class="draw-overlay">
-    <div id="drawCard" class="draw-card"></div>
-  </div>
 
   <script src="script.js"></script>
 </body>
