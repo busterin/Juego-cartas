@@ -112,7 +112,7 @@ html,body{
 .placed .art, .placed .art img{
   position:absolute; inset:0; width:100%; height:100%;
   object-fit:cover;
-  object-position: top;   /* mostrar la parte superior de la carta */
+  object-position: top;
   border-radius:inherit;
 }
 
@@ -141,9 +141,9 @@ html,body{
 .t-cost{ left:6px; background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
 .t-pts { right:6px; background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
 
-/* Tokens en la mano: sobresalen hacia arriba y molestan menos */
+/* Tokens en la mano */
 .hand .card .token{
-  top: -14px;        /* subir por encima del borde */
+  top: -14px;
   width: 24px;
   height: 24px;
   font-size: .75rem;
@@ -159,7 +159,7 @@ html,body{
 .placed .name-top, .placed .desc{ display:none; }
 
 /* ===== Ghost arrastre ===== */
-.ghost{ position:fixed; z-index:9999; pointer-events:none; width:var(--card-w); height:var(--card-h); transform: translate(-50%, -50%) scale(1.06); border:1px solid rgba(255,255,255,.35); border-radius:12px; overflow:visible; }
+.ghost{ position:fixed; z-index:9999; pointer-events:none; width:var(--card-w); height:var(--card-h); transform: translate(-50%, -50%) scale(1.06); border:1.5px solid rgba(255,255,255,.35); border-radius:12px; overflow:visible; }
 .ghost .art img{ border-radius:inherit; }
 
 /* ===== Carta voladora del robo ===== */
@@ -189,7 +189,7 @@ html,body{
   aspect-ratio: 5 / 7;
   border-radius: 14px; overflow: hidden; position: relative;
   border: 1.5px solid rgba(255,255,255,.28);
-  background: transparent; /* eliminar fondo negro */
+  background: transparent;
   box-shadow: 0 18px 40px rgba(0,0,0,.6);
 }
 @supports (height: 1dvh){
@@ -202,7 +202,7 @@ html,body{
 .zoom-card .art img{
   width:100%; height:100%;
   object-fit:cover;
-  object-position: top;   /* evita franja arriba */
+  object-position: top;
   display:block;
   background:none;
 }
@@ -214,7 +214,17 @@ html,body{
 .zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
 .zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
 .zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
-.zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:1.15rem; line-height:1.35; }
+.zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:1.1rem; line-height:1.35; }
+
+/* Quita cualquier efecto de marco que pudiera parecer “borde” en zoom */
+.zoom-card::before{
+  content:"";
+  position:absolute; inset:0; border-radius:inherit;
+  pointer-events:none;
+  /* Solo un fino borde interno muy sutil, sin banda superior */
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.16);
+  background: none;
+}
 
 /* ===== Toast ===== */
 .turn-toast{
@@ -316,10 +326,9 @@ html,body{
   :root{ --lanes-gap: 6px; --slot-inset: 4px; --slot-br: 9px; }
 }
 
-/* === Marcos: miniatura, tablero y zoom === */
+/* === Marcos: miniatura y tablero (zoom override arriba) === */
 .hand .card::before,
-.placed::before,
-.zoom-card::before{
+.placed::before{
   content:"";
   position:absolute;
   inset:0;
@@ -344,14 +353,20 @@ html,body{
   z-index: 2;
 }
 
-/* ===== Intro estilo Fire Emblem ===== */
-.intro-screen{
+/* ===== Intro estilo Fire Emblem (corregido) ===== */
+.intro-overlay{
   position: fixed; inset:0; z-index: 9000;
   display: grid; place-items: end center;
-  background: url("assets/Guerrera.PNG") center top / cover no-repeat fixed;
+  background: transparent;
   opacity:0; pointer-events:none; transition:opacity .25s ease;
 }
-.intro-screen.visible{ opacity:1; pointer-events:auto; }
+.intro-overlay.visible{ opacity:1; pointer-events:auto; }
+
+.intro-bg{
+  position:absolute; inset:0;
+  background: url("assets/Guerrera.PNG") center top / cover no-repeat;
+}
+
 .intro-panel{
   width:min(820px, 92vw);
   margin: 0 auto 4vh auto;
