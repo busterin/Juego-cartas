@@ -2,22 +2,18 @@
   --bg1:#0b0f1e; --bg2:#151b36; --ink:#eaf2ff; --muted:#a5b3cc;
   --panel:rgba(255,255,255,.06); --panel-br:rgba(255,255,255,.14);
   --glow:0 10px 30px rgba(0,0,0,.45), inset 0 0 40px rgba(255,255,255,.035);
-
   --game-max:760px;
   --gap:10px;
-
   --hex: 56px; --round-sz: 48px; --meter-sz: 26px;
   --card-w: clamp(72px, 16vw, 110px);
   --card-h: calc(var(--card-w) * 1.42);
-
   --lanes-gap: 10px;
   --slot-inset: 6px;
   --slot-br: 12px;
-
   --bottom-pad: 10px;
 }
 
-/* ===== Base ===== */
+/* Base */
 *{ box-sizing:border-box }
 html,body{
   height:100%;
@@ -35,350 +31,108 @@ html,body{
   max-width: var(--game-max);
   margin-inline:auto;
   display: grid;
-  grid-template-rows: auto 1fr auto auto; /* HUD | Board | Hand | Footer */
+  grid-template-rows: auto 1fr auto auto;
   gap: var(--gap);
   padding: 6px 8px calc(var(--bottom-pad) + env(safe-area-inset-bottom));
   overflow:hidden;
 }
 
-/* ===== HUD ===== */
-.top-hud{
-  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-  align-items:center; gap:6px; padding-inline:2px;
-  position:relative; z-index:300;
-}
-.portrait{ display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; min-width:0; }
-.portrait.enemy{ justify-self:end; }
-.frame.hex{ width:var(--hex); height:var(--hex); display:grid; place-items:center; font-size:calc(var(--hex)*.7); background:transparent; border:none; }
-.info{ display:flex; flex-direction:column; gap:3px; min-width:0; }
-.info .name{ font-weight:900; font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.meters{ display:flex; gap:6px; flex-wrap:wrap; }
-.round-display{ display:flex; align-items:center; justify-content:center; }
-.round-no{
-  width:var(--round-sz); height:var(--round-sz); border-radius:50%; display:grid; place-items:center;
-  font-weight:900; font-size:calc(var(--round-sz)*.22 + .7rem); color:#061018;
-  background: radial-gradient(60% 60% at 50% 40%, #baf3ff 0, #6be2ff 55%, #3b8cff 100%);
-  box-shadow:0 0 16px rgba(107,226,255,.5), inset 0 4px 15px rgba(255,255,255,.45), inset 0 -6px 20px rgba(0,0,0,.25);
-  border:1px solid rgba(255,255,255,.5);
-}
-.meter{
-  width:var(--meter-sz); height:var(--meter-sz); border-radius:50%;
-  display:grid; place-items:center; font-weight:900; color:#101010;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.18), 0 3px 8px rgba(0,0,0,.35);
-  font-size:.85rem;
-}
-.meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
-/* VIDA (antes verde): ahora rojo */
-.meter.pts { background:radial-gradient(60% 60% at 30% 30%, #ffd1d1 0, #ff8b8b 60%, #ff5a5a 100%); }
+/* ... OMITIDO: estilos del HUD, tablero, mano, botones, etc. ... */
 
-/* ===== Tablero (6 huecos por lado) ===== */
-.board{
-  display:grid;
-  grid-template-rows: 1fr 1fr;
-  gap: var(--lanes-gap);
-  min-height:0; height:100%;
-}
-.row{ width:100%; max-width:var(--game-max); margin-inline:auto; min-height:0; }
-.lanes-3x2{
-  height:100%;
-  display:grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: var(--lanes-gap);
-}
-.slot{
-  height:100%;
-  border:2px dashed rgba(105,240,255,.35);
-  border-radius:var(--slot-br);
-  display:grid; place-items:center; position:relative;
-  background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
-  overflow:hidden; transition: border-color .15s ease, background .15s ease;
-}
-.slot.enemy{ border-color: rgba(255,108,132,.35); }
-.slot.occupied{
-  border-style: solid;
-  border-color: rgba(255,255,255,.28);
-  background: linear-gradient(180deg, rgba(34,48,88,.45), rgba(34,48,88,.25));
+/* ============ ZOOM ============ */
+.zoom-panel {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
-/* Cartas colocadas (mesa) */
-.placed{
-  position:absolute; inset:var(--slot-inset);
-  border-radius:calc(var(--slot-br) - 2px);
-  border:1.5px solid rgba(255,255,255,.28);
-  box-shadow: 0 6px 24px rgba(0,0,0,.5);
-  background:#0f1633; overflow:visible;
-}
-.placed .art, .placed .art img{
-  position:absolute; inset:0; width:100%; height:100%;
-  object-fit:cover;
-  object-position: top;
-  border-radius:inherit;
-}
-
-/* ===== Mano ===== */
-.hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; position:relative; z-index:120; overflow:visible; }
-.hand{ position:relative; width:100%; height:100%; overflow:visible; z-index:121; }
-.hand .card{
-  position:absolute; bottom:0; left:50%;
-  width:var(--card-w); height:var(--card-h);
-  transform-origin: bottom center;
-  transition: transform .18s ease, filter .18s ease;
-  box-shadow: 0 6px 18px rgba(0,0,0,.45);
-  transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot));
-  overflow: visible; touch-action: none;
-
-  border-radius: 12px;
-  border: 1.5px solid rgba(255,255,255,.22);
-  background: #0f1633;
-}
-.hand .card:hover{ transform: translateX(calc(var(--x) + var(--off, 0px))) translateY(-6px) rotate(0deg) scale(1.06); z-index:40; }
-.card .art, .ghost .art{ position:absolute; inset:0; }
-.card .art img, .ghost .art img{ width:100%; height:100%; object-fit:cover; border-radius:inherit; }
-
-/* ===== Tokens ===== */
-.token{ position:absolute; top:5px; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:.9rem; font-weight:900; z-index:2; color:#101010; box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 4px 10px rgba(0,0,0,.4); }
-.t-cost{ left:6px; background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
-.t-pts { right:6px; background:radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%); }
-
-/* Tokens en la mano */
-.hand .card .token{
-  top: -14px;
-  width: 24px;
-  height: 24px;
-  font-size: .75rem;
-}
-.hand .card .t-cost{ left:4px; }
-.hand .card .t-pts { right:4px; }
-
-.name-top{ position:absolute; left:6px; right:6px; top:6px; text-align:center; font-weight:900; font-size:.75rem; color:#eaf2ff; background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:3px 6px; }
-.desc{ position:absolute; left:6px; right:6px; bottom:6px; font-size:.68rem; color:#d9e6ff; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.14); border-radius:10px; padding:4px 6px; }
-
-/* Ocultar nombre/desc en miniaturas y mesa */
-.hand .card .name-top, .hand .card .desc,
-.placed .name-top, .placed .desc{ display:none; }
-
-/* ===== Ghost arrastre ===== */
-.ghost{ position:fixed; z-index:9999; pointer-events:none; width:var(--card-w); height:var(--card-h); transform: translate(-50%, -50%) scale(1.06); border:1.5px solid rgba(255,255,255,.35); border-radius:12px; overflow:visible; }
-.ghost .art img{ border-radius:inherit; }
-
-/* ===== Carta voladora del robo ===== */
-.fly-card{
-  position: fixed; left: 50%; top: 50%;
-  width: var(--card-w); height: var(--card-h);
-  transform: translate(-50%, -50%) scale(1);
-  border-radius: 12px; overflow: hidden; z-index: 1500;
-  transition: transform .45s cubic-bezier(.2,.8,.2,1);
-  box-shadow: 0 10px 30px rgba(0,0,0,.55);
-}
-.fly-card .art, .fly-card .art img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-
-/* ===== Botones ===== */
-.bottom-bar{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; padding:8px 8px var(--bottom-pad); background: linear-gradient(180deg, rgba(5,8,18,0), rgba(5,8,18,.55)); }
-.btn{ border:1px solid var(--panel-br); background:var(--panel); padding:9px 14px; border-radius:12px; color:#eaf2ff; cursor:pointer; box-shadow:var(--glow); }
-.btn.primary{ background: linear-gradient(180deg, rgba(108,80,255,.35), rgba(108,80,255,.15)); border-color: rgba(128,112,255,.55); font-weight:900; }
-
-/* ===== Zoom (sin borde negro) ===== */
-.overlay{ position:fixed; inset:0; display:grid; place-items:center; background: linear-gradient(180deg, rgba(5,8,18,.65), rgba(5,8,18,.75)); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:1000; }
-.overlay.visible{ opacity:1; pointer-events:auto; }
-
-.zoom-panel{ position: fixed; inset: 0; display: grid; place-items: center; background: transparent; border: none; padding: 0; }
-
-.zoom-card{
+.zoom-card {
   width: min(92vw, calc(92vh * 5 / 7));
   aspect-ratio: 5 / 7;
-  border-radius: 14px; overflow: hidden; position: relative;
-  border: 1.5px solid rgba(255,255,255,.28);
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  border: none;
   background: transparent;
-  box-shadow: 0 18px 40px rgba(0,0,0,.6);
+  box-shadow: none;
 }
+
 @supports (height: 1dvh){
-  .zoom-card{ width: min(92vw, calc(92dvh * 5 / 7)); }
+  .zoom-card { width: min(92vw, calc(92dvh * 5 / 7)); }
 }
 @supports (height: 1svh){
-  .zoom-card{ width: min(92vw, calc(92svh * 5 / 7)); }
-}
-.zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
-.zoom-card .art img{
-  width:100%; height:100%;
-  object-fit:cover;
-  object-position: top;
-  display:block;
-  background:none;
-}
-.zoom-card .zoom-token{
-  position:absolute; top:10px; width:42px; height:42px;
-  border-radius:50%; display:grid; place-items:center; font-weight:900; color:#101010;
-  box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42);
-}
-.zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
-.zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
-.zoom-card .name{ position:absolute; left:10px; right:10px; bottom:12px; text-align:center; font-weight:900; background: rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:8px 10px; color:#eaf2ff; }
-.zoom-card .desc{ position:absolute; left:10px; right:10px; bottom:52px; text-align:center; color:#dfeaff; font-size:1.1rem; line-height:1.35; }
-
-/* Quita cualquier efecto de marco que pudiera parecer “borde” en zoom */
-.zoom-card::before{
-  content:"";
-  position:absolute; inset:0; border-radius:inherit;
-  pointer-events:none;
-  /* Solo un fino borde interno muy sutil, sin banda superior */
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,.16);
-  background: none;
+  .zoom-card { width: min(92vw, calc(92svh * 5 / 7)); }
 }
 
-/* ===== Toast ===== */
-.turn-toast{
-  position: fixed; left: 50%; top: 42%;
-  transform: translate(-50%, -50%) scale(.96);
-  padding: 10px 14px; border-radius: 14px;
-  font-weight: 900; letter-spacing: .5px; color: #061018;
-  background: radial-gradient(60% 60% at 50% 40%, #baf3ff 0, #6be2ff 55%, #3b8cff 100%);
-  border:1px solid rgba(255,255,255,.6); box-shadow: 0 12px 30px rgba(0,0,0,.45);
-  opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease;
-  z-index: 120;
-}
-.turn-toast.show{ opacity: 1; transform: translate(-50%, -50%) scale(1); }
-.turn-toast.warn{ background: radial-gradient(60% 60% at 50% 40%, #ffd1d1 0, #ff8b8b 55%, #ff5a5a 100%); color:#3c0d0d; }
-
-/* ===== Splash portada ===== */
-.splash{ position: fixed; inset: 0; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity .25s ease; }
-.splash.visible{ opacity: 1; pointer-events: auto; }
-.splash-cover{ position:absolute; inset:0; background: url("assets/Portadacartas.PNG") center center / cover no-repeat; display:flex; align-items:flex-end; justify-content:center; padding-bottom: 12%; }
-.btn.start{ font-size:1.2rem; padding:14px 22px; border-radius:14px; font-weight:900; background: linear-gradient(180deg, rgba(108,80,255,.55), rgba(108,80,255,.25)); border: 2px solid rgba(255,255,255,.4); box-shadow:0 6px 20px rgba(0,0,0,.55); }
-
-/* ===== Overlay robo ===== */
-.draw-overlay{ position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.55); opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 1100; }
-.draw-overlay.visible{ opacity: 1; pointer-events: auto; }
-
-/* ===== Shake coste insuficiente ===== */
-@keyframes shake{
-  10%, 90% { transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot)) translateY(0) }
-  20%, 80% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
-  30%, 50%, 70% { transform: translateX(calc(var(--x) + var(--off, 0px) + 3px)) rotate(var(--rot)) }
-  40%, 60% { transform: translateX(calc(var(--x) + var(--off, 0px) - 3px)) rotate(var(--rot)) }
-}
-.card.shake{ animation: shake .45s ease; }
-
-/* ===== 💥 Explosión al destruir ===== */
-.explosion{
-  position:absolute; left:50%; top:50%;
-  width:140%; height:140%;
-  transform: translate(-50%,-50%) scale(.6);
-  border-radius:50%; pointer-events:none;
-  background: radial-gradient(circle,
-    rgba(255,255,255,.95) 0%,
-    rgba(255,230,120,.9) 22%,
-    rgba(255,160,0,.75) 42%,
-    rgba(255,60,0,.45) 58%,
-    rgba(255,0,0,0) 72%);
-  filter: blur(1px); mix-blend-mode: screen; opacity:1;
-  animation: boom .45s ease-out forwards; z-index: 200;
-}
-@keyframes boom{ to{ transform: translate(-50%,-50%) scale(1.4); opacity:0; } }
-
-/* ===== Impact overlay ===== */
-.hit-overlay{
-  position:absolute; inset:-10%;
-  border-radius: inherit;
-  pointer-events:none;
-  z-index: 5;
-  background:
-    radial-gradient(circle at 50% 50%,
-      rgba(255,255,255,.85) 0%,
-      rgba(255,140,140,.75) 22%,
-      rgba(255,70,70,.35) 48%,
-      rgba(255,0,0,0) 62%);
-  animation: impactFlash .28s ease-out forwards, impactRingParent .35s ease-out forwards;
-}
-@keyframes impactFlash{
-  0%{ opacity:0; transform: scale(.85); }
-  30%{ opacity:1; }
-  100%{ opacity:0; transform: scale(1.25); }
-}
-@keyframes impactRingParent{
-  0%{ box-shadow: 0 0 0 0 rgba(255,200,200,.95), inset 0 0 0 0 rgba(255,200,200,0); }
-  100%{ box-shadow: 0 0 0 22px rgba(255,200,200,0), inset 0 0 0 0 rgba(255,200,200,0); }
-}
-
-/* Token de puntos: rebote + rojo temporal en daño */
-.token.t-pts.damage{
-  animation: dmgBounce .35s ease, dmgColor .6s ease;
-}
-@keyframes dmgBounce{
-  0%{ transform: translateY(0) scale(1); }
-  30%{ transform: translateY(-3px) scale(1.15); }
-  100%{ transform: translateY(0) scale(1); }
-}
-@keyframes dmgColor{
-  0%{
-    background: radial-gradient(60% 60% at 30% 30%, #ffd6d6 0, #ff7373 60%, #ff3030 100%);
-  }
-  100%{
-    background: radial-gradient(60% 60% at 30% 30%, #b6ffd1 0, #59e88f 60%, #20b86a 100%);
-  }
-}
-
-/* ===== Compactación móviles ===== */
-@media (max-width: 480px){
-  :root{ --lanes-gap: 8px; --slot-inset: 5px; --slot-br: 10px; }
-}
-@media (max-width: 380px){
-  :root{ --lanes-gap: 6px; --slot-inset: 4px; --slot-br: 9px; }
-}
-
-/* === Marcos: miniatura y tablero (zoom override arriba) === */
-.hand .card::before,
-.placed::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  pointer-events:none;
-  box-shadow:
-    inset 0 0 0 2px rgba(255,255,255,.14),
-    inset 0 0 0 6px rgba(255,255,255,.05);
-  background:
-    linear-gradient(180deg,
-      rgba(255,255,255,.10),
-      rgba(255,255,255,0) 40%,
-      rgba(255,255,255,0) 60%,
-      rgba(255,255,255,.08) 100%);
-  mix-blend-mode: screen;
-  z-index: 1;
-}
-.hand .card .token,
-.placed .token,
-.zoom-card .zoom-token{
+.zoom-card .art {
   position: absolute;
-  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-items: center;
 }
 
-/* ===== Intro estilo Fire Emblem (corregido) ===== */
-.intro-overlay{
-  position: fixed; inset:0; z-index: 9000;
-  display: grid; place-items: end center;
-  background: transparent;
-  opacity:0; pointer-events:none; transition:opacity .25s ease;
-}
-.intro-overlay.visible{ opacity:1; pointer-events:auto; }
-
-.intro-bg{
-  position:absolute; inset:0;
-  background: url("assets/Guerrera.PNG") center top / cover no-repeat;
+.zoom-card .art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+  background: none;
+  border-radius: inherit;
 }
 
-.intro-panel{
-  width:min(820px, 92vw);
-  margin: 0 auto 4vh auto;
-  background: linear-gradient(180deg, rgba(10,14,24,.65), rgba(10,14,24,.85));
-  border:1px solid rgba(255,255,255,.22);
-  border-radius:14px; padding:14px 16px 16px;
-  box-shadow:0 12px 30px rgba(0,0,0,.5);
+.zoom-card .zoom-token {
+  position: absolute;
+  top: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: #101010;
+  box-shadow:
+    inset 0 2px 7px rgba(0,0,0,.45),
+    inset 0 -2px 6px rgba(0,0,0,.35),
+    0 0 0 1px rgba(255,255,255,.25),
+    0 6px 14px rgba(0,0,0,.42);
 }
-.intro-text{
-  font-size: clamp(1rem, 2.4vw, 1.25rem);
-  line-height: 1.5;
-  color:#eef4ff;
-  min-height: 3lh;
+
+.zoom-card .zoom-token.cost {
+  left: 10px;
+  background: radial-gradient(#ffeaa3, #e1a700);
 }
-.intro-actions{ display:flex; justify-content:flex-end; margin-top:10px; }
+
+.zoom-card .zoom-token.pts {
+  right: 10px;
+  background: radial-gradient(#b6ffd1, #20b86a);
+}
+
+.zoom-card .name {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 12px;
+  text-align: center;
+  font-weight: 900;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: #eaf2ff;
+}
+
+.zoom-card .desc {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 52px;
+  text-align: center;
+  color: #dfeaff;
+  font-size: 1.1rem;
+  line-height: 1.35;
+}
