@@ -13,7 +13,6 @@
   --bottom-pad: 10px;
 }
 
-/* Base */
 *{ box-sizing:border-box }
 html,body{
   height:100%;
@@ -37,102 +36,159 @@ html,body{
   overflow:hidden;
 }
 
-/* ... OMITIDO: estilos del HUD, tablero, mano, botones, etc. ... */
-
-/* ============ ZOOM ============ */
-.zoom-panel {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: transparent;
-  border: none;
-  padding: 0;
+/* ===== HUD ===== */
+.top-hud{
+  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center; gap:6px; padding-inline:2px;
+  position:relative; z-index:300;
+}
+.portrait{ display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; min-width:0; }
+.portrait.enemy{ justify-self:end; }
+.frame.hex{ width:var(--hex); height:var(--hex); display:grid; place-items:center; font-size:calc(var(--hex)*.7); background:transparent; border:none; }
+.info{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.info .name{ font-weight:900; font-size:.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.meters{ display:flex; gap:6px; flex-wrap:wrap; }
+.round-display{ display:flex; align-items:center; justify-content:center; }
+.round-no{
+  width:var(--round-sz); height:var(--round-sz); border-radius:50%; display:grid; place-items:center;
+  font-weight:900; font-size:calc(var(--round-sz)*.22 + .7rem); color:#061018;
+  background: radial-gradient(60% 60% at 50% 40%, #baf3ff 0, #6be2ff 55%, #3b8cff 100%);
+  box-shadow:0 0 16px rgba(107,226,255,.5), inset 0 4px 15px rgba(255,255,255,.45), inset 0 -6px 20px rgba(0,0,0,.25);
+  border:1px solid rgba(255,255,255,.5);
+}
+.meter{
+  width:var(--meter-sz); height:var(--meter-sz); border-radius:50%;
+  display:grid; place-items:center; font-weight:900; color:#101010;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.18), 0 3px 8px rgba(0,0,0,.35);
+  font-size:.85rem;
+}
+.meter.coin{ background:radial-gradient(60% 60% at 30% 30%, #ffeaa3 0, #ffc84d 60%, #e1a700 100%); }
+.meter.pts { background:radial-gradient(60% 60% at 30% 30%, #ffd1d1 0, #ff8b8b 60%, #ff5a5a 100%); }
+/* ===== Tablero (6 huecos por lado) ===== */
+.board{
+  display:grid;
+  grid-template-rows: 1fr 1fr;
+  gap: var(--lanes-gap);
+  min-height:0; height:100%;
+}
+.row{ width:100%; max-width:var(--game-max); margin-inline:auto; min-height:0; }
+.lanes-3x2{
+  height:100%;
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: var(--lanes-gap);
+}
+.slot{
+  height:100%;
+  border:2px dashed rgba(105,240,255,.35);
+  border-radius:var(--slot-br);
+  display:grid; place-items:center; position:relative;
+  background: linear-gradient(180deg, rgba(34,48,88,.35), rgba(34,48,88,.15));
+  overflow:hidden; transition: border-color .15s ease, background .15s ease;
+}
+.slot.enemy{ border-color: rgba(255,108,132,.35); }
+.slot.occupied{
+  border-style: solid;
+  border-color: rgba(255,255,255,.28);
+  background: linear-gradient(180deg, rgba(34,48,88,.45), rgba(34,48,88,.25));
 }
 
-.zoom-card {
+/* Cartas colocadas (mesa) */
+.placed{
+  position:absolute; inset:var(--slot-inset);
+  border-radius:calc(var(--slot-br) - 2px);
+  border:1.5px solid rgba(255,255,255,.28);
+  box-shadow: 0 6px 24px rgba(0,0,0,.5);
+  background:#0f1633; overflow:visible;
+}
+.placed .art, .placed .art img{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover;
+  object-position: top;
+  border-radius:inherit;
+}
+
+/* ===== Mano ===== */
+.hand-zone{ height: calc(var(--card-h) + 12px); min-height:0; position:relative; z-index:120; overflow:visible; }
+.hand{ position:relative; width:100%; height:100%; overflow:visible; z-index:121; }
+.hand .card{
+  position:absolute; bottom:0; left:50%;
+  width:var(--card-w); height:var(--card-h);
+  transform-origin: bottom center;
+  transition: transform .18s ease, filter .18s ease;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45);
+  transform: translateX(calc(var(--x) + var(--off, 0px))) rotate(var(--rot));
+  overflow: visible; touch-action: none;
+
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,.22);
+  background: #0f1633;
+}
+.hand .card:hover{
+  transform: translateX(calc(var(--x) + var(--off, 0px))) translateY(-6px) rotate(0deg) scale(1.06);
+  z-index:40;
+}
+.card .art, .ghost .art{ position:absolute; inset:0; }
+.card .art img, .ghost .art img{
+  width:100%; height:100%;
+  object-fit:cover;
+  border-radius:inherit;
+}
+
+/* ===== Zoom (versión original) ===== */
+.zoom-panel{
+  position: fixed; inset: 0; display: grid; place-items: center;
+  background: transparent; border: none; padding: 0;
+}
+
+.zoom-card{
   width: min(92vw, calc(92vh * 5 / 7));
   aspect-ratio: 5 / 7;
-  border-radius: 14px;
-  overflow: hidden;
-  position: relative;
-  border: none;
+  border-radius: 14px; overflow: hidden; position: relative;
+  border: 1.5px solid rgba(255,255,255,.28);
   background: transparent;
-  box-shadow: none;
+  box-shadow: 0 18px 40px rgba(0,0,0,.6);
 }
-
 @supports (height: 1dvh){
-  .zoom-card { width: min(92vw, calc(92dvh * 5 / 7)); }
+  .zoom-card{ width: min(92vw, calc(92dvh * 5 / 7)); }
 }
 @supports (height: 1svh){
-  .zoom-card { width: min(92vw, calc(92svh * 5 / 7)); }
+  .zoom-card{ width: min(92vw, calc(92svh * 5 / 7)); }
 }
-
-.zoom-card .art {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-}
-
-.zoom-card .art img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.zoom-card .art{ position:absolute; inset:0; display:grid; place-items:center; }
+.zoom-card .art img{
+  width:100%; height:100%;
+  object-fit:cover;
   object-position: top;
-  display: block;
-  background: none;
-  border-radius: inherit;
+  display:block;
+  background:none;
 }
-
-.zoom-card .zoom-token {
-  position: absolute;
-  top: 10px;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-weight: 900;
-  color: #101010;
-  box-shadow:
-    inset 0 2px 7px rgba(0,0,0,.45),
-    inset 0 -2px 6px rgba(0,0,0,.35),
-    0 0 0 1px rgba(255,255,255,.25),
-    0 6px 14px rgba(0,0,0,.42);
+.zoom-card .zoom-token{
+  position:absolute; top:10px; width:42px; height:42px;
+  border-radius:50%; display:grid; place-items:center; font-weight:900; color:#101010;
+  box-shadow: inset 0 2px 7px rgba(0,0,0,.45), inset 0 -2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.25), 0 6px 14px rgba(0,0,0,.42);
 }
-
-.zoom-card .zoom-token.cost {
-  left: 10px;
-  background: radial-gradient(#ffeaa3, #e1a700);
-}
-
-.zoom-card .zoom-token.pts {
-  right: 10px;
-  background: radial-gradient(#b6ffd1, #20b86a);
-}
-
-.zoom-card .name {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 12px;
-  text-align: center;
-  font-weight: 900;
+.zoom-card .zoom-token.cost{ left:10px; background: radial-gradient(#ffeaa3, #e1a700); }
+.zoom-card .zoom-token.pts{ right:10px; background: radial-gradient(#b6ffd1, #20b86a); }
+.zoom-card .name{
+  position:absolute; left:10px; right:10px; bottom:12px;
+  text-align:center; font-weight:900;
   background: rgba(255,255,255,.1);
-  border: 1px solid rgba(255,255,255,.16);
-  border-radius: 10px;
-  padding: 8px 10px;
-  color: #eaf2ff;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:10px; padding:8px 10px; color:#eaf2ff;
+}
+.zoom-card .desc{
+  position:absolute; left:10px; right:10px; bottom:52px;
+  text-align:center; color:#dfeaff;
+  font-size:1.1rem; line-height:1.35;
 }
 
-.zoom-card .desc {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 52px;
-  text-align: center;
-  color: #dfeaff;
-  font-size: 1.1rem;
-  line-height: 1.35;
+/* Efecto sutil interno */
+.zoom-card::before{
+  content:"";
+  position:absolute; inset:0; border-radius:inherit;
+  pointer-events:none;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.16);
+  background: none;
 }
